@@ -49,10 +49,13 @@ pub fn cache(cache_dir: &PathBuf, id: &str, url: &str) -> Result<String, String>
     let host = page.host_str().ok_or("无效网址")?;
     std::fs::create_dir_all(cache_dir).map_err(|e| e.to_string())?;
     let out = cache_dir.join(format!("{id}.png"));
+    if out.exists() {
+        return Ok(out.to_string_lossy().into_owned());
+    }
 
     let client = reqwest::blocking::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .timeout(Duration::from_secs(8))
+        .timeout(Duration::from_secs(3))
         .redirect(reqwest::redirect::Policy::limited(5))
         .build()
         .map_err(|e| e.to_string())?;

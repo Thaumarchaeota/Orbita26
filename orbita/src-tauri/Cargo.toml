@@ -1,6 +1,6 @@
 [package]
 name = "orbita"
-version = "0.1.0"
+version = "0.0.9"
 description = "Orbita desktop hub"
 authors = ["you"]
 edition = "2021"

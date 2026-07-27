@@ -8,6 +8,7 @@ mod ai;
 mod app_icon;
 mod data;
 mod favicon;
+mod obsidian;
 mod window_shell;
 mod zotero;
 
@@ -154,6 +155,19 @@ async fn list_zotero_items(
 }
 
 #[tauri::command]
+async fn list_obsidian_notes(
+    app: tauri::AppHandle,
+    limit: Option<u32>,
+) -> Result<Vec<obsidian::ObsidianNote>, String> {
+    let n = limit.unwrap_or(50);
+    let settings = data::read_settings(&app)?;
+    let vault_dir = settings.integrations.obsidian.vault_dir;
+    tauri::async_runtime::spawn_blocking(move || obsidian::list_notes(&vault_dir, n))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 fn cache_app_icon(app: tauri::AppHandle, app_id: String, path: String) -> Result<Option<String>, String> {
     let data_dir = data::get_data_dir(&app)?;
     let cache_dir = data::cache_icons_dir(&data_dir);
@@ -189,13 +203,13 @@ fn read_app_icon_data(path: String) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
-fn cache_favicon(app: tauri::AppHandle, bookmark_id: String, url: String) -> Result<Option<String>, String> {
+async fn cache_favicon(app: tauri::AppHandle, bookmark_id: String, url: String) -> Result<Option<String>, String> {
     let data_dir = data::get_data_dir(&app)?;
     let cache_dir = data::cache_favicons_dir(&data_dir);
-    match favicon::cache(&cache_dir, &bookmark_id, &url) {
-        Ok(p) => Ok(Some(p)),
-        Err(_) => Ok(None),
-    }
+    let result = tauri::async_runtime::spawn_blocking(move || favicon::cache(&cache_dir, &bookmark_id, &url))
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(result.ok())
 }
 
 #[tauri::command]
@@ -314,6 +328,14 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
+fn app_icon() -> Result<tauri::image::Image<'static>, String> {
+    let bytes = include_bytes!("../icons/logo-source.png");
+    let img = image::load_from_memory(bytes).map_err(|e| e.to_string())?;
+    let rgba = img.to_rgba8();
+    let (w, h) = (rgba.width(), rgba.height());
+    Ok(tauri::image::Image::new_owned(rgba.into_raw(), w, h))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -339,10 +361,8 @@ pub fn run() {
             let show_item = MenuItem::with_id(app, "tray-show", "显示 Orbita", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "tray-quit", "退出", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&show_item, &quit_item])?;
-            let icon = app
-                .default_window_icon()
-                .ok_or("missing app icon")?
-                .clone();
+            let icon = app_icon()?;
+            let _ = win.set_icon(icon.clone());
             TrayIconBuilder::with_id("main")
                 .icon(icon)
                 .menu(&tray_menu)
@@ -388,6 +408,7 @@ pub fn run() {
             launch_v2ray,
             launch_app,
             list_zotero_items,
+            list_obsidian_notes,
             open_external_url,
             read_settings,
             write_settings,

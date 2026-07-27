@@ -1,5 +1,6 @@
 import { readBookmarks, writeBookmarks } from "../../core/data/client";
 import type { BookmarkEntry, BookmarkLink } from "../../core/data/types";
+import { createLauncherStore } from "./launcher-store";
 
 export type { BookmarkEntry, BookmarkLink };
 export type Bookmark = BookmarkLink;
@@ -15,71 +16,25 @@ const DEFAULT_BOOKMARKS: BookmarkEntry[] = [
   { kind: "link", id: "notion", name: "Notion", url: "https://www.notion.so" },
 ];
 
-let cache: BookmarkEntry[] | null = null;
-
-export async function initBookmarks(): Promise<BookmarkEntry[]> {
-  const items = await readBookmarks();
-  cache = items.length ? items : [...DEFAULT_BOOKMARKS];
-  if (!items.length) await writeBookmarks(cache);
-  return cache;
+function normalizeUrl(url: string): string {
+  const t = url.trim();
+  return t.startsWith("http") ? t : `https://${t}`;
 }
 
-export function loadBookmarks(): BookmarkEntry[] {
-  if (!cache) throw new Error("bookmarks not loaded");
-  return cache;
-}
-
-export function saveBookmarks(bookmarks: BookmarkEntry[]): void {
-  cache = bookmarks;
-  void writeBookmarks(bookmarks);
-}
-
-export function updateBookmark(
-  id: string,
-  name: string,
-  url: string,
-  icon?: string,
-): BookmarkEntry[] {
-  const bookmarks = loadBookmarks();
-  const next = bookmarks.map((b) => {
-    if (b.kind === "folder") return b;
-    if (b.id !== id) return b;
-    const item: BookmarkLink = {
-      ...b,
-      name: name.trim(),
-      url: url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`,
-    };
+const store = createLauncherStore<BookmarkLink, BookmarkEntry>({
+  name: "bookmarks",
+  read: readBookmarks,
+  write: writeBookmarks,
+  defaults: DEFAULT_BOOKMARKS,
+  applyPayload: (leaf, name, url, icon) => {
+    const item: BookmarkLink = { ...leaf, name: name.trim(), url: normalizeUrl(url) };
     if (icon) item.icon = icon;
     return item;
-  });
-  saveBookmarks(next);
-  return next;
-}
+  },
+});
 
-export function updateBookmarkInFolder(
-  folderId: string,
-  id: string,
-  name: string,
-  url: string,
-  icon?: string,
-): BookmarkEntry[] {
-  const bookmarks = loadBookmarks();
-  const next = bookmarks.map((b) => {
-    if (b.kind !== "folder" || b.id !== folderId) return b;
-    return {
-      ...b,
-      children: b.children.map((c) => {
-        if (c.id !== id) return c;
-        const item: BookmarkLink = {
-          ...c,
-          name: name.trim(),
-          url: url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`,
-        };
-        if (icon) item.icon = icon;
-        return item;
-      }),
-    };
-  });
-  saveBookmarks(next);
-  return next;
-}
+export const initBookmarks = store.init;
+export const loadBookmarks = store.load;
+export const saveBookmarks = store.save;
+export const updateBookmark = store.updateLeaf;
+export const updateBookmarkInFolder = store.updateLeafInFolder;

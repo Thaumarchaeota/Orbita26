@@ -17,6 +17,7 @@ export type TileGridOptions<T extends { id: string; name: string }> = {
   dragOutPanel?: HTMLElement;
   onDragOutHover?: (active: boolean) => void;
   onMoveOut?: (sourceId: string) => void;
+  onRenameFolder?: (item: T, trigger: HTMLElement) => T[] | null | Promise<T[] | null>;
 };
 
 const DRAG_THRESHOLD = 4;
@@ -509,9 +510,9 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       const tile = editFolderBtn.closest<HTMLElement>(".launcher-tile");
       if (!tile?.dataset.id) return;
       const item = getItems().find((i) => i.id === tile.dataset.id);
-      if (!item) return;
-      const name = window.prompt("文件夹名称", item.name);
-      if (name?.trim()) setItems(getItems().map((i) => (i.id === item.id ? { ...i, name: name.trim() } : i)));
+      if (!item || !options.onRenameFolder) return;
+      const next = await Promise.resolve(options.onRenameFolder(item, editFolderBtn));
+      if (next) setItems(next);
       paint();
       return;
     }

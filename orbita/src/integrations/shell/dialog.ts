@@ -44,6 +44,57 @@ export function mountConfirmDialog(root: HTMLElement) {
     });
 }
 
+export function mountFolderRenameDialog(root: HTMLElement) {
+  const backdrop = document.createElement("div");
+  backdrop.className = "dialog-backdrop";
+  backdrop.innerHTML = `
+    <form class="dialog-panel" id="folderRenameDialogForm">
+      <div class="dialog-title">重命名文件夹</div>
+      <div class="dialog-field">
+        <label for="folderRenameDialogName">名称</label>
+        <input id="folderRenameDialogName" type="text" autocomplete="off" required>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="dialog-btn" data-action="cancel">取消</button>
+        <button type="submit" class="dialog-btn dialog-btn-primary">保存</button>
+      </div>
+    </form>
+  `;
+  root.appendChild(backdrop);
+
+  const motion = bindDialog(backdrop);
+  const form = backdrop.querySelector<HTMLFormElement>("#folderRenameDialogForm")!;
+  const nameInput = backdrop.querySelector<HTMLInputElement>("#folderRenameDialogName")!;
+  let resolvePending: ((value: string | null) => void) | null = null;
+
+  const close = async (value: string | null) => {
+    await motion.close();
+    resolvePending?.(value);
+    resolvePending = null;
+  };
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name) return;
+    void close(name);
+  });
+  backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) void close(null);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && motion.isOpen()) void close(null);
+  });
+
+  return (initial: string, trigger?: MotionTrigger) =>
+    new Promise<string | null>((resolve) => {
+      resolvePending = resolve;
+      nameInput.value = initial;
+      void motion.open(trigger).then(() => requestAnimationFrame(() => nameInput.focus()));
+    });
+}
+
 export function mountBookmarkDialog(root: HTMLElement) {
   const backdrop = document.createElement("div");
   backdrop.className = "dialog-backdrop";

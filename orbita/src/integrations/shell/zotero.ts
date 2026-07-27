@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { openObsidianNote } from "./obsidian";
 
 export type ZoteroItem = {
   id: number;
@@ -27,9 +28,4 @@ export async function openZoteroItem(key: string): Promise<void> {
   });
 }
 
-export async function openObsidianNote(path: string): Promise<void> {
-  if (!isTauri()) return;
-  await invoke("open_external_url", {
-    url: `obsidian://open?path=${encodeURIComponent(path)}`,
-  });
-}
+export { openObsidianNote };

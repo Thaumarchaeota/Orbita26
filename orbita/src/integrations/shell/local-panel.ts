@@ -375,7 +375,14 @@ function renderTabContent(tab: LocalTab): string {
       </div>
     `;
   }
-  return `<div class="local-placeholder">敬请期待</div>`;
+  return `
+    <div class="local-literature-pane" id="notePane">
+      <div class="local-literature-bar">
+        <button type="button" class="local-refresh-btn" id="noteRefresh" title="刷新">${REFRESH_SVG}</button>
+      </div>
+      <div class="local-file-list" id="noteList"><div class="local-placeholder">加载中…</div></div>
+    </div>
+  `;
 }
 
 function mountLiteratureList(container: HTMLElement, signal: AbortSignal) {
@@ -434,6 +441,55 @@ function mountLiteratureList(container: HTMLElement, signal: AbortSignal) {
   void load();
 }
 
+function mountNoteList(container: HTMLElement, signal: AbortSignal) {
+  const pane = container.querySelector<HTMLElement>("#notePane")!;
+  const listEl = pane.querySelector<HTMLElement>("#noteList")!;
+  const refreshBtn = pane.querySelector<HTMLButtonElement>("#noteRefresh")!;
+
+  const load = async () => {
+    if (signal.aborted) return;
+    listEl.innerHTML = `<div class="local-placeholder">加载中…</div>`;
+    try {
+      const { formatNoteTime, listObsidianNotes } = await import("./obsidian");
+      const items = await listObsidianNotes(50);
+      if (signal.aborted) return;
+      if (!items.length) {
+        listEl.innerHTML = `<div class="local-placeholder">无笔记</div>`;
+        return;
+      }
+      listEl.innerHTML = items
+        .map((item) => {
+          const title = escHtml(item.name || "(无标题)");
+          const time = escAttr(formatNoteTime(item.modified));
+          return `
+        <button type="button" class="local-file-row" data-path="${escAttr(item.path)}" title="${time}">
+          <span class="local-file-icon">${NOTE_SVG}</span>
+          <span class="local-file-name">${title}</span>
+        </button>`;
+        })
+        .join("");
+    } catch (err) {
+      if (signal.aborted) return;
+      listEl.innerHTML = `<div class="local-placeholder">${escHtml(err instanceof Error ? err.message : "读取失败")}</div>`;
+    }
+  };
+
+  pane.addEventListener(
+    "click",
+    (e) => {
+      if ((e.target as HTMLElement).closest("#noteRefresh")) return;
+      const row = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-file-row");
+      if (row?.dataset.path) {
+        void import("./obsidian").then((m) => m.openObsidianNote(row.dataset.path!));
+      }
+    },
+    { signal },
+  );
+
+  refreshBtn.addEventListener("click", () => void load(), { signal });
+  void load();
+}
+
 export function mountLocalPanel(
   container: HTMLElement,
   root: HTMLElement,
@@ -475,6 +531,7 @@ export function mountLocalPanel(
       content.innerHTML = renderTabContent(tab);
       if (tab === "file") mountFileList(content, promptEntry, askDelete, signal);
       if (tab === "literature") mountLiteratureList(content, signal);
+      if (tab === "note") mountNoteList(content, signal);
     };
     if (!contentReady) {
       mount();

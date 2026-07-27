@@ -1,6 +1,9 @@
 export type GridPrefs = {
   cols: number;
   rows: number;
+  tileScale: number;
+  colGap: number;
+  rowGap: number;
 };
 
 export type UiPrefs = {
@@ -8,8 +11,8 @@ export type UiPrefs = {
   localTab: "file" | "literature" | "note";
   activeConversationId: string | null;
   blockOpacity: number;
-  bookmarksGrid: GridPrefs;
-  appsGrid: GridPrefs;
+  topGrid: GridPrefs;
+  dockLeftGrid: GridPrefs;
 };
 
 export type V2rayIntegration = {
@@ -21,9 +24,14 @@ export type ZoteroIntegration = {
   articleNoteDir: string;
 };
 
+export type ObsidianIntegration = {
+  vaultDir: string;
+};
+
 export type Integrations = {
   v2ray: V2rayIntegration;
   zotero: ZoteroIntegration;
+  obsidian: ObsidianIntegration;
 };
 
 export type ApiEntry = {
@@ -97,6 +105,24 @@ export type AppFolder = {
 export type AppEntry = AppLink | AppFolder;
 
 export type AppItem = AppLink;
+
+export type LauncherLeafBase = {
+  kind: string;
+  id: string;
+  name: string;
+  icon?: string;
+  slot?: number;
+};
+
+export type LauncherFolder<L extends LauncherLeafBase = LauncherLeafBase> = {
+  kind: "folder";
+  id: string;
+  name: string;
+  children: L[];
+  slot?: number;
+};
+
+export type LauncherEntryOf<L extends LauncherLeafBase = LauncherLeafBase> = L | LauncherFolder<L>;
 
 export type LocalEntryKind = "file" | "folder";
 

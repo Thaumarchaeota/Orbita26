@@ -13,8 +13,9 @@ import type {
   UiPrefs,
 } from "./types";
 
-export const DEFAULT_BOOKMARKS_GRID: GridPrefs = { cols: 6, rows: 3 };
-export const DEFAULT_APPS_GRID: GridPrefs = { cols: 2, rows: 5 };
+export const DEFAULT_GRID_GAP = 8;
+export const DEFAULT_TOP_GRID: GridPrefs = { cols: 6, rows: 3, tileScale: 100, colGap: 8, rowGap: 8 };
+export const DEFAULT_DOCK_LEFT_GRID: GridPrefs = { cols: 2, rows: 5, tileScale: 100, colGap: 8, rowGap: 8 };
 
 export function isTauri() {
   return "__TAURI_INTERNALS__" in window;
@@ -65,6 +66,7 @@ export function defaultIntegrations(): Integrations {
       dataDir: "",
       articleNoteDir: "",
     },
+    obsidian: { vaultDir: "" },
   };
 }
 
@@ -74,14 +76,31 @@ export function defaultUiPrefs(): UiPrefs {
     localTab: "file",
     activeConversationId: null,
     blockOpacity: 12,
-    bookmarksGrid: { ...DEFAULT_BOOKMARKS_GRID },
-    appsGrid: { ...DEFAULT_APPS_GRID },
+    topGrid: { ...DEFAULT_TOP_GRID },
+    dockLeftGrid: { ...DEFAULT_DOCK_LEFT_GRID },
   };
 }
 
 function clampInt(value: unknown, fallback: number, min: number, max: number): number {
   const n = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : fallback;
   return Math.max(min, Math.min(max, n));
+}
+
+export function normalizeGridLayoutPrefs(
+  value: Partial<GridPrefs> | undefined,
+  fallback: GridPrefs,
+  colsMin: number,
+  colsMax: number,
+  rowsMin: number,
+  rowsMax: number,
+): GridPrefs {
+  return {
+    cols: clampInt(value?.cols, fallback.cols, colsMin, colsMax),
+    rows: clampInt(value?.rows, fallback.rows, rowsMin, rowsMax),
+    tileScale: clampLauncherTileScale(value?.tileScale ?? fallback.tileScale),
+    colGap: clampInt(value?.colGap, fallback.colGap, 0, 24),
+    rowGap: clampInt(value?.rowGap, fallback.rowGap, 0, 24),
+  };
 }
 
 export function normalizeGridPrefs(
@@ -166,6 +185,11 @@ export function normalizeLocalEntries(items: unknown[]): LocalEntry[] {
   return items.map(normalizeLocalEntry).filter((e): e is LocalEntry => !!e);
 }
 
+function clampLauncherTileScale(value: unknown): number {
+  const n = typeof value === "number" && Number.isFinite(value) ? Math.round(value) : 100;
+  return Math.max(70, Math.min(130, n));
+}
+
 function clampBlockOpacity(value: unknown): number {
   const n = typeof value === "number" && Number.isFinite(value) ? value : 12;
   return Math.max(0, Math.min(100, Math.round(n)));
@@ -189,27 +213,92 @@ export function defaultSettings(dataDir: string): AppSettings {
   };
 }
 
-function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?: string }): AppSettings {
-  const base = defaultSettings(raw.dataDir);
+type LegacyUiPrefs = UiPrefs & {
+  bookmarksGrid?: Partial<GridPrefs>;
+  appsGrid?: Partial<GridPrefs>;
+  launcherTileScale?: number;
+};
+
+function ensureTopDockSemantics(top: GridPrefs, dock: GridPrefs): { top: GridPrefs; dock: GridPrefs } {
+  if (top.cols >= dock.cols) return { top, dock };
+  return { top: { ...dock }, dock: { ...top } };
+}
+
+function fixCorruptedGridPrefs(top: GridPrefs, dock: GridPrefs): { top: GridPrefs; dock: GridPrefs } {
+  let t = top;
+  let d = dock;
+  if (t.cols <= 4 && d.cols >= 3 && t.cols >= d.cols) {
+    if (t.cols < DEFAULT_TOP_GRID.cols) t = { ...t, cols: DEFAULT_TOP_GRID.cols };
+    if (d.cols > DEFAULT_DOCK_LEFT_GRID.cols) d = { ...d, cols: DEFAULT_DOCK_LEFT_GRID.cols };
+  }
+  return ensureTopDockSemantics(t, d);
+}
+
+function migrateLauncherGridPrefs(raw: Partial<AppSettings>): Partial<AppSettings> {
+  if ((raw.version ?? 0) >= 5 || !raw.ui) return raw;
+  const legacy = raw.ui as LegacyUiPrefs;
+  let top = legacy.topGrid;
+  let dock = legacy.dockLeftGrid;
+  const bg = legacy.bookmarksGrid;
+  const ag = legacy.appsGrid;
+  if (!top || !dock) {
+    const bgCols = typeof bg?.cols === "number" ? bg.cols : DEFAULT_TOP_GRID.cols;
+    const agCols = typeof ag?.cols === "number" ? ag.cols : DEFAULT_DOCK_LEFT_GRID.cols;
+    if ((raw.version ?? 0) >= 4) {
+      top = top ?? ag ?? DEFAULT_TOP_GRID;
+      dock = dock ?? bg ?? DEFAULT_DOCK_LEFT_GRID;
+    } else if (bgCols > agCols) {
+      top = top ?? bg ?? DEFAULT_TOP_GRID;
+      dock = dock ?? ag ?? DEFAULT_DOCK_LEFT_GRID;
+    } else {
+      top = top ?? ag ?? DEFAULT_TOP_GRID;
+      dock = dock ?? bg ?? DEFAULT_DOCK_LEFT_GRID;
+    }
+  }
+  const fixed = fixCorruptedGridPrefs(top, dock);
   return {
-    version: typeof raw.version === "number" ? raw.version : 0,
-    theme: normalizeTheme(raw.theme),
-    dataDir: raw.dataDir,
+    ...raw,
+    version: 5,
     ui: {
-      ...base.ui,
-      ...(raw.ui ?? {}),
-      localTab:
-        raw.ui?.localTab === "literature" || raw.ui?.localTab === "note" || raw.ui?.localTab === "file"
-          ? raw.ui.localTab
-          : base.ui.localTab,
-      activeConversationId: raw.ui?.activeConversationId ?? null,
-      blockOpacity: clampBlockOpacity(raw.ui?.blockOpacity),
-      bookmarksGrid: normalizeGridPrefs(raw.ui?.bookmarksGrid, DEFAULT_BOOKMARKS_GRID, 3, 12, 1, 8),
-      appsGrid: normalizeGridPrefs(raw.ui?.appsGrid, DEFAULT_APPS_GRID, 1, 4, 1, 10),
+      ...legacy,
+      topGrid: fixed.top,
+      dockLeftGrid: fixed.dock,
     },
+  };
+}
+
+function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?: string }): AppSettings {
+  const migrated = migrateLauncherGridPrefs(raw);
+  const base = defaultSettings(migrated.dataDir ?? raw.dataDir);
+  const uiRaw = (migrated.ui ?? raw.ui) as LegacyUiPrefs | undefined;
+  const legacyScale = clampLauncherTileScale(uiRaw?.launcherTileScale);
+  const topFallback: GridPrefs = { ...DEFAULT_TOP_GRID, tileScale: legacyScale };
+  const dockFallback: GridPrefs = { ...DEFAULT_DOCK_LEFT_GRID, tileScale: legacyScale };
+  const topDock = fixCorruptedGridPrefs(
+    normalizeGridLayoutPrefs(uiRaw?.topGrid, topFallback, 3, 12, 1, 8),
+    normalizeGridLayoutPrefs(uiRaw?.dockLeftGrid, dockFallback, 1, 4, 1, 10),
+  );
+  const ui: UiPrefs = {
+    ...base.ui,
+    ...uiRaw,
+    localTab:
+      uiRaw?.localTab === "literature" || uiRaw?.localTab === "note" || uiRaw?.localTab === "file"
+        ? uiRaw.localTab
+        : base.ui.localTab,
+    activeConversationId: uiRaw?.activeConversationId ?? null,
+    blockOpacity: clampBlockOpacity(uiRaw?.blockOpacity),
+    topGrid: topDock.top,
+    dockLeftGrid: topDock.dock,
+  };
+  return {
+    version: Math.max(typeof migrated.version === "number" ? migrated.version : 0, 5),
+    theme: normalizeTheme(migrated.theme ?? raw.theme),
+    dataDir: migrated.dataDir ?? raw.dataDir,
+    ui,
     integrations: {
       v2ray: { ...base.integrations.v2ray, ...(raw.integrations?.v2ray ?? {}) },
       zotero: { ...base.integrations.zotero, ...(raw.integrations?.zotero ?? {}) },
+      obsidian: { ...base.integrations.obsidian, ...(raw.integrations?.obsidian ?? {}) },
     },
     ai: {
       ...base.ai,
@@ -222,7 +311,9 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
 export async function readSettings(): Promise<AppSettings> {
   if (isTauri()) {
     const raw = await invoke<AppSettings>("read_settings");
-    return normalizeSettings(raw);
+    const next = normalizeSettings(raw);
+    if ((raw.version ?? 0) < 5) await writeSettings(next);
+    return next;
   }
   const bootstrap = readWebJson<{ dataDir: string }>("bootstrap", { dataDir: "orbita-data" });
   const raw = readWebJson<Partial<AppSettings> | null>("settings.json", null);
@@ -232,16 +323,18 @@ export async function readSettings(): Promise<AppSettings> {
     writeWebJson("bootstrap", { dataDir: s.dataDir });
     return s;
   }
-  return normalizeSettings({
+  const next = normalizeSettings({
     ...raw,
     dataDir: raw.dataDir ?? bootstrap.dataDir,
     theme: raw.theme ?? "light",
   });
+  if ((raw.version ?? 0) < 5) writeWebJson("settings.json", next);
+  return next;
 }
 
 export async function writeSettings(settings: AppSettings): Promise<void> {
   const next = normalizeSettings(settings);
-  next.version = Math.max(next.version, 1);
+  next.version = Math.max(next.version, 5);
   if (isTauri()) {
     await invoke("write_settings", { settings: next });
     return;

@@ -14,28 +14,81 @@ pub struct GridPrefs {
     pub cols: u8,
     #[serde(default = "default_bookmarks_rows")]
     pub rows: u8,
+    #[serde(default = "default_tile_scale")]
+    pub tile_scale: u8,
+    #[serde(default = "default_grid_gap")]
+    pub col_gap: u8,
+    #[serde(default = "default_grid_gap")]
+    pub row_gap: u8,
+}
+
+fn default_grid_gap() -> u8 {
+    8
+}
+
+fn default_tile_scale() -> u8 {
+    100
 }
 
 fn default_bookmarks_cols() -> u8 {
-    6
-}
-
-fn default_bookmarks_rows() -> u8 {
-    3
-}
-
-fn default_apps_cols() -> u8 {
     2
 }
 
-fn default_apps_rows() -> u8 {
+fn default_bookmarks_rows() -> u8 {
     5
+}
+
+fn default_apps_cols() -> u8 {
+    6
+}
+
+fn default_apps_rows() -> u8 {
+    3
+}
+
+fn default_top_cols() -> u8 {
+    6
+}
+
+fn default_top_rows() -> u8 {
+    3
+}
+
+fn default_dock_left_cols() -> u8 {
+    2
+}
+
+fn default_dock_left_rows() -> u8 {
+    5
+}
+
+fn default_top_grid() -> GridPrefs {
+    GridPrefs {
+        cols: default_top_cols(),
+        rows: default_top_rows(),
+        tile_scale: default_tile_scale(),
+        col_gap: default_grid_gap(),
+        row_gap: default_grid_gap(),
+    }
+}
+
+fn default_dock_left_grid() -> GridPrefs {
+    GridPrefs {
+        cols: default_dock_left_cols(),
+        rows: default_dock_left_rows(),
+        tile_scale: default_tile_scale(),
+        col_gap: default_grid_gap(),
+        row_gap: default_grid_gap(),
+    }
 }
 
 fn default_bookmarks_grid() -> GridPrefs {
     GridPrefs {
         cols: default_bookmarks_cols(),
         rows: default_bookmarks_rows(),
+        tile_scale: default_tile_scale(),
+        col_gap: default_grid_gap(),
+        row_gap: default_grid_gap(),
     }
 }
 
@@ -43,6 +96,9 @@ fn default_apps_grid() -> GridPrefs {
     GridPrefs {
         cols: default_apps_cols(),
         rows: default_apps_rows(),
+        tile_scale: default_tile_scale(),
+        col_gap: default_grid_gap(),
+        row_gap: default_grid_gap(),
     }
 }
 
@@ -57,9 +113,13 @@ pub struct UiPrefs {
     pub active_conversation_id: Option<String>,
     #[serde(default = "default_block_opacity")]
     pub block_opacity: u8,
-    #[serde(default = "default_bookmarks_grid")]
+    #[serde(default = "default_top_grid")]
+    pub top_grid: GridPrefs,
+    #[serde(default = "default_dock_left_grid")]
+    pub dock_left_grid: GridPrefs,
+    #[serde(default = "default_bookmarks_grid", skip_serializing)]
     pub bookmarks_grid: GridPrefs,
-    #[serde(default = "default_apps_grid")]
+    #[serde(default = "default_apps_grid", skip_serializing)]
     pub apps_grid: GridPrefs,
 }
 
@@ -82,6 +142,8 @@ impl Default for UiPrefs {
             local_tab: default_local_tab(),
             active_conversation_id: None,
             block_opacity: default_block_opacity(),
+            top_grid: default_top_grid(),
+            dock_left_grid: default_dock_left_grid(),
             bookmarks_grid: default_bookmarks_grid(),
             apps_grid: default_apps_grid(),
         }
@@ -133,6 +195,21 @@ impl Default for ZoteroIntegration {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ObsidianIntegration {
+    #[serde(default)]
+    pub vault_dir: String,
+}
+
+impl Default for ObsidianIntegration {
+    fn default() -> Self {
+        Self {
+            vault_dir: String::new(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Integrations {
@@ -140,6 +217,8 @@ pub struct Integrations {
     pub v2ray: V2rayIntegration,
     #[serde(default)]
     pub zotero: ZoteroIntegration,
+    #[serde(default)]
+    pub obsidian: ObsidianIntegration,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

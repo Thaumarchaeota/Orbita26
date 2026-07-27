@@ -7,7 +7,7 @@ import {
   patchSettings,
 } from "../../core/settings";
 import type { GridPrefs } from "../../core/data/types";
-import { normalizeGridPrefs, DEFAULT_APPS_GRID, DEFAULT_BOOKMARKS_GRID } from "../../core/data/client";
+import { normalizeGridLayoutPrefs, DEFAULT_TOP_GRID, DEFAULT_DOCK_LEFT_GRID } from "../../core/data/client";
 import { SETTINGS_GEAR_SVG } from "../ai/icons";
 import { pickAppFile, pickLocalFolder } from "./adapter";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
@@ -46,17 +46,37 @@ function mountSettingsDialog(root: HTMLElement) {
           <div class="settings-opacity-hint">0 为全透明，100 为不透明</div>
         </div>
         <div class="dialog-field">
-          <label>书签网格</label>
+          <label>上方网格（应用）</label>
           <div class="settings-grid-row">
-            <label>列 <input id="settingsBookmarksCols" type="number" min="3" max="12" step="1"></label>
-            <label>行 <input id="settingsBookmarksRows" type="number" min="1" max="8" step="1"></label>
+            <label>列 <input id="settingsAppsCols" type="number" min="3" max="12" step="1"></label>
+            <label>行 <input id="settingsAppsRows" type="number" min="1" max="8" step="1"></label>
+          </div>
+          <div class="settings-grid-row">
+            <label>图标 <span id="settingsTopTileScaleVal">100</span>%</label>
+            <input id="settingsTopTileScale" type="range" min="70" max="130" step="5" value="100">
+          </div>
+          <div class="settings-grid-row">
+            <label>列距 <span id="settingsTopColGapVal">8</span></label>
+            <input id="settingsTopColGap" type="range" min="0" max="24" step="1" value="8">
+            <label>行距 <span id="settingsTopRowGapVal">8</span></label>
+            <input id="settingsTopRowGap" type="range" min="0" max="24" step="1" value="8">
           </div>
         </div>
         <div class="dialog-field">
-          <label>应用网格</label>
+          <label>左下网格（书签）</label>
           <div class="settings-grid-row">
-            <label>列 <input id="settingsAppsCols" type="number" min="1" max="4" step="1"></label>
-            <label>行 <input id="settingsAppsRows" type="number" min="1" max="10" step="1"></label>
+            <label>列 <input id="settingsBookmarksCols" type="number" min="1" max="4" step="1"></label>
+            <label>行 <input id="settingsBookmarksRows" type="number" min="1" max="10" step="1"></label>
+          </div>
+          <div class="settings-grid-row">
+            <label>图标 <span id="settingsDockTileScaleVal">100</span>%</label>
+            <input id="settingsDockTileScale" type="range" min="70" max="130" step="5" value="100">
+          </div>
+          <div class="settings-grid-row">
+            <label>列距 <span id="settingsDockColGapVal">8</span></label>
+            <input id="settingsDockColGap" type="range" min="0" max="24" step="1" value="8">
+            <label>行距 <span id="settingsDockRowGapVal">8</span></label>
+            <input id="settingsDockRowGap" type="range" min="0" max="24" step="1" value="8">
           </div>
         </div>
         <div class="dialog-field">
@@ -87,6 +107,13 @@ function mountSettingsDialog(root: HTMLElement) {
             <button type="button" class="dialog-btn" data-action="browse-note">浏览</button>
           </div>
         </div>
+        <div class="dialog-field">
+          <label for="settingsVaultDir">Obsidian 库目录</label>
+          <div class="settings-path-row">
+            <input id="settingsVaultDir" type="text" readonly>
+            <button type="button" class="dialog-btn" data-action="browse-vault">浏览</button>
+          </div>
+        </div>
       </div>
       <div class="dialog-actions">
         <button type="button" class="dialog-btn" data-action="cancel">取消</button>
@@ -102,9 +129,22 @@ function mountSettingsDialog(root: HTMLElement) {
   const v2rayInput = backdrop.querySelector<HTMLInputElement>("#settingsV2rayPath")!;
   const zoteroInput = backdrop.querySelector<HTMLInputElement>("#settingsZoteroDir")!;
   const noteInput = backdrop.querySelector<HTMLInputElement>("#settingsNoteDir")!;
+  const vaultInput = backdrop.querySelector<HTMLInputElement>("#settingsVaultDir")!;
   const blockOpacityField = backdrop.querySelector<HTMLElement>("#settingsBlockOpacityField")!;
   const blockOpacityInput = backdrop.querySelector<HTMLInputElement>("#settingsBlockOpacity")!;
   const blockOpacityVal = backdrop.querySelector<HTMLElement>("#settingsBlockOpacityVal")!;
+  const topTileScaleInput = backdrop.querySelector<HTMLInputElement>("#settingsTopTileScale")!;
+  const topTileScaleVal = backdrop.querySelector<HTMLElement>("#settingsTopTileScaleVal")!;
+  const topColGapInput = backdrop.querySelector<HTMLInputElement>("#settingsTopColGap")!;
+  const topColGapVal = backdrop.querySelector<HTMLElement>("#settingsTopColGapVal")!;
+  const topRowGapInput = backdrop.querySelector<HTMLInputElement>("#settingsTopRowGap")!;
+  const topRowGapVal = backdrop.querySelector<HTMLElement>("#settingsTopRowGapVal")!;
+  const dockTileScaleInput = backdrop.querySelector<HTMLInputElement>("#settingsDockTileScale")!;
+  const dockTileScaleVal = backdrop.querySelector<HTMLElement>("#settingsDockTileScaleVal")!;
+  const dockColGapInput = backdrop.querySelector<HTMLInputElement>("#settingsDockColGap")!;
+  const dockColGapVal = backdrop.querySelector<HTMLElement>("#settingsDockColGapVal")!;
+  const dockRowGapInput = backdrop.querySelector<HTMLInputElement>("#settingsDockRowGap")!;
+  const dockRowGapVal = backdrop.querySelector<HTMLElement>("#settingsDockRowGapVal")!;
   const bookmarksColsInput = backdrop.querySelector<HTMLInputElement>("#settingsBookmarksCols")!;
   const bookmarksRowsInput = backdrop.querySelector<HTMLInputElement>("#settingsBookmarksRows")!;
   const appsColsInput = backdrop.querySelector<HTMLInputElement>("#settingsAppsCols")!;
@@ -113,8 +153,8 @@ function mountSettingsDialog(root: HTMLElement) {
 
   let draftTheme: AppTheme = "light";
   let draftBlockOpacity = 12;
-  let draftBookmarksGrid: GridPrefs = { ...DEFAULT_BOOKMARKS_GRID };
-  let draftAppsGrid: GridPrefs = { ...DEFAULT_APPS_GRID };
+  let draftTopGrid: GridPrefs = { ...DEFAULT_TOP_GRID };
+  let draftDockLeftGrid: GridPrefs = { ...DEFAULT_DOCK_LEFT_GRID };
   let savedSettings = getSettings();
   let resolvePending: ((value: boolean) => void) | null = null;
 
@@ -122,38 +162,78 @@ function mountSettingsDialog(root: HTMLElement) {
     return {
       ...savedSettings.ui,
       blockOpacity: draftBlockOpacity,
-      bookmarksGrid: draftBookmarksGrid,
-      appsGrid: draftAppsGrid,
+      topGrid: draftTopGrid,
+      dockLeftGrid: draftDockLeftGrid,
     };
   }
 
   function syncDraftGrids() {
-    draftBookmarksGrid = normalizeGridPrefs(
+    draftTopGrid = normalizeGridLayoutPrefs(
       {
-        cols: Number(bookmarksColsInput.value),
-        rows: Number(bookmarksRowsInput.value),
+        cols: Number(appsColsInput.value),
+        rows: Number(appsRowsInput.value),
+        tileScale: Number(topTileScaleInput.value),
+        colGap: Number(topColGapInput.value),
+        rowGap: Number(topRowGapInput.value),
       },
-      DEFAULT_BOOKMARKS_GRID,
+      draftTopGrid,
       3,
       12,
       1,
       8,
     );
-    draftAppsGrid = normalizeGridPrefs(
+    draftDockLeftGrid = normalizeGridLayoutPrefs(
       {
-        cols: Number(appsColsInput.value),
-        rows: Number(appsRowsInput.value),
+        cols: Number(bookmarksColsInput.value),
+        rows: Number(bookmarksRowsInput.value),
+        tileScale: Number(dockTileScaleInput.value),
+        colGap: Number(dockColGapInput.value),
+        rowGap: Number(dockRowGapInput.value),
       },
-      DEFAULT_APPS_GRID,
+      draftDockLeftGrid,
       1,
       4,
       1,
       10,
     );
-    bookmarksColsInput.value = String(draftBookmarksGrid.cols);
-    bookmarksRowsInput.value = String(draftBookmarksGrid.rows);
-    appsColsInput.value = String(draftAppsGrid.cols);
-    appsRowsInput.value = String(draftAppsGrid.rows);
+    bookmarksColsInput.value = String(draftDockLeftGrid.cols);
+    bookmarksRowsInput.value = String(draftDockLeftGrid.rows);
+    appsColsInput.value = String(draftTopGrid.cols);
+    appsRowsInput.value = String(draftTopGrid.rows);
+    topTileScaleInput.value = String(draftTopGrid.tileScale);
+    topTileScaleVal.textContent = String(draftTopGrid.tileScale);
+    topColGapInput.value = String(draftTopGrid.colGap);
+    topColGapVal.textContent = String(draftTopGrid.colGap);
+    topRowGapInput.value = String(draftTopGrid.rowGap);
+    topRowGapVal.textContent = String(draftTopGrid.rowGap);
+    dockTileScaleInput.value = String(draftDockLeftGrid.tileScale);
+    dockTileScaleVal.textContent = String(draftDockLeftGrid.tileScale);
+    dockColGapInput.value = String(draftDockLeftGrid.colGap);
+    dockColGapVal.textContent = String(draftDockLeftGrid.colGap);
+    dockRowGapInput.value = String(draftDockLeftGrid.rowGap);
+    dockRowGapVal.textContent = String(draftDockLeftGrid.rowGap);
+  }
+
+  function fillGridInputs(grid: GridPrefs, prefix: "top" | "dock") {
+    if (prefix === "top") {
+      appsColsInput.value = String(grid.cols);
+      appsRowsInput.value = String(grid.rows);
+      topTileScaleInput.value = String(grid.tileScale);
+      topTileScaleVal.textContent = String(grid.tileScale);
+      topColGapInput.value = String(grid.colGap);
+      topColGapVal.textContent = String(grid.colGap);
+      topRowGapInput.value = String(grid.rowGap);
+      topRowGapVal.textContent = String(grid.rowGap);
+    } else {
+      bookmarksColsInput.value = String(grid.cols);
+      bookmarksRowsInput.value = String(grid.rows);
+      dockTileScaleInput.value = String(grid.tileScale);
+      dockTileScaleVal.textContent = String(grid.tileScale);
+      dockColGapInput.value = String(grid.colGap);
+      dockColGapVal.textContent = String(grid.colGap);
+      dockRowGapInput.value = String(grid.rowGap);
+      dockRowGapVal.textContent = String(grid.rowGap);
+    }
   }
 
   function syncBlockFieldVisibility() {
@@ -164,18 +244,17 @@ function mountSettingsDialog(root: HTMLElement) {
     savedSettings = settings;
     draftTheme = settings.theme;
     draftBlockOpacity = settings.ui.blockOpacity;
-    draftBookmarksGrid = { ...settings.ui.bookmarksGrid };
-    draftAppsGrid = { ...settings.ui.appsGrid };
+    draftTopGrid = { ...settings.ui.topGrid };
+    draftDockLeftGrid = { ...settings.ui.dockLeftGrid };
     blockOpacityInput.value = String(draftBlockOpacity);
     blockOpacityVal.textContent = String(draftBlockOpacity);
-    bookmarksColsInput.value = String(draftBookmarksGrid.cols);
-    bookmarksRowsInput.value = String(draftBookmarksGrid.rows);
-    appsColsInput.value = String(draftAppsGrid.cols);
-    appsRowsInput.value = String(draftAppsGrid.rows);
+    fillGridInputs(draftTopGrid, "top");
+    fillGridInputs(draftDockLeftGrid, "dock");
     dataDirInput.value = settings.dataDir;
     v2rayInput.value = settings.integrations.v2ray.exePath;
     zoteroInput.value = settings.integrations.zotero.dataDir;
     noteInput.value = settings.integrations.zotero.articleNoteDir;
+    vaultInput.value = settings.integrations.obsidian.vaultDir;
     themeBtns.forEach((btn) => {
       btn.classList.toggle("dialog-btn-primary", btn.dataset.theme === draftTheme);
     });
@@ -203,14 +282,20 @@ function mountSettingsDialog(root: HTMLElement) {
     applyUiPrefs({ ...savedSettings.ui, blockOpacity: draftBlockOpacity });
   });
 
-  const previewGrid = () => {
+  const previewLayout = () => {
     syncDraftGrids();
     applyUiPrefs(readDraftUi());
   };
-  bookmarksColsInput.addEventListener("input", previewGrid);
-  bookmarksRowsInput.addEventListener("input", previewGrid);
-  appsColsInput.addEventListener("input", previewGrid);
-  appsRowsInput.addEventListener("input", previewGrid);
+  bookmarksColsInput.addEventListener("input", previewLayout);
+  bookmarksRowsInput.addEventListener("input", previewLayout);
+  appsColsInput.addEventListener("input", previewLayout);
+  appsRowsInput.addEventListener("input", previewLayout);
+  topTileScaleInput.addEventListener("input", previewLayout);
+  topColGapInput.addEventListener("input", previewLayout);
+  topRowGapInput.addEventListener("input", previewLayout);
+  dockTileScaleInput.addEventListener("input", previewLayout);
+  dockColGapInput.addEventListener("input", previewLayout);
+  dockRowGapInput.addEventListener("input", previewLayout);
 
   backdrop.querySelector('[data-action="browse-data"]')!.addEventListener("click", async () => {
     const path = await pickLocalFolder();
@@ -227,6 +312,10 @@ function mountSettingsDialog(root: HTMLElement) {
   backdrop.querySelector('[data-action="browse-note"]')!.addEventListener("click", async () => {
     const path = await pickLocalFolder();
     if (path) noteInput.value = path;
+  });
+  backdrop.querySelector('[data-action="browse-vault"]')!.addEventListener("click", async () => {
+    const path = await pickLocalFolder();
+    if (path) vaultInput.value = path;
   });
 
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(false));
@@ -249,6 +338,7 @@ function mountSettingsDialog(root: HTMLElement) {
           dataDir: zoteroInput.value.trim(),
           articleNoteDir: noteInput.value.trim(),
         },
+        obsidian: { vaultDir: vaultInput.value.trim() },
       },
     });
     applyAppearance(next);

@@ -1,8 +1,16 @@
 # Orbita 重构 Roadmap
 
-> **状态**：Phase 0–6 已落地（2026-07-27）。前端 `tsc` + Rust `cargo check` 通过。  
+> **状态**：Phase 0–6 已落地；**v0.0.9 已验收**（2026-07-28）。前端 `tsc` + Rust `cargo check` 通过。  
 > **约束**：用户可见功能、交互、快捷键零变更。旧数据自动迁移，可回滚。  
 > **目标**：架构分层清晰；配置归 `settings.json`；所有个人数据落在「设置 → 数据存储位置」内。
+
+## 更新日志
+
+| 版本 | 日期 | 摘要 |
+| ---- | ---- | ---- |
+| **0.0.9** | 2026-07-28 | 栅格 `topGrid`/`dockLeftGrid` + v5 迁移；上应用/下书签对调修复；Tile 六键尺寸；favicon 乐观更新；Obsidian 笔记 tab；象耳芋 Logo；Tile 排版/滚动 |
+| **0.0.8** | 2026-07-27 | 书签/应用/浮层/本地文件树收官；本地树指示线拖拽 |
+| **0.0.7** | 2026-07-27 | 数据架构重构，dataDir 归集 |
 
 ---
 
@@ -390,7 +398,7 @@ createFormDialog(root, { title, fields, onSubmit })
 
 - [ ] 删 `core/optimistic.ts`（无引用）
 - [ ] Rust `conversation_path`：拒绝非 UUID 格式 id
-- [ ] 版本号统一：`package.json` / `tauri.conf.json` → `0.1.0`（或自定，三处一致）
+- [x] 版本号统一：`package.json` / `tauri.conf.json` / `Cargo.toml` → `0.0.9`（三处一致）
 
 #### 5.6 Phase 5 验收
 

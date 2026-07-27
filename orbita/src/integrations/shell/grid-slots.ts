@@ -1,12 +1,12 @@
 import { getSettings } from "../../core/settings";
 
-export function bookmarksGridCapacity(): number {
-  const g = getSettings().ui.bookmarksGrid;
+export function topGridCapacity(): number {
+  const g = getSettings().ui.topGrid;
   return g.cols * g.rows;
 }
 
-export function appsGridCapacity(): number {
-  const g = getSettings().ui.appsGrid;
+export function dockLeftGridCapacity(): number {
+  const g = getSettings().ui.dockLeftGrid;
   return g.cols * g.rows;
 }
 

@@ -99,6 +99,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   let conversation: Conversation | null = null;
   let requestId: string | null = null;
   let streaming = false;
+  let modelMenuEntryId: string | null = null;
 
   function escapeHtml(text: string) {
     return escHtml(text).replace(/\n/g, "<br>");
@@ -295,24 +296,35 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   function paintModelMenu() {
     if (!conversation) return;
     const config = getAiConfig();
-    const activeEntryId = conversation.activeEntryId;
-    const entry = config.entries.find((e) => e.id === activeEntryId) ?? config.entries[0];
+    const previewEntryId = modelMenuEntryId ?? conversation.activeEntryId;
+    const entry = config.entries.find((e) => e.id === previewEntryId) ?? config.entries[0];
+    const activeModel =
+      entry?.id === conversation.activeEntryId ? conversation.activeModel : entry?.models[0] ?? "";
     modelMenu.innerHTML = `
-      <div class="ai-model-tabs">
-        ${config.entries
-          .map(
-            (e) =>
-              `<button type="button" class="ai-model-tab ${e.id === activeEntryId ? "active" : ""}" data-entry="${e.id}">${escapeHtml(e.name)}</button>`,
-          )
-          .join("")}
-      </div>
-      <div class="ai-model-list">
-        ${entry?.models
-          .map(
-            (m) =>
-              `<button type="button" class="ai-model-item ${m === conversation!.activeModel ? "active" : ""}" data-model="${escapeAttr(m)}">${escapeHtml(modelBaseName(m))}</button>`,
-          )
-          .join("") ?? ""}
+      <div class="ai-model-picker-head">选择模型</div>
+      <div class="ai-model-picker-body">
+        <div class="ai-model-picker-col">
+          <div class="ai-model-picker-label">API</div>
+          <div class="ai-model-picker-apis">
+            ${config.entries
+              .map(
+                (e) =>
+                  `<button type="button" class="ai-model-api ${e.id === previewEntryId ? "active" : ""}" data-entry="${e.id}">${escapeHtml(e.name)}</button>`,
+              )
+              .join("")}
+          </div>
+        </div>
+        <div class="ai-model-picker-col">
+          <div class="ai-model-picker-label">模型</div>
+          <div class="ai-model-picker-models">
+            ${entry?.models
+              .map(
+                (m) =>
+                  `<button type="button" class="ai-model-choice ${m === activeModel ? "active" : ""}" data-model="${escapeAttr(m)}">${escapeHtml(modelBaseName(m))}</button>`,
+              )
+              .join("") ?? `<div class="ai-model-picker-empty">暂无模型</div>`}
+          </div>
+        </div>
       </div>
     `;
   }
@@ -468,28 +480,35 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   });
 
   modelBtn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!conversation) return;
+    modelMenuEntryId = conversation.activeEntryId;
     paintModelMenu();
     if (isPopoverOpen(modelMenu)) {
       await closePopover(modelMenu, e);
+      modelMenuEntryId = null;
       return;
     }
     await openPopover(modelMenu, e);
   });
 
   modelMenu.addEventListener("click", async (e) => {
+    e.stopPropagation();
     if (!conversation) return;
-    const entryBtn = (e.target as HTMLElement).closest<HTMLButtonElement>(".ai-model-tab");
+    const entryBtn = (e.target as HTMLElement).closest<HTMLButtonElement>(".ai-model-api");
     if (entryBtn?.dataset.entry) {
-      conversation.activeEntryId = entryBtn.dataset.entry;
+      modelMenuEntryId = entryBtn.dataset.entry;
       paintModelMenu();
-      syncModelBtn();
       return;
     }
-    const modelItem = (e.target as HTMLElement).closest<HTMLButtonElement>(".ai-model-item");
+    const modelItem = (e.target as HTMLElement).closest<HTMLButtonElement>(".ai-model-choice");
     if (modelItem?.dataset.model) {
+      const entryId = modelMenuEntryId ?? conversation.activeEntryId;
+      conversation.activeEntryId = entryId;
       conversation.activeModel = modelItem.dataset.model;
       const config = getAiConfig();
       await saveAiConfig({ ...config, activeEntryId: conversation.activeEntryId, activeModel: conversation.activeModel });
+      modelMenuEntryId = null;
       await closePopover(modelMenu);
       syncModelBtn();
       await persistConversation();
@@ -501,7 +520,12 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     if (isPopoverOpen(convMenu) && !aside.querySelector(".ai-conv-picker")?.contains(target)) {
       void closeConvPicker();
     }
-    if (isPopoverOpen(modelMenu) && !aside.querySelector(".ai-bottom")?.contains(target)) {
+    if (
+      isPopoverOpen(modelMenu) &&
+      !modelMenu.contains(target) &&
+      !modelBtn.contains(target)
+    ) {
+      modelMenuEntryId = null;
       void closePopover(modelMenu);
     }
   });
