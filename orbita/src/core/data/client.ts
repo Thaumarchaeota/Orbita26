@@ -67,6 +67,13 @@ export function defaultIntegrations(): Integrations {
       articleNoteDir: "",
     },
     obsidian: { vaultDir: "" },
+    ticktick: {
+      clientId: "m5iR14msV0KXA5fDYt",
+      clientSecret: "QsjOxN217ijYZAPOH4GnZJxiyCVdp7s1",
+      redirectUri: "http://127.0.0.1:8765/callback",
+      accessToken: "",
+      defaultProjectId: "inbox",
+    },
   };
 }
 
@@ -100,20 +107,6 @@ export function normalizeGridLayoutPrefs(
     tileScale: clampLauncherTileScale(value?.tileScale ?? fallback.tileScale),
     colGap: clampInt(value?.colGap, fallback.colGap, 0, 24),
     rowGap: clampInt(value?.rowGap, fallback.rowGap, 0, 24),
-  };
-}
-
-export function normalizeGridPrefs(
-  value: Partial<GridPrefs> | undefined,
-  fallback: GridPrefs,
-  colsMin: number,
-  colsMax: number,
-  rowsMin: number,
-  rowsMax: number,
-): GridPrefs {
-  return {
-    cols: clampInt(value?.cols, fallback.cols, colsMin, colsMax),
-    rows: clampInt(value?.rows, fallback.rows, rowsMin, rowsMax),
   };
 }
 
@@ -299,6 +292,22 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
       v2ray: { ...base.integrations.v2ray, ...(raw.integrations?.v2ray ?? {}) },
       zotero: { ...base.integrations.zotero, ...(raw.integrations?.zotero ?? {}) },
       obsidian: { ...base.integrations.obsidian, ...(raw.integrations?.obsidian ?? {}) },
+      ticktick: {
+        ...base.integrations.ticktick,
+        ...(raw.integrations?.ticktick ?? {}),
+        clientId:
+          raw.integrations?.ticktick?.clientId?.trim() || base.integrations.ticktick.clientId,
+        clientSecret:
+          raw.integrations?.ticktick?.clientSecret?.trim() ||
+          base.integrations.ticktick.clientSecret,
+        redirectUri:
+          raw.integrations?.ticktick?.redirectUri?.trim() ||
+          base.integrations.ticktick.redirectUri,
+        accessToken: raw.integrations?.ticktick?.accessToken ?? "",
+        defaultProjectId:
+          raw.integrations?.ticktick?.defaultProjectId?.trim() ||
+          base.integrations.ticktick.defaultProjectId,
+      },
     },
     ai: {
       ...base.ai,

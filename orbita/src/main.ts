@@ -8,9 +8,11 @@ import { hydrateShellStore } from "./integrations/shell/store";
 import { initIntegrations, registerIntegration } from "./core/registry";
 import { shellIntegration } from "./integrations/shell";
 import { aiIntegration } from "./integrations/ai";
+import { ticktickIntegration } from "./integrations/ticktick";
 
 registerIntegration(shellIntegration);
 registerIntegration(aiIntegration);
+registerIntegration(ticktickIntegration);
 
 void (async () => {
   await initSettings();

@@ -269,7 +269,7 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
           id,
           name: data.name.trim(),
           [cfg.payloadKey]: resolvedPayload,
-        } as L;
+        } as unknown as L;
         items = items.map((e) =>
           e.id === folderId && isLauncherFolder(e)
             ? { ...e, children: [...(e as LauncherFolder<L>).children, link] }

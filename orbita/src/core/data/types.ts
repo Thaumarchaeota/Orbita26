@@ -28,10 +28,19 @@ export type ObsidianIntegration = {
   vaultDir: string;
 };
 
+export type TicktickIntegration = {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  accessToken: string;
+  defaultProjectId: string;
+};
+
 export type Integrations = {
   v2ray: V2rayIntegration;
   zotero: ZoteroIntegration;
   obsidian: ObsidianIntegration;
+  ticktick: TicktickIntegration;
 };
 
 export type ApiEntry = {

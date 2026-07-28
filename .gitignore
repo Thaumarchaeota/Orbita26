@@ -1,4 +1,5 @@
 HANDOFF.md
+roadmap.md
 调试指南.md
 
 scripts/env.ps1
@@ -13,6 +14,8 @@ dist/
 orbita/node_modules/
 orbita/dist/
 orbita/src-tauri/target/
+orbita/src-tauri/binaries/
+tools/LibreHardwareMonitor/
 orbita/src-tauri/gen/
 orbita/app-icon.png
 
@@ -27,3 +30,4 @@ desktop.ini
 
 *.log
 *.pdb
+ticktickapi.md

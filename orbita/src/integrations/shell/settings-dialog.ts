@@ -11,14 +11,16 @@ import { normalizeGridLayoutPrefs, DEFAULT_TOP_GRID, DEFAULT_DOCK_LEFT_GRID } fr
 import { SETTINGS_GEAR_SVG } from "../ai/icons";
 import { pickAppFile, pickLocalFolder } from "./adapter";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
+import { didaAuthStatus, didaConnect, didaDisconnect, invokeError } from "../ticktick/client";
 
 export function mountSettingsButton(root: HTMLElement) {
+  const mount = root.querySelector<HTMLElement>("#settingsMount") ?? root;
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "settings-btn";
   btn.title = "设置";
   btn.innerHTML = SETTINGS_GEAR_SVG;
-  root.appendChild(btn);
+  mount.appendChild(btn);
 
   const openSettings = mountSettingsDialog(root);
   btn.addEventListener("click", (e) => void openSettings(e));
@@ -114,6 +116,26 @@ function mountSettingsDialog(root: HTMLElement) {
             <button type="button" class="dialog-btn" data-action="browse-vault">浏览</button>
           </div>
         </div>
+        <div class="dialog-field">
+          <label>滴答清单</label>
+          <div class="dialog-field">
+            <label for="settingsTicktickClientId">Client ID</label>
+            <input id="settingsTicktickClientId" type="text" autocomplete="off">
+          </div>
+          <div class="dialog-field">
+            <label for="settingsTicktickClientSecret">Client Secret</label>
+            <input id="settingsTicktickClientSecret" type="password" autocomplete="off">
+          </div>
+          <div class="dialog-field">
+            <label for="settingsTicktickRedirect">Redirect URI</label>
+            <input id="settingsTicktickRedirect" type="text" autocomplete="off">
+          </div>
+          <div class="settings-path-row">
+            <button type="button" class="dialog-btn" data-action="ticktick-connect">连接</button>
+            <button type="button" class="dialog-btn" data-action="ticktick-disconnect">断开</button>
+            <span id="settingsTicktickStatus" class="settings-ticktick-status"></span>
+          </div>
+        </div>
       </div>
       <div class="dialog-actions">
         <button type="button" class="dialog-btn" data-action="cancel">取消</button>
@@ -130,6 +152,10 @@ function mountSettingsDialog(root: HTMLElement) {
   const zoteroInput = backdrop.querySelector<HTMLInputElement>("#settingsZoteroDir")!;
   const noteInput = backdrop.querySelector<HTMLInputElement>("#settingsNoteDir")!;
   const vaultInput = backdrop.querySelector<HTMLInputElement>("#settingsVaultDir")!;
+  const ticktickClientIdInput = backdrop.querySelector<HTMLInputElement>("#settingsTicktickClientId")!;
+  const ticktickClientSecretInput = backdrop.querySelector<HTMLInputElement>("#settingsTicktickClientSecret")!;
+  const ticktickRedirectInput = backdrop.querySelector<HTMLInputElement>("#settingsTicktickRedirect")!;
+  const ticktickStatusEl = backdrop.querySelector<HTMLElement>("#settingsTicktickStatus")!;
   const blockOpacityField = backdrop.querySelector<HTMLElement>("#settingsBlockOpacityField")!;
   const blockOpacityInput = backdrop.querySelector<HTMLInputElement>("#settingsBlockOpacity")!;
   const blockOpacityVal = backdrop.querySelector<HTMLElement>("#settingsBlockOpacityVal")!;
@@ -255,6 +281,12 @@ function mountSettingsDialog(root: HTMLElement) {
     zoteroInput.value = settings.integrations.zotero.dataDir;
     noteInput.value = settings.integrations.zotero.articleNoteDir;
     vaultInput.value = settings.integrations.obsidian.vaultDir;
+    ticktickClientIdInput.value = settings.integrations.ticktick.clientId;
+    ticktickClientSecretInput.value = settings.integrations.ticktick.clientSecret;
+    ticktickRedirectInput.value = settings.integrations.ticktick.redirectUri;
+    void didaAuthStatus().then(({ connected }) => {
+      ticktickStatusEl.textContent = connected ? "已连接" : "未连接";
+    });
     themeBtns.forEach((btn) => {
       btn.classList.toggle("dialog-btn-primary", btn.dataset.theme === draftTheme);
     });
@@ -318,6 +350,35 @@ function mountSettingsDialog(root: HTMLElement) {
     if (path) vaultInput.value = path;
   });
 
+  backdrop.querySelector('[data-action="ticktick-connect"]')!.addEventListener("click", async () => {
+    const current = getSettings();
+    await patchSettings({
+      integrations: {
+        ...current.integrations,
+        ticktick: {
+          clientId: ticktickClientIdInput.value.trim(),
+          clientSecret: ticktickClientSecretInput.value.trim(),
+          redirectUri: ticktickRedirectInput.value.trim(),
+          accessToken: current.integrations.ticktick.accessToken,
+          defaultProjectId: current.integrations.ticktick.defaultProjectId,
+        },
+      },
+    });
+    try {
+      await didaConnect();
+      ticktickStatusEl.textContent = "已连接";
+      window.dispatchEvent(new CustomEvent("orbita:ticktick-auth"));
+    } catch (e) {
+      alert(invokeError(e));
+    }
+  });
+
+  backdrop.querySelector('[data-action="ticktick-disconnect"]')!.addEventListener("click", async () => {
+    await didaDisconnect();
+    ticktickStatusEl.textContent = "未连接";
+    window.dispatchEvent(new CustomEvent("orbita:ticktick-auth"));
+  });
+
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(false));
   backdrop.addEventListener("click", (e) => {
     if (e.target === backdrop) void close(false);
@@ -339,6 +400,13 @@ function mountSettingsDialog(root: HTMLElement) {
           articleNoteDir: noteInput.value.trim(),
         },
         obsidian: { vaultDir: vaultInput.value.trim() },
+        ticktick: {
+          clientId: ticktickClientIdInput.value.trim(),
+          clientSecret: ticktickClientSecretInput.value.trim(),
+          redirectUri: ticktickRedirectInput.value.trim(),
+          accessToken: savedSettings.integrations.ticktick.accessToken,
+          defaultProjectId: savedSettings.integrations.ticktick.defaultProjectId,
+        },
       },
     });
     applyAppearance(next);

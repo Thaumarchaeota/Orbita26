@@ -210,7 +210,7 @@ export function bindListTreeDrag(
     if (e.button !== 0) return;
     const row = rowEl(e.target);
     if (!row) return;
-    if ((e.target as HTMLElement).closest('[data-action="delete"], [data-action="edit"]')) return;
+    if ((e.target as HTMLElement).closest('[data-action="edit"]')) return;
     pointerId = row.dataset.id ?? null;
     pointerRow = row;
     startX = e.clientX;

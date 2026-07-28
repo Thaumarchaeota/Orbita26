@@ -7,7 +7,9 @@ use tauri_plugin_dialog::DialogExt;
 mod ai;
 mod app_icon;
 mod data;
+mod dida;
 mod favicon;
+mod hwmon;
 mod obsidian;
 mod window_shell;
 mod zotero;
@@ -319,6 +321,98 @@ fn ai_chat_abort(request_id: String) {
     ai::abort(request_id);
 }
 
+#[tauri::command]
+fn get_system_stats() -> hwmon::SystemStats {
+    hwmon::read_stats()
+}
+
+#[tauri::command]
+fn dida_auth_status(app: tauri::AppHandle) -> Result<dida::DidaAuthStatus, String> {
+    dida::dida_auth_status(app)
+}
+
+#[tauri::command]
+fn dida_begin_oauth(app: tauri::AppHandle) -> Result<String, String> {
+    dida::dida_begin_oauth(app)
+}
+
+#[tauri::command]
+async fn dida_finish_oauth(app: tauri::AppHandle) -> Result<dida::DidaAuthStatus, String> {
+    tauri::async_runtime::spawn_blocking(move || dida::dida_finish_oauth(app))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+fn dida_connect(app: tauri::AppHandle) -> Result<dida::DidaAuthStatus, String> {
+    dida::dida_connect(app)
+}
+
+#[tauri::command]
+fn dida_disconnect(app: tauri::AppHandle) -> Result<dida::DidaAuthStatus, String> {
+    dida::dida_disconnect(app)
+}
+
+#[tauri::command]
+async fn dida_list_projects(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || dida::dida_list_projects(app))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn dida_filter_tasks(
+    app: tauri::AppHandle,
+    req: dida::DidaFilterTasksRequest,
+) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || dida::dida_filter_tasks(app, req))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn dida_create_task(
+    app: tauri::AppHandle,
+    req: dida::DidaCreateTaskRequest,
+) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || dida::dida_create_task(app, req))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn dida_update_task(
+    app: tauri::AppHandle,
+    task_id: String,
+    req: dida::DidaUpdateTaskRequest,
+) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || dida::dida_update_task(app, task_id, req))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn dida_complete_task(
+    app: tauri::AppHandle,
+    project_id: String,
+    task_id: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || dida::dida_complete_task(app, project_id, task_id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn dida_delete_task(
+    app: tauri::AppHandle,
+    project_id: String,
+    task_id: String,
+) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || dida::dida_delete_task(app, project_id, task_id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
         let _ = window_shell::fit_work_area(&win);
@@ -392,6 +486,8 @@ pub fn run() {
                 }
             });
 
+            hwmon::init();
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -426,8 +522,21 @@ pub fn run() {
             write_local_files,
             migrate_legacy_caches,
             ai_chat_stream,
-            ai_chat_abort
+            ai_chat_abort,
+            get_system_stats,
+            dida_auth_status,
+            dida_begin_oauth,
+            dida_finish_oauth,
+            dida_connect,
+            dida_disconnect,
+            dida_list_projects,
+            dida_filter_tasks,
+            dida_create_task,
+            dida_update_task,
+            dida_complete_task,
+            dida_delete_task
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|_app, _event| {});
 }

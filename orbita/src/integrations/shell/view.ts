@@ -19,6 +19,7 @@ import { mountLocalPanel } from "./local-panel";
 import { mountSettingsButton } from "./settings-dialog";
 import { mountFolderOverlay } from "./folder-overlay";
 import { mountAppLauncherGrid, mountBookmarkLauncherGrid } from "./launcher-grid";
+import { mountStatsBar } from "./stats-bar";
 
 const BOOKMARK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
 const APP_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
@@ -183,6 +184,23 @@ export function mountShell(root: HTMLElement) {
       </header>
       <main class="shell-body" id="shellBody"></main>
     </div>
+    <div class="top-tray">
+      <div class="sys-stats" id="sysStats">
+        <div class="sys-stat-item sys-stat-fps">
+          <span class="sys-stat-label">FPS</span>
+          <span class="sys-stat-val" id="statFps">--</span>
+        </div>
+        <div class="sys-stat-item">
+          <span class="sys-stat-label">CPU</span>
+          <span class="sys-stat-val" id="statCpu">--</span>
+        </div>
+        <div class="sys-stat-item">
+          <span class="sys-stat-label">MEM</span>
+          <span class="sys-stat-val" id="statMem">--</span>
+        </div>
+      </div>
+      <div id="settingsMount"></div>
+    </div>
   `;
 
   const timeEl = root.querySelector<HTMLElement>("#time")!;
@@ -192,6 +210,7 @@ export function mountShell(root: HTMLElement) {
   const input = root.querySelector<HTMLInputElement>("#searchInput")!;
 
   startClock(timeEl, dateEl);
+  mountStatsBar(root);
   renderEngines(enginesEl, indicator);
   input.placeholder = LBL_SEARCH_IN(getCurrentEngine().name);
 

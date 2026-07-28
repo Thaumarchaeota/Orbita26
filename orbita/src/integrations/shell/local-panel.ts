@@ -51,26 +51,25 @@ function moveSegmentIndicator(indicator: HTMLElement, btn: HTMLButtonElement | n
   indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
 }
 
-function rowActionBtns(deleteMode: boolean): string {
-  if (!deleteMode) return "";
-  return `<span class="local-tree-edit" data-action="edit" aria-label="编辑">${EDIT_SVG}</span><span class="local-tree-delete" data-action="delete" aria-label="删除">×</span>`;
+function rowEditBtn(): string {
+  return `<span class="local-tree-edit" data-action="edit" aria-label="编辑">${EDIT_SVG}</span>`;
 }
 
 function iconStyle(color?: string): string {
   return color ? ` style="--icon-color:${escAttr(color)}"` : "";
 }
 
-function renderFileRow(item: LocalEntry, deleteMode: boolean, depth: number, expanded: Set<string>): string {
+function renderFileRow(item: LocalEntry, depth: number, expanded: Set<string>): string {
   if (item.kind === "group") {
     const open = expanded.has(item.id);
-    const actions = rowActionBtns(deleteMode);
+    const actions = rowEditBtn();
     const iconAttr = iconStyle(item.color);
     const childrenHtml = item.children
-      .map((c) => renderFileRow(c, deleteMode, depth + 1, expanded))
+      .map((c) => renderFileRow(c, depth + 1, expanded))
       .join("");
     return `
       <div class="local-tree-group" data-group-id="${escAttr(item.id)}">
-        <button type="button" class="local-tree-row local-tree-folder${deleteMode ? " is-editing" : ""}${open ? " is-expanded" : ""}" data-id="${escAttr(item.id)}" data-kind="group" style="--depth:${depth}" title="${escAttr(item.name)}">
+        <button type="button" class="local-tree-row local-tree-folder${open ? " is-expanded" : ""}" data-id="${escAttr(item.id)}" data-kind="group" style="--depth:${depth}" title="${escAttr(item.name)}">
           ${actions}
           <span class="local-tree-twistie${open ? " is-open" : ""}">${CHEVRON_SVG}</span>
           <span class="local-tree-icon"${iconAttr}>${open ? FOLDER_OPEN_SVG : FOLDER_SVG}</span>
@@ -84,10 +83,10 @@ function renderFileRow(item: LocalEntry, deleteMode: boolean, depth: number, exp
     `;
   }
   const icon = item.kind === "folder" ? FOLDER_SVG : FILE_SVG;
-  const actions = rowActionBtns(deleteMode);
+  const actions = rowEditBtn();
   const iconAttr = iconStyle(item.color);
   return `
-    <button type="button" class="local-tree-row local-tree-leaf${deleteMode ? " is-editing" : ""}" data-id="${escAttr(item.id)}" data-kind="${escAttr(item.kind)}" style="--depth:${depth}" title="${escAttr(item.path)}">
+    <button type="button" class="local-tree-row local-tree-leaf" data-id="${escAttr(item.id)}" data-kind="${escAttr(item.kind)}" style="--depth:${depth}" title="${escAttr(item.path)}">
       ${actions}
       <span class="local-tree-twistie is-leaf"></span>
       <span class="local-tree-icon"${iconAttr}>${icon}</span>
@@ -97,9 +96,9 @@ function renderFileRow(item: LocalEntry, deleteMode: boolean, depth: number, exp
   `;
 }
 
-function renderTree(items: LocalEntry[], deleteMode: boolean, expanded: Set<string>): string {
+function renderTree(items: LocalEntry[], expanded: Set<string>): string {
   if (!items.length) return `<div class="local-tree-empty">暂无文件</div>`;
-  return items.map((item) => renderFileRow(item, deleteMode, 0, expanded)).join("");
+  return items.map((item) => renderFileRow(item, 0, expanded)).join("");
 }
 
 function positionAddMenu(root: HTMLElement) {
@@ -154,7 +153,6 @@ function mountFileList(
   const listEl = container.querySelector<HTMLElement>("#localFileList")!;
 
   let items = loadLocalFiles();
-  let deleteMode = false;
   let addMenuOpen = false;
   const expanded = new Set<string>();
   let addParentId: string | null = null;
@@ -168,8 +166,7 @@ function mountFileList(
 
   const paint = () => {
     if (signal.aborted) return;
-    listEl.classList.toggle("is-delete-mode", deleteMode);
-    listEl.innerHTML = renderTree(items, deleteMode, expanded);
+    listEl.innerHTML = renderTree(items, expanded);
     if (addMenuOpen) {
       const btn = explorerEl.querySelector<HTMLElement>("#localAddBtn");
       const menu = explorerEl.querySelector<HTMLElement>("#localAddMenu");
@@ -179,12 +176,6 @@ function mountFileList(
         setPopoverOrigin(menu, btn);
       }
     }
-  };
-
-  const exitDeleteMode = () => {
-    if (!deleteMode) return;
-    deleteMode = false;
-    paint();
   };
 
   const setItems = (next: LocalEntry[]) => {
@@ -224,7 +215,6 @@ function mountFileList(
       const addBtn = (e.target as HTMLElement).closest<HTMLElement>("#localAddBtn");
       if (addBtn) {
         e.stopPropagation();
-        if (deleteMode) exitDeleteMode();
         const menu = explorerEl.querySelector<HTMLElement>("#localAddMenu");
         if (!menu) return;
         if (isPopoverOpen(menu)) {
@@ -271,30 +261,12 @@ function mountFileList(
           );
           if (data && !signal.aborted) setItems(updateLocalFile(loc.node.id, data.name, data.path, data.color));
         }
-        deleteMode = false;
-        paint();
-        return;
-      }
-
-      const deleteBtn = (e.target as HTMLElement).closest<HTMLElement>('[data-action="delete"]');
-      if (deleteBtn) {
-        e.stopPropagation();
-        const row = deleteBtn.closest<HTMLButtonElement>(".local-tree-row");
-        if (!row?.dataset.id) return;
-        const loc = locateLocalEntry(items, row.dataset.id);
-        if (!loc) return;
-        if (await askDelete(loc.node.name, deleteBtn)) {
-          setItems(removeLocalFile(row.dataset.id));
-        }
-        deleteMode = false;
-        paint();
         return;
       }
 
       const row = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-tree-row[data-id]");
       if (!row || !listEl.contains(row)) return;
       if (consumeRowClickSuppress(listEl)) return;
-      if (deleteMode) return;
       if (row.dataset.kind === "group") {
         const id = row.dataset.id!;
         toggleGroupRow(row, id, !expanded.has(id), expanded);
@@ -309,13 +281,16 @@ function mountFileList(
 
   listEl.addEventListener(
     "contextmenu",
-    (e) => {
+    async (e) => {
       const row = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-tree-row");
-      if (!row) return;
+      if (!row?.dataset.id) return;
       e.preventDefault();
-      void closeAddMenu();
-      deleteMode = true;
-      paint();
+      await closeAddMenu();
+      const loc = locateLocalEntry(items, row.dataset.id);
+      if (!loc) return;
+      if (await askDelete(loc.node.name, row)) {
+        setItems(removeLocalFile(row.dataset.id));
+      }
     },
     { signal },
   );
@@ -325,9 +300,6 @@ function mountFileList(
     (e) => {
       if (explorerEl.querySelector("#localAddWrap")?.contains(e.target as Node)) return;
       if (addMenuOpen) void closeAddMenu();
-      if (!deleteMode) return;
-      if (listEl.contains(e.target as Node)) return;
-      exitDeleteMode();
     },
     { signal },
   );
@@ -345,7 +317,6 @@ function mountFileList(
     (e) => {
       if (e.key !== "Escape") return;
       void closeAddMenu();
-      exitDeleteMode();
     },
     { signal },
   );

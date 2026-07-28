@@ -40,6 +40,7 @@ export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSet
       v2ray: { ...current.integrations.v2ray, ...(patch.integrations?.v2ray ?? {}) },
       zotero: { ...current.integrations.zotero, ...(patch.integrations?.zotero ?? {}) },
       obsidian: { ...current.integrations.obsidian, ...(patch.integrations?.obsidian ?? {}) },
+      ticktick: { ...current.integrations.ticktick, ...(patch.integrations?.ticktick ?? {}) },
     },
     ai: {
       ...current.ai,
