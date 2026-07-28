@@ -74,8 +74,6 @@ fn chat_url(base_url: &str) -> String {
     let base = base_url.trim().trim_end_matches('/');
     if base.ends_with("/chat/completions") {
         base.to_string()
-    } else if base.ends_with("/v1") {
-        format!("{base}/chat/completions")
     } else {
         format!("{base}/chat/completions")
     }

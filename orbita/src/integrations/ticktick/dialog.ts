@@ -99,9 +99,10 @@ export function mountTaskDialog(root: HTMLElement) {
   };
 
   const close = async (value: TaskDialogResult) => {
-    if (saving) return;
+    if (saving && value === null) return;
     await closeAllPickers(pickers);
     await motion.close();
+    saving = false;
     resolvePending?.(value);
     resolvePending = null;
   };

@@ -105,14 +105,30 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     return escHtml(text).replace(/\n/g, "<br>");
   }
 
+  let streamingBubble: HTMLElement | null = null;
+
   function renderMessages() {
     if (!conversation) return;
+    streamingBubble = null;
     messagesEl.innerHTML = conversation.messages
       .map(
         (m) =>
           `<div class="ai-msg ai-msg-${m.role}"><div class="ai-msg-bubble">${escapeHtml(m.content)}</div></div>`,
       )
       .join("");
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function updateStreamingBubble(content: string) {
+    if (!streamingBubble) {
+      const bubbles = messagesEl.querySelectorAll<HTMLElement>(".ai-msg-bubble");
+      streamingBubble = bubbles[bubbles.length - 1] ?? null;
+    }
+    if (!streamingBubble) {
+      renderMessages();
+      return;
+    }
+    streamingBubble.innerHTML = escapeHtml(content);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
@@ -408,10 +424,10 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
       (event) => {
         if (event.type === "chunk") {
           assistant.content += event.content;
-          renderMessages();
+          updateStreamingBubble(assistant.content);
         } else if (event.type === "error") {
           assistant.content = event.message;
-          renderMessages();
+          updateStreamingBubble(assistant.content);
         }
       },
     );

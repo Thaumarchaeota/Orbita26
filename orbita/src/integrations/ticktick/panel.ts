@@ -269,19 +269,12 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
 
   const visibleTasks = () => filterTasks(allTasks, selectedProjectId, selectedDay);
 
-  const paintTasks = () => {
-    const list = visibleTasks();
-    if (!list.length) {
-      taskListEl.innerHTML = `<div class="ticktick-empty">暂无任务</div>`;
-      return;
-    }
-    taskListEl.innerHTML = list
-      .map((t) => {
-        const due = formatTaskDue(t.dueDate);
-        const overdue = due === "已过期";
-        const key = taskKey(t.projectId, t.id);
-        const completing = pendingComplete.has(key);
-        return `
+  const taskRowHtml = (t: DidaTask) => {
+    const due = formatTaskDue(t.dueDate);
+    const overdue = due === "已过期";
+    const key = taskKey(t.projectId, t.id);
+    const completing = pendingComplete.has(key);
+    return `
           <div class="ticktick-task-row ${priorityClass(t.priority)}${overdue ? " is-overdue" : ""}${completing ? " is-completing" : ""}" data-project="${escAttr(t.projectId)}" data-id="${escAttr(t.id)}">
             <button type="button" class="ticktick-task-check" aria-label="完成" data-action="complete">
               <span class="ticktick-task-check-box">${CHECK_MARK_SVG}</span>
@@ -291,8 +284,68 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
             <button type="button" class="ticktick-task-edit" data-action="edit" title="编辑">${EDIT_SVG}</button>
           </div>
         `;
-      })
-      .join("");
+  };
+
+  const rowMatchesTask = (row: HTMLElement, t: DidaTask) => {
+    const due = formatTaskDue(t.dueDate);
+    const overdue = due === "已过期";
+    const key = taskKey(t.projectId, t.id);
+    const completing = pendingComplete.has(key);
+    const title = row.querySelector(".ticktick-task-title");
+    const dueEl = row.querySelector(".ticktick-task-due");
+    return (
+      row.classList.contains("is-completing") === completing &&
+      row.classList.contains("is-overdue") === overdue &&
+      title?.textContent === t.title &&
+      dueEl?.textContent === due
+    );
+  };
+
+  const syncTaskRows = (list: DidaTask[]) => {
+    if (!list.length) {
+      taskListEl.innerHTML = `<div class="ticktick-empty">暂无任务</div>`;
+      return;
+    }
+    taskListEl.querySelector(".ticktick-empty")?.remove();
+
+    let cursor = taskListEl.firstElementChild as HTMLElement | null;
+    for (const t of list) {
+      const html = taskRowHtml(t);
+      const key = taskKey(t.projectId, t.id);
+      while (cursor && !cursor.classList.contains("ticktick-task-row")) {
+        cursor.remove();
+        cursor = taskListEl.firstElementChild as HTMLElement | null;
+      }
+      if (!cursor) {
+        taskListEl.insertAdjacentHTML("beforeend", html);
+        continue;
+      }
+      const curKey = taskKey(cursor.dataset.project!, cursor.dataset.id!);
+      if (curKey === key) {
+        if (!rowMatchesTask(cursor, t)) cursor.outerHTML = html;
+        cursor = cursor.nextElementSibling as HTMLElement | null;
+        continue;
+      }
+      const existing = taskListEl.querySelector<HTMLElement>(
+        `.ticktick-task-row[data-project="${escAttr(t.projectId)}"][data-id="${escAttr(t.id)}"]`,
+      );
+      if (existing) {
+        if (!rowMatchesTask(existing, t)) existing.outerHTML = html;
+        taskListEl.insertBefore(existing, cursor);
+      } else {
+        cursor.insertAdjacentHTML("beforebegin", html);
+      }
+      cursor = cursor.nextElementSibling as HTMLElement | null;
+    }
+    while (cursor) {
+      const next = cursor.nextElementSibling as HTMLElement | null;
+      if (cursor.classList.contains("ticktick-task-row")) cursor.remove();
+      cursor = next;
+    }
+  };
+
+  const paintTasks = () => {
+    syncTaskRows(visibleTasks());
   };
 
   const clearPending = (key: string) => {

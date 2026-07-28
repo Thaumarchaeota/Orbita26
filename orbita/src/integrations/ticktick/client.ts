@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauri } from "../../core/data/client";
 import { openUrl } from "../shell/adapter";
 import type {
   DidaAuthStatus,
@@ -7,10 +8,6 @@ import type {
   DidaTask,
   DidaUpdateTaskInput,
 } from "./types";
-
-function isTauri() {
-  return "__TAURI_INTERNALS__" in window;
-}
 
 export function invokeError(e: unknown): string {
   if (e instanceof Error) return e.message;

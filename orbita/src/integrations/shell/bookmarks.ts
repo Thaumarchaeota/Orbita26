@@ -16,10 +16,7 @@ const DEFAULT_BOOKMARKS: BookmarkEntry[] = [
   { kind: "link", id: "notion", name: "Notion", url: "https://www.notion.so" },
 ];
 
-function normalizeUrl(url: string): string {
-  const t = url.trim();
-  return t.startsWith("http") ? t : `https://${t}`;
-}
+import { normalizeUrl } from "../../core/url";
 
 const store = createLauncherStore<BookmarkLink, BookmarkEntry>({
   name: "bookmarks",

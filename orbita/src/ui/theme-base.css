@@ -1,0 +1,152 @@
+﻿* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --text: #1a3a5c;
+  --time: #1565c0;
+  --muted: #6b8caf;
+  --surface: rgba(255,255,255,.55);
+  --surface-active: rgba(255,255,255,.75);
+  --border: rgba(21,101,192,.14);
+  --border-active: rgba(21,101,192,.32);
+  --shadow: rgba(21,101,192,.08);
+  --input-ph: #8fa8be;
+  --btn-bg: rgba(21,101,192,.08);
+  --btn-hover: #1565c0;
+  --focus: rgba(21,101,192,.4);
+  --toggle-bg: rgba(255,255,255,.5);
+  --toggle-color: #1565c0;
+  --github: #24292f;
+  --glass-hover-bg: rgba(120, 140, 170, 0.1);
+  --glass-active-bg: rgba(120, 140, 170, 0.15);
+  --glass-blur: 28px;
+  --glass-blur-strong: 40px;
+  --glass-blur-scrim: 26px;
+  --glass-saturate: 1.45;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --spring: cubic-bezier(.34, 1.2, .64, 1);
+  --spring-ios: cubic-bezier(.32, .72, 0, 1);
+  --spring-bounce: cubic-bezier(.34, 1.56, .64, 1);
+  --top-tile-scale: 1;
+  --top-tile-h: calc(80px * var(--top-tile-scale));
+  --top-avatar-size: calc(40px * var(--top-tile-scale));
+  --top-name-size: calc(11px * var(--top-tile-scale));
+  --top-avatar-font-size: calc(16px * var(--top-tile-scale));
+  --top-avatar-icon-size: calc(18px * var(--top-tile-scale));
+  --top-grid-col-gap: 8px;
+  --top-grid-row-gap: 8px;
+  --dock-tile-scale: 1;
+  --dock-tile-h: calc(80px * var(--dock-tile-scale));
+  --dock-avatar-size: calc(40px * var(--dock-tile-scale));
+  --dock-name-size: calc(11px * var(--dock-tile-scale));
+  --dock-avatar-font-size: calc(16px * var(--dock-tile-scale));
+  --dock-avatar-icon-size: calc(18px * var(--dock-tile-scale));
+  --dock-grid-col-gap: 8px;
+  --dock-grid-row-gap: 8px;
+  --bookmarks-cols: 6;
+  --bookmarks-rows: 3;
+  --apps-cols: 2;
+  --apps-rows: 5;
+  --local-dock-cols: 4;
+  --dock-left-span: 3;
+  --launcher-dock-cols: 7;
+  --bookmarks-scroll-h: calc(var(--top-tile-h) * var(--bookmarks-rows) + var(--top-grid-row-gap) * (var(--bookmarks-rows) - 1));
+  --launcher-apps-scroll-h: calc(var(--dock-tile-h) * var(--apps-rows) + var(--dock-grid-row-gap) * (var(--apps-rows) - 1));
+  --local-segment-block-h: 30px;
+}
+[data-theme="dark"] {
+  --text: rgba(255,255,255,.92);
+  --time: #e0e0e8;
+  --muted: rgba(255,255,255,.45);
+  --surface: rgba(255,255,255,.06);
+  --surface-active: rgba(255,255,255,.14);
+  --border: rgba(255,255,255,.08);
+  --border-active: rgba(255,255,255,.2);
+  --shadow: rgba(0,0,0,.2);
+  --input-ph: rgba(255,255,255,.28);
+  --btn-bg: rgba(255,255,255,.1);
+  --btn-hover: rgba(42,171,238,.6);
+  --focus: rgba(42,171,238,.45);
+  --toggle-bg: rgba(255,255,255,.08);
+  --toggle-color: rgba(255,255,255,.7);
+  --github: #e6edf3;
+  --glass-hover-bg: rgba(255, 255, 255, 0.05);
+  --glass-active-bg: rgba(255, 255, 255, 0.08);
+  --glass-blur: 28px;
+  --glass-blur-strong: 40px;
+  --glass-blur-scrim: 26px;
+  --glass-saturate: 1.45;
+}
+[data-theme="transparent-light"] {
+  --text: rgba(255, 255, 255, 0.96);
+  --time: rgba(255, 255, 255, 0.98);
+  --muted: rgba(255, 255, 255, 0.68);
+  --surface: rgba(255, 255, 255, 0.1);
+  --surface-active: rgba(255, 255, 255, 0.15);
+  --border: rgba(255, 255, 255, 0.16);
+  --border-active: rgba(255, 255, 255, 0.3);
+  --shadow: rgba(0, 0, 0, 0.22);
+  --input-ph: rgba(255, 255, 255, 0.46);
+  --btn-bg: rgba(255, 255, 255, 0.14);
+  --btn-hover: rgba(255, 255, 255, 0.32);
+  --focus: rgba(255, 255, 255, 0.48);
+  --toggle-bg: rgba(255, 255, 255, 0.1);
+  --toggle-color: rgba(255, 255, 255, 0.94);
+  --github: #f0f3f6;
+  --glass-hover-bg: rgba(255, 255, 255, 0.1);
+  --glass-active-bg: rgba(255, 255, 255, 0.14);
+  --glass-blur: 32px;
+  --glass-blur-strong: 44px;
+  --glass-blur-scrim: 30px;
+  --glass-saturate: 1.5;
+}
+[data-theme="transparent-dark"] {
+  --text: rgba(255, 255, 255, 0.92);
+  --time: #e0e0e8;
+  --muted: rgba(255, 255, 255, 0.5);
+  --surface: rgba(12, 18, 32, 0.42);
+  --surface-active: rgba(12, 18, 32, 0.56);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-active: rgba(255, 255, 255, 0.22);
+  --shadow: rgba(0, 0, 0, 0.32);
+  --input-ph: rgba(255, 255, 255, 0.32);
+  --btn-bg: rgba(255, 255, 255, 0.1);
+  --btn-hover: rgba(42, 171, 238, 0.55);
+  --focus: rgba(42, 171, 238, 0.45);
+  --toggle-bg: rgba(255, 255, 255, 0.08);
+  --toggle-color: rgba(255, 255, 255, 0.82);
+  --github: #e6edf3;
+  --glass-hover-bg: rgba(255, 255, 255, 0.06);
+  --glass-active-bg: rgba(255, 255, 255, 0.1);
+  --glass-blur: 32px;
+  --glass-blur-strong: 44px;
+  --glass-blur-scrim: 30px;
+  --glass-saturate: 1.5;
+}
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  transition: opacity .6s var(--ease);
+}
+.bg-light { background: linear-gradient(160deg, #c8d9ea, #d8e4ef 50%, #dce6f0); opacity: 1; }
+.bg-dark { background: radial-gradient(ellipse at 50% 0%, #1a2744, #090b10 70%); opacity: 0; }
+[data-theme="dark"] .bg-light { opacity: 0; }
+[data-theme="dark"] .bg-dark { opacity: 1; }
+[data-theme="transparent-light"] .bg-light,
+[data-theme="transparent-light"] .bg-dark,
+[data-theme="transparent-dark"] .bg-light,
+[data-theme="transparent-dark"] .bg-dark { opacity: 0; }
+html, body, #app {
+  background: transparent;
+}
+body {
+  height: 100vh;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  transition: color .5s var(--ease);
+}
+#app {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}

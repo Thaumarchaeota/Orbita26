@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { isTauri } from "../../core/data/client";
 import type { ApiEntry } from "./config";
 
 export type ChatMessage = {
@@ -18,7 +19,7 @@ export async function chatStream(
   model: string,
   onEvent: (event: AiStreamEvent) => void,
 ): Promise<void> {
-  if (!("__TAURI_INTERNALS__" in window)) {
+  if (!isTauri()) {
     onEvent({ type: "error", message: "需使用 dev.bat 运行" });
     return;
   }
@@ -38,6 +39,6 @@ export async function chatStream(
 }
 
 export async function abortChat(requestId: string): Promise<void> {
-  if (!("__TAURI_INTERNALS__" in window)) return;
+  if (!isTauri()) return;
   await invoke("ai_chat_abort", { requestId });
 }

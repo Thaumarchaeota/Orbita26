@@ -1,6 +1,6 @@
 import { escAttr, escHtml } from "../../core/html";
-import { closePopover, crossfadeSwap, isPopoverOpen, openPopover, setPopoverOrigin } from "../../ui/motion";
-import { openLocalPath, pickLocalFile, pickLocalFolder } from "./adapter";
+import { crossfadeSwap } from "../../ui/motion";
+import { openLocalPath, openWithCursor, pickLocalFile, pickLocalFolder, getFileTypeIcons, searchEverything, type EverythingHit } from "./adapter";
 import { mountLocalEntryDialog } from "./dialog";
 import type { LocalEntry } from "../../core/data/types";
 import {
@@ -17,12 +17,10 @@ import {
 import { bindListTreeDrag, consumeRowClickSuppress } from "./list-tree-drag";
 import { locateLocalEntry, moveLocalNode } from "./local-tree";
 import { setLocalTab, shellStore, type LocalTab } from "./store";
+import { FOLDER_OPEN_SVG, FOLDER_SVG, TOOLBAR_ADD_FILE_SVG, TOOLBAR_ADD_FOLDER_SVG, TOOLBAR_ADD_GROUP_SVG, applyShellIcon, localItemIcon } from "./local-icons";
 import { EDIT_SVG } from "./tiles";
 
 const LOCAL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-7l-2-2H4a1 1 0 0 0-1 1z"/></svg>`;
-const FILE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-const FOLDER_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-7l-2-2H4a1 1 0 0 0-1 1z"/></svg>`;
-const PLUS_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 const ARTICLE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
 const NOTE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 const REFRESH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
@@ -33,16 +31,13 @@ const LOCAL_TABS: { id: LocalTab; label: string }[] = [
   { id: "note", label: "笔记" },
 ];
 
-const GROUP_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>`;
 const CHEVRON_SVG = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>`;
-const FOLDER_OPEN_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2 2h12a2 2 0 0 1 2 2v1"/><path d="M5 19h14a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2H9l-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg>`;
+const CURSOR_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
 
-const ADD_MENU_HTML = `
-  <div class="local-add-menu motion-popover" id="localAddMenu">
-    <button type="button" data-kind="file">${FILE_SVG}文件</button>
-    <button type="button" data-kind="folder">${FOLDER_SVG}文件夹</button>
-    <button type="button" data-kind="group">${GROUP_SVG}分组</button>
-  </div>
+const ADD_ACTIONS_HTML = `
+  <button type="button" class="local-explorer-add" data-add-kind="file" title="添加文件" aria-label="添加文件">${TOOLBAR_ADD_FILE_SVG}</button>
+  <button type="button" class="local-explorer-add" data-add-kind="folder" title="添加文件夹" aria-label="添加文件夹">${TOOLBAR_ADD_FOLDER_SVG}</button>
+  <button type="button" class="local-explorer-add" data-add-kind="group" title="添加分组" aria-label="添加分组">${TOOLBAR_ADD_GROUP_SVG}</button>
 `;
 
 function moveSegmentIndicator(indicator: HTMLElement, btn: HTMLButtonElement | null) {
@@ -52,7 +47,16 @@ function moveSegmentIndicator(indicator: HTMLElement, btn: HTMLButtonElement | n
 }
 
 function rowEditBtn(): string {
-  return `<span class="local-tree-edit" data-action="edit" aria-label="编辑">${EDIT_SVG}</span>`;
+  return `<span class="local-tree-action local-tree-edit" data-action="edit" aria-label="编辑">${EDIT_SVG}</span>`;
+}
+
+function rowCursorBtn(): string {
+  return `<span class="local-tree-action local-tree-cursor" data-action="cursor" aria-label="用 Cursor 打开">${CURSOR_SVG}</span>`;
+}
+
+function rowActions(item: LocalEntry): string {
+  if (item.kind === "folder") return rowCursorBtn() + rowEditBtn();
+  return rowEditBtn();
 }
 
 function iconStyle(color?: string): string {
@@ -62,7 +66,7 @@ function iconStyle(color?: string): string {
 function renderFileRow(item: LocalEntry, depth: number, expanded: Set<string>): string {
   if (item.kind === "group") {
     const open = expanded.has(item.id);
-    const actions = rowEditBtn();
+    const actions = rowActions(item);
     const iconAttr = iconStyle(item.color);
     const childrenHtml = item.children
       .map((c) => renderFileRow(c, depth + 1, expanded))
@@ -72,7 +76,7 @@ function renderFileRow(item: LocalEntry, depth: number, expanded: Set<string>): 
         <button type="button" class="local-tree-row local-tree-folder${open ? " is-expanded" : ""}" data-id="${escAttr(item.id)}" data-kind="group" style="--depth:${depth}" title="${escAttr(item.name)}">
           ${actions}
           <span class="local-tree-twistie${open ? " is-open" : ""}">${CHEVRON_SVG}</span>
-          <span class="local-tree-icon"${iconAttr}>${open ? FOLDER_OPEN_SVG : FOLDER_SVG}</span>
+          <span class="local-tree-icon local-item-icon is-folder"${iconAttr}>${open ? FOLDER_OPEN_SVG : FOLDER_SVG}</span>
           <span class="local-tree-label">${escHtml(item.name)}</span>
         </button>
         <div class="local-tree-children-wrap${open ? " is-open" : ""}">
@@ -82,14 +86,14 @@ function renderFileRow(item: LocalEntry, depth: number, expanded: Set<string>): 
       </div>
     `;
   }
-  const icon = item.kind === "folder" ? FOLDER_SVG : FILE_SVG;
-  const actions = rowEditBtn();
+  const iconKind = item.kind === "folder" ? "folder" : "file";
+  const actions = rowActions(item);
   const iconAttr = iconStyle(item.color);
   return `
-    <button type="button" class="local-tree-row local-tree-leaf" data-id="${escAttr(item.id)}" data-kind="${escAttr(item.kind)}" style="--depth:${depth}" title="${escAttr(item.path)}">
+    <button type="button" class="local-tree-row local-tree-leaf" data-id="${escAttr(item.id)}" data-kind="${escAttr(item.kind)}" data-path="${escAttr(item.path)}" style="--depth:${depth}">
       ${actions}
       <span class="local-tree-twistie is-leaf"></span>
-      <span class="local-tree-icon"${iconAttr}>${icon}</span>
+      ${localItemIcon(iconKind, "local-tree-icon", iconAttr)}
       <span class="local-tree-label">${escHtml(item.name)}</span>
     </button>
     <div class="local-tree-after-slot" data-target-id="${escAttr(item.id)}" aria-hidden="true"></div>
@@ -101,33 +105,41 @@ function renderTree(items: LocalEntry[], expanded: Set<string>): string {
   return items.map((item) => renderFileRow(item, 0, expanded)).join("");
 }
 
-function positionAddMenu(root: HTMLElement) {
-  const menu = root.querySelector<HTMLElement>("#localAddMenu");
-  const btn = root.querySelector<HTMLElement>("#localAddBtn");
-  if (!menu || !btn) return;
-  const rect = btn.getBoundingClientRect();
-  const menuH = menu.offsetHeight || 36;
-  const spaceAbove = rect.top;
-  const spaceBelow = window.innerHeight - rect.bottom;
-  menu.style.position = "fixed";
-  menu.style.left = `${rect.left}px`;
-  menu.style.right = "auto";
-  menu.style.bottom = "auto";
-  if (spaceAbove >= menuH + 4 || spaceAbove >= spaceBelow) {
-    menu.style.top = `${rect.top - menuH - 4}px`;
-  } else {
-    menu.style.top = `${rect.bottom + 4}px`;
-  }
+function buildIdPathMap(items: LocalEntry[]): Map<string, string> {
+  const map = new Map<string, string>();
+  const walk = (nodes: LocalEntry[]) => {
+    for (const node of nodes) {
+      if (node.kind === "group") walk(node.children);
+      else map.set(node.id, node.path);
+    }
+  };
+  walk(items);
+  return map;
 }
 
-function resetAddMenu(root: HTMLElement) {
-  const menu = root.querySelector<HTMLElement>("#localAddMenu");
-  if (!menu) return;
-  menu.style.position = "";
-  menu.style.left = "";
-  menu.style.top = "";
-  menu.style.right = "";
-  menu.style.bottom = "";
+function applyTreeIcons(
+  listEl: HTMLElement,
+  idPath: Map<string, string>,
+  icons: Map<string, string>,
+) {
+  for (const row of listEl.querySelectorAll<HTMLElement>(".local-tree-leaf")) {
+    const id = row.dataset.id;
+    if (!id) continue;
+    const path = idPath.get(id);
+    const url = path ? icons.get(path) : undefined;
+    if (url) applyShellIcon(row, url);
+  }
+}
+function collectIconItems(items: LocalEntry[]): Pick<EverythingHit, "path" | "isDir">[] {
+  const out: Pick<EverythingHit, "path" | "isDir">[] = [];
+  const walk = (nodes: LocalEntry[]) => {
+    for (const node of nodes) {
+      if (node.kind === "group") walk(node.children);
+      else out.push({ path: node.path, isDir: node.kind === "folder" });
+    }
+  };
+  walk(items);
+  return out;
 }
 
 function toggleGroupRow(row: HTMLElement, id: string, open: boolean, expanded: Set<string>) {
@@ -147,34 +159,130 @@ function mountFileList(
   container: HTMLElement,
   promptEntry: ReturnType<typeof mountLocalEntryDialog>,
   askDelete: (name: string, trigger: HTMLElement) => Promise<boolean>,
+  askAddFavorite: (name: string, trigger: HTMLElement) => Promise<boolean>,
   signal: AbortSignal,
 ) {
   const explorerEl = container.querySelector<HTMLElement>("#localExplorer")!;
   const listEl = container.querySelector<HTMLElement>("#localFileList")!;
+  const searchEl = explorerEl.querySelector<HTMLInputElement>("#localFileSearch")!;
 
   let items = loadLocalFiles();
-  let addMenuOpen = false;
   const expanded = new Set<string>();
   let addParentId: string | null = null;
-
-  const closeAddMenu = async () => {
-    addMenuOpen = false;
-    const menu = explorerEl.querySelector<HTMLElement>("#localAddMenu");
-    if (menu && isPopoverOpen(menu)) await closePopover(menu);
-    resetAddMenu(explorerEl);
-  };
+  let searchTimer = 0;
+  let searchQuery = "";
+  let lastTreeIconKey = "";
+  const treeIconCache = new Map<string, string>();
 
   const paint = () => {
-    if (signal.aborted) return;
+    if (signal.aborted || searchQuery) return;
+    hidePathTip();
     listEl.innerHTML = renderTree(items, expanded);
-    if (addMenuOpen) {
-      const btn = explorerEl.querySelector<HTMLElement>("#localAddBtn");
-      const menu = explorerEl.querySelector<HTMLElement>("#localAddMenu");
-      if (btn && menu) {
-        positionAddMenu(explorerEl);
-        menu.classList.add("motion-popover", "is-open");
-        setPopoverOrigin(menu, btn);
+    void paintTreeIcons();
+  };
+
+  const pathTip = document.createElement("div");
+  pathTip.className = "local-path-tip";
+  pathTip.innerHTML =
+    '<span class="local-path-tip__label">路径</span><span class="local-path-tip__path"></span>';
+  document.body.appendChild(pathTip);
+  const pathTipText = pathTip.querySelector<HTMLElement>(".local-path-tip__path")!;
+
+  const hidePathTip = () => {
+    pathTip.classList.remove("is-visible");
+  };
+
+  const showPathTip = (row: HTMLElement, path: string) => {
+    pathTipText.textContent = path;
+    pathTip.classList.remove("is-visible");
+    pathTip.style.visibility = "hidden";
+    pathTip.style.left = "0";
+    pathTip.style.top = "0";
+    const tipRect = pathTip.getBoundingClientRect();
+    pathTip.style.visibility = "";
+    const rect = row.getBoundingClientRect();
+    let left = rect.left;
+    let top = rect.bottom + 6;
+    if (left + tipRect.width > window.innerWidth - 12) {
+      left = window.innerWidth - tipRect.width - 12;
+    }
+    if (top + tipRect.height > window.innerHeight - 12) {
+      top = rect.top - tipRect.height - 6;
+    }
+    pathTip.style.left = `${Math.max(12, left)}px`;
+    pathTip.style.top = `${Math.max(12, top)}px`;
+    requestAnimationFrame(() => pathTip.classList.add("is-visible"));
+  };
+
+  const showSearchResults = (hits: EverythingHit[]) => {
+    hidePathTip();
+    if (!hits.length) {
+      listEl.innerHTML = `<div class="local-tree-empty">无结果</div>`;
+      return;
+    }
+    listEl.innerHTML = hits
+      .map(
+        (hit) => `
+      <button type="button" class="local-file-row local-search-hit" data-path="${escAttr(hit.path)}" data-is-dir="${hit.isDir ? "1" : "0"}">
+        ${localItemIcon(hit.isDir ? "folder" : "file", "local-file-icon")}
+        <span class="local-file-meta">
+          <span class="local-file-name">${escHtml(hit.name)}</span>
+        </span>
+      </button>`,
+      )
+      .join("");
+  };
+
+  const paintSearchIcons = async (hits: EverythingHit[], q: string) => {
+    try {
+      const icons = await getFileTypeIcons(hits);
+      if (signal.aborted || searchQuery !== q) return;
+      for (const row of listEl.querySelectorAll<HTMLElement>(".local-search-hit")) {
+        const path = row.dataset.path;
+        const url = path ? icons.get(path) : undefined;
+        if (url) applyShellIcon(row, url);
       }
+    } catch {
+      /* fallback to svg */
+    }
+  };
+
+  const paintTreeIcons = async () => {
+    const iconItems = collectIconItems(items);
+    if (!iconItems.length) return;
+    const iconKey = iconItems.map((i) => i.path).join("\0");
+    const idPath = buildIdPathMap(items);
+    if (iconKey === lastTreeIconKey) {
+      applyTreeIcons(listEl, idPath, treeIconCache);
+      return;
+    }
+    try {
+      const icons = await getFileTypeIcons(iconItems);
+      if (signal.aborted || searchQuery) return;
+      for (const [path, url] of icons) treeIconCache.set(path, url);
+      lastTreeIconKey = iconKey;
+      applyTreeIcons(listEl, idPath, icons);
+    } catch {
+      /* fallback to svg */
+    }
+  };
+
+  const runSearch = async (query: string) => {
+    const q = query.trim();
+    searchQuery = q;
+    if (!q) {
+      paint();
+      return;
+    }
+    listEl.innerHTML = `<div class="local-tree-empty">搜索中…</div>`;
+    try {
+      const hits = await searchEverything(q);
+      if (signal.aborted || searchQuery !== q) return;
+      showSearchResults(hits);
+      void paintSearchIcons(hits, q);
+    } catch (err) {
+      if (signal.aborted || searchQuery !== q) return;
+      listEl.innerHTML = `<div class="local-tree-empty">${escHtml(err instanceof Error ? err.message : "搜索失败")}</div>`;
     }
   };
 
@@ -191,12 +299,57 @@ function mountFileList(
 
   paint();
 
+  searchEl.addEventListener(
+    "input",
+    () => {
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(() => void runSearch(searchEl.value), 300);
+    },
+    { signal },
+  );
+
+  let tipRow: HTMLElement | null = null;
+
+  listEl.addEventListener(
+    "mouseover",
+    (e) => {
+      const row = (e.target as HTMLElement).closest<HTMLElement>(
+        ".local-search-hit[data-path], .local-tree-leaf[data-path]",
+      );
+      if (!row?.dataset.path || row === tipRow) {
+        if (!row) {
+          tipRow = null;
+          hidePathTip();
+        }
+        return;
+      }
+      tipRow = row;
+      showPathTip(row, row.dataset.path);
+    },
+    { signal },
+  );
+
+  listEl.addEventListener(
+    "mouseout",
+    (e) => {
+      const related = e.relatedTarget as Node | null;
+      if (related && listEl.contains(related)) {
+        const nextRow = (related as HTMLElement).closest?.(
+          ".local-search-hit[data-path], .local-tree-leaf[data-path]",
+        );
+        if (nextRow?.dataset.path) return;
+      }
+      tipRow = null;
+      hidePathTip();
+    },
+    { signal },
+  );
+
   const addEntry = async (kind: LocalEntryKind | "group", trigger: HTMLElement) => {
-    await closeAddMenu();
     if (kind === "group") {
-      const name = window.prompt("分组名称", "新分组");
-      if (!name?.trim() || signal.aborted) return;
-      setItems(addLocalGroupEntry(name, addParentId));
+      const data = await promptEntry("添加分组", { name: "新分组" }, trigger, { groupOnly: true });
+      if (!data?.name.trim() || signal.aborted) return;
+      setItems(addLocalGroupEntry(data.name, addParentId));
       if (addParentId) expanded.add(addParentId);
       return;
     }
@@ -212,30 +365,29 @@ function mountFileList(
   explorerEl.addEventListener(
     "click",
     async (e) => {
-      const addBtn = (e.target as HTMLElement).closest<HTMLElement>("#localAddBtn");
-      if (addBtn) {
-        e.stopPropagation();
-        const menu = explorerEl.querySelector<HTMLElement>("#localAddMenu");
-        if (!menu) return;
-        if (isPopoverOpen(menu)) {
-          await closeAddMenu();
-          return;
-        }
-        addMenuOpen = true;
-        positionAddMenu(explorerEl);
-        void openPopover(menu, addBtn);
+      const searchRow = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-file-row[data-path]");
+      if (searchRow?.dataset.path && listEl.contains(searchRow)) {
+        await openLocalPath(searchRow.dataset.path);
         return;
       }
 
-      const addMenu = explorerEl.querySelector<HTMLElement>("#localAddMenu");
-      const kindBtn =
-        addMenu?.contains(e.target as Node) &&
-        (e.target as HTMLElement).closest<HTMLButtonElement>("[data-kind]");
-      if (kindBtn) {
+      const addBtn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-add-kind]");
+      if (addBtn?.dataset.addKind) {
         e.stopPropagation();
-        const kind = kindBtn.dataset.kind;
-        if (kind === "file" || kind === "folder") void addEntry(kind, kindBtn);
-        if (kind === "group") void addEntry("group", kindBtn);
+        const kind = addBtn.dataset.addKind;
+        if (kind === "file" || kind === "folder") void addEntry(kind, addBtn);
+        if (kind === "group") void addEntry("group", addBtn);
+        return;
+      }
+
+      const cursorBtn = (e.target as HTMLElement).closest<HTMLElement>('[data-action="cursor"]');
+      if (cursorBtn) {
+        e.stopPropagation();
+        const row = cursorBtn.closest<HTMLButtonElement>(".local-tree-row");
+        if (!row?.dataset.id) return;
+        const loc = locateLocalEntry(items, row.dataset.id);
+        if (!loc || loc.node.kind !== "folder") return;
+        await openWithCursor(loc.node.path);
         return;
       }
 
@@ -266,6 +418,7 @@ function mountFileList(
 
       const row = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-tree-row[data-id]");
       if (!row || !listEl.contains(row)) return;
+      if (searchQuery) return;
       if (consumeRowClickSuppress(listEl)) return;
       if (row.dataset.kind === "group") {
         const id = row.dataset.id!;
@@ -282,41 +435,27 @@ function mountFileList(
   listEl.addEventListener(
     "contextmenu",
     async (e) => {
+      hidePathTip();
+      const searchRow = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-search-hit[data-path]");
+      if (searchRow?.dataset.path && searchQuery) {
+        e.preventDefault();
+        const path = searchRow.dataset.path;
+        const name = guessLocalName(path);
+        if (await askAddFavorite(name, searchRow)) {
+          const kind = searchRow.dataset.isDir === "1" ? "folder" : "file";
+          setItems(addLocalFile(name, path, kind, addParentId));
+        }
+        return;
+      }
+
       const row = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-tree-row");
       if (!row?.dataset.id) return;
       e.preventDefault();
-      await closeAddMenu();
       const loc = locateLocalEntry(items, row.dataset.id);
       if (!loc) return;
       if (await askDelete(loc.node.name, row)) {
         setItems(removeLocalFile(row.dataset.id));
       }
-    },
-    { signal },
-  );
-
-  document.addEventListener(
-    "click",
-    (e) => {
-      if (explorerEl.querySelector("#localAddWrap")?.contains(e.target as Node)) return;
-      if (addMenuOpen) void closeAddMenu();
-    },
-    { signal },
-  );
-
-  window.addEventListener(
-    "resize",
-    () => {
-      if (addMenuOpen) positionAddMenu(explorerEl);
-    },
-    { signal },
-  );
-
-  document.addEventListener(
-    "keydown",
-    (e) => {
-      if (e.key !== "Escape") return;
-      void closeAddMenu();
     },
     { signal },
   );
@@ -327,10 +466,8 @@ function renderTabContent(tab: LocalTab): string {
     return `
       <div class="local-explorer" id="localExplorer">
         <div class="local-explorer-toolbar">
-          <div class="local-add-wrap" id="localAddWrap">
-            ${ADD_MENU_HTML}
-            <button type="button" class="local-explorer-action" id="localAddBtn" title="新建">${PLUS_SVG}</button>
-          </div>
+          <input type="search" class="local-explorer-search" id="localFileSearch" placeholder="搜索…" autocomplete="off" spellcheck="false" />
+          <div class="local-add-wrap">${ADD_ACTIONS_HTML}</div>
         </div>
         <div class="local-file-list vscode-tree" id="localFileList"></div>
       </div>
@@ -465,6 +602,7 @@ export function mountLocalPanel(
   container: HTMLElement,
   root: HTMLElement,
   askDelete: (name: string, trigger: HTMLElement) => Promise<boolean>,
+  askAddFavorite: (name: string, trigger: HTMLElement) => Promise<boolean>,
 ) {
   const { localTab } = shellStore.getState();
   container.innerHTML = `
@@ -500,7 +638,7 @@ export function mountLocalPanel(
       const { signal } = tabAbort;
       const tab = shellStore.getState().localTab;
       content.innerHTML = renderTabContent(tab);
-      if (tab === "file") mountFileList(content, promptEntry, askDelete, signal);
+      if (tab === "file") mountFileList(content, promptEntry, askDelete, askAddFavorite, signal);
       if (tab === "literature") mountLiteratureList(content, signal);
       if (tab === "note") mountNoteList(content, signal);
     };

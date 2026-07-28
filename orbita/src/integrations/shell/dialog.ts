@@ -18,6 +18,7 @@ export function mountConfirmDialog(root: HTMLElement) {
   const motion = bindDialog(backdrop);
   const titleEl = backdrop.querySelector<HTMLElement>("#confirmDialogTitle")!;
   const messageEl = backdrop.querySelector<HTMLElement>("#confirmDialogMessage")!;
+  const confirmBtn = backdrop.querySelector<HTMLButtonElement>('[data-action="confirm"]')!;
   let resolvePending: ((value: boolean) => void) | null = null;
 
   const close = async (value: boolean) => {
@@ -35,11 +36,19 @@ export function mountConfirmDialog(root: HTMLElement) {
     if (e.key === "Escape" && motion.isOpen()) void close(false);
   });
 
-  return (title: string, message: string, trigger?: MotionTrigger) =>
+  return (
+    title: string,
+    message: string,
+    trigger?: MotionTrigger,
+    opts?: { confirmLabel?: string; danger?: boolean },
+  ) =>
     new Promise<boolean>((resolve) => {
       resolvePending = resolve;
       titleEl.textContent = title;
       messageEl.textContent = message;
+      confirmBtn.textContent = opts?.confirmLabel ?? "删除";
+      confirmBtn.classList.toggle("dialog-btn-danger", opts?.danger !== false);
+      confirmBtn.classList.toggle("dialog-btn-primary", opts?.danger === false);
       void motion.open(trigger);
     });
 }

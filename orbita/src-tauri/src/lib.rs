@@ -8,7 +8,9 @@ mod ai;
 mod app_icon;
 mod data;
 mod dida;
+mod everything;
 mod favicon;
+mod file_type_icon;
 mod hwmon;
 mod obsidian;
 mod window_shell;
@@ -74,8 +76,25 @@ async fn pick_local_folder(app: tauri::AppHandle) -> Result<Option<String>, Stri
 }
 
 #[tauri::command]
-fn open_local_path(path: String) -> Result<(), String> {
-    open_external_url(path)
+fn open_local_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app.opener()
+        .open_path(path, None::<&str>)
+        .map_err(|e| format!("打开失败: {e}"))
+}
+
+#[tauri::command]
+fn open_with_cursor(path: String) -> Result<(), String> {
+    Command::new("cursor")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("打开 Cursor 失败: {e}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+fn search_everything(query: String, limit: Option<u32>) -> Result<Vec<everything::EverythingHit>, String> {
+    everything::search(&query, limit.unwrap_or(50))
 }
 
 #[tauri::command]
@@ -202,6 +221,18 @@ fn read_app_icon_data(path: String) -> Result<Option<String>, String> {
         return Ok(None);
     }
     app_icon::read_data_url(&path).map(Some)
+}
+
+#[tauri::command]
+async fn get_file_type_icons(
+    app: tauri::AppHandle,
+    items: Vec<file_type_icon::FileTypeIconItem>,
+) -> Result<Vec<file_type_icon::FileTypeIcon>, String> {
+    let data_dir = data::get_data_dir(&app)?;
+    let cache_dir = data::cache_file_type_icons_dir(&data_dir);
+    tauri::async_runtime::spawn_blocking(move || file_type_icon::resolve_batch(&cache_dir, &items))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -495,10 +526,13 @@ pub fn run() {
             pick_local_file,
             pick_local_folder,
             open_local_path,
+            open_with_cursor,
+            search_everything,
             pick_app_file,
             cache_app_icon,
             delete_app_icon,
             read_app_icon_data,
+            get_file_type_icons,
             cache_favicon,
             delete_favicon,
             launch_v2ray,

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauri } from "../../core/data/client";
 import { openObsidianNote } from "./obsidian";
 
 export type ZoteroItem = {
@@ -9,10 +10,6 @@ export type ZoteroItem = {
   date_modified: string;
   note_path: string | null;
 };
-
-function isTauri() {
-  return "__TAURI_INTERNALS__" in window;
-}
 
 export async function listZoteroItems(limit = 20): Promise<ZoteroItem[]> {
   if (isTauri()) {

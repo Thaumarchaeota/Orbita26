@@ -1,4 +1,11 @@
 import { buildGridSlots } from "./grid-slots";
+import {
+  capturePositions,
+  flipElements,
+  DRAG_THRESHOLD,
+  createPointerGhost,
+  movePointerGhost,
+} from "../../ui/pointer-drag";
 
 export function displaySlots<T extends { id: string; slot?: number }>(
   items: T[],
@@ -20,47 +27,21 @@ export type TileGridOptions<T extends { id: string; name: string }> = {
   onRenameFolder?: (item: T, trigger: HTMLElement) => T[] | null | Promise<T[] | null>;
 };
 
-const DRAG_THRESHOLD = 4;
 const ABSORB_DWELL_MS = 200;
 const ZONE_IN = 0.38;
 const ZONE_OUT = 0.33;
-const FLIP_MS = 0.28;
-const GHOST_SCALE = 1.04;
+const GHOST_SCALE = 1;
 
 function tileEl(target: EventTarget | null): HTMLElement | null {
   return (target as HTMLElement).closest<HTMLElement>(".launcher-tile");
 }
 
-function capturePositions(grid: HTMLElement): Map<string, DOMRect> {
-  const map = new Map<string, DOMRect>();
-  grid.querySelectorAll<HTMLElement>(".launcher-tile[data-id]").forEach((el) => {
-    if (el.dataset.id) map.set(el.dataset.id, el.getBoundingClientRect());
-  });
-  return map;
+function captureTilePositions(grid: HTMLElement): Map<string, DOMRect> {
+  return capturePositions(grid, ".launcher-tile[data-id]");
 }
 
 function flipAnimate(grid: HTMLElement, before: Map<string, DOMRect>) {
-  grid.querySelectorAll<HTMLElement>(".launcher-tile[data-id]").forEach((el) => {
-    const id = el.dataset.id;
-    if (!id) return;
-    const prev = before.get(id);
-    if (!prev) return;
-    const next = el.getBoundingClientRect();
-    const dx = prev.left - next.left;
-    const dy = prev.top - next.top;
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-    el.style.transition = "none";
-    el.style.transform = `translate(${dx}px, ${dy}px)`;
-    requestAnimationFrame(() => {
-      el.style.transition = `transform ${FLIP_MS}s var(--spring)`;
-      el.style.transform = "";
-      const done = () => {
-        el.style.transition = "";
-        el.removeEventListener("transitionend", done);
-      };
-      el.addEventListener("transitionend", done);
-    });
-  });
+  flipElements(grid, before, ".launcher-tile[data-id]");
 }
 
 function orderFromDom<T extends { id: string; slot?: number }>(grid: HTMLElement, items: T[]): T[] {
@@ -172,6 +153,56 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   let lastClientX = 0;
   let lastClientY = 0;
   let capturePointerId: number | null = null;
+  let pendingMove: { x: number; y: number } | null = null;
+  let moveRafId = 0;
+  let dragSlotCtx: {
+    gridRect: DOMRect;
+    cell: DOMRect;
+    gapX: number;
+    gapY: number;
+    cols: number;
+    tileCount: number;
+  } | null = null;
+
+  const clearDragSlotCtx = () => {
+    dragSlotCtx = null;
+  };
+
+  const initDragSlotCtx = () => {
+    const tiles = grid.querySelectorAll<HTMLElement>(".launcher-tile");
+    if (!tiles.length) return;
+    const style = getComputedStyle(grid);
+    dragSlotCtx = {
+      gridRect: grid.getBoundingClientRect(),
+      cell: tiles[0]!.getBoundingClientRect(),
+      gapX: parseFloat(style.columnGap || style.gap) || 8,
+      gapY: parseFloat(style.rowGap || style.gap) || 8,
+      cols: readGridCols(grid),
+      tileCount: tiles.length,
+    };
+  };
+
+  const slotFromPointCached = (x: number, y: number): number | null => {
+    if (!dragSlotCtx) return slotFromPoint(grid, x, y);
+    const { gridRect, cell, gapX, gapY, cols, tileCount } = dragSlotCtx;
+    const stepX = cell.width + gapX;
+    const stepY = cell.height + gapY;
+    const col = Math.max(0, Math.min(cols - 1, Math.floor((x - gridRect.left + stepX / 2) / stepX)));
+    const row = Math.max(0, Math.floor((y - gridRect.top + stepY / 2) / stepY));
+    const slot = row * cols + col;
+    return slot < tileCount ? slot : tileCount - 1;
+  };
+
+  const schedulePointerMove = (x: number, y: number) => {
+    pendingMove = { x, y };
+    if (moveRafId) return;
+    moveRafId = requestAnimationFrame(() => {
+      moveRafId = 0;
+      if (!pendingMove) return;
+      onPointerMove(pendingMove.x, pendingMove.y);
+      pendingMove = null;
+    });
+  };
 
   const paint = () => {
     const items = getItems();
@@ -182,8 +213,53 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       .join("");
   };
 
+  const paintSlotAt = (slotIndex: number) => {
+    const items = getItems();
+    const cap = options.gridCapacity?.() ?? maxItems;
+    const slots = displaySlots(items, cap);
+    const item = slots[slotIndex] ?? null;
+    const html = render(item, editMode, !editMode && !!item, slotIndex);
+    const child = grid.children[slotIndex] as HTMLElement | undefined;
+    const wrap = document.createElement("div");
+    wrap.innerHTML = html.trim();
+    const newEl = wrap.firstElementChild as HTMLElement | null;
+    if (!newEl) return;
+    if (child) child.replaceWith(newEl);
+    else grid.appendChild(newEl);
+  };
+
+  const paintSlotsForId = (id: string) => {
+    const cap = options.gridCapacity?.() ?? maxItems;
+    const slots = displaySlots(getItems(), cap);
+    const slotIndex = slots.findIndex((s) => s?.id === id);
+    if (slotIndex >= 0) paintSlotAt(slotIndex);
+  };
+
+  const paintSlotsForDeleted = (deletedId: string) => {
+    const deletedSlot = Array.from(grid.children).findIndex(
+      (c) => (c as HTMLElement).dataset.id === deletedId,
+    );
+    if (deletedSlot >= 0) paintSlotAt(deletedSlot);
+  };
+
+  const paintItemChange = (id?: string, deletedId?: string) => {
+    if (editMode) {
+      paint();
+      return;
+    }
+    if (fixedSlots && deletedId) {
+      paintSlotsForDeleted(deletedId);
+      return;
+    }
+    if (fixedSlots && id) {
+      paintSlotsForId(id);
+      return;
+    }
+    paint();
+  };
+
   const paintWithFlip = () => {
-    const before = capturePositions(grid);
+    const before = captureTilePositions(grid);
     paint();
     requestAnimationFrame(() => flipAnimate(grid, before));
   };
@@ -222,15 +298,11 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
 
   const createGhost = (tile: HTMLElement, x: number, y: number) => {
     const rect = tile.getBoundingClientRect();
-    ghost = tile.cloneNode(true) as HTMLElement;
-    ghost.classList.add("launcher-tile-ghost");
-    ghost.style.width = `${rect.width}px`;
-    ghost.style.height = `${rect.height}px`;
-    ghost.style.left = "0";
-    ghost.style.top = "0";
-    ghost.style.transform = `translate3d(${rect.left}px, ${rect.top}px, 0) scale(${GHOST_SCALE})`;
-    ghost.style.transition = "none";
-    document.body.appendChild(ghost);
+    const extra: string[] = [];
+    if (grid.classList.contains("bookmarks-grid")) extra.push("from-bookmarks");
+    else if (grid.classList.contains("apps-grid")) extra.push("from-apps");
+    const { ghost: g } = createPointerGhost(tile, "launcher-tile-ghost", extra, GHOST_SCALE);
+    ghost = g;
     ghostOffsetX = x - rect.left;
     ghostOffsetY = y - rect.top;
     tile.classList.add("is-drag-source");
@@ -239,7 +311,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
 
   const moveGhost = (x: number, y: number) => {
     if (!ghost) return;
-    ghost.style.transform = `translate3d(${x - ghostOffsetX}px, ${y - ghostOffsetY}px, 0) scale(${GHOST_SCALE})`;
+    movePointerGhost(ghost, x, y, ghostOffsetX, ghostOffsetY, GHOST_SCALE);
   };
 
   const previewMoveToSlot = (targetSlot: number) => {
@@ -250,7 +322,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     if (current === targetSlot) return;
     const ref = grid.children[targetSlot] as HTMLElement;
     if (!ref || ref === pointerTile) return;
-    const before = capturePositions(grid);
+    const before = captureTilePositions(grid);
     grid.insertBefore(pointerTile, ref);
     flipAnimate(grid, before);
     previewDirty = true;
@@ -259,7 +331,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   const previewMoveTo = (hover: HTMLElement) => {
     if (!pointerId || !pointerTile || hover === pointerTile) return;
     if (pointerTile.nextElementSibling === hover) return;
-    const before = capturePositions(grid);
+    const before = captureTilePositions(grid);
     grid.insertBefore(pointerTile, hover);
     flipAnimate(grid, before);
     previewDirty = true;
@@ -345,10 +417,11 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       pointerDragging = true;
       grid.classList.add("is-reordering");
       pointerTile.classList.add("is-dragging");
+      if (fixedSlots) initDragSlotCtx();
       createGhost(pointerTile, e.clientX, e.clientY);
     }
     moveGhost(e.clientX, e.clientY);
-    onPointerMove(e.clientX, e.clientY);
+    schedulePointerMove(e.clientX, e.clientY);
   };
 
   const onDocPointerUp = (e: PointerEvent) => {
@@ -370,7 +443,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     }
 
     if (fixedSlots) {
-      const slot = slotFromPoint(grid, x, y);
+      const slot = slotFromPointCached(x, y);
       if (slot === null) {
         lastHoverKey = null;
         return;
@@ -447,6 +520,13 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       paint();
     }
 
+    clearDragSlotCtx();
+    if (moveRafId) {
+      cancelAnimationFrame(moveRafId);
+      moveRafId = 0;
+      pendingMove = null;
+    }
+
     pointerId = null;
     pointerTile = null;
     pointerDragging = false;
@@ -500,7 +580,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
         setItems(next);
       }
       editMode = false;
-      paint();
+      paintItemChange(undefined, item.id);
       return;
     }
 
@@ -513,7 +593,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       if (!item || !options.onRenameFolder) return;
       const next = await Promise.resolve(options.onRenameFolder(item, editFolderBtn));
       if (next) setItems(next);
-      paint();
+      paintItemChange(item.id);
       return;
     }
 
@@ -526,7 +606,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       if (!item) return;
       const next = await Promise.resolve(onEdit(item, editBtn));
       if (next) setItems(next);
-      paint();
+      paintItemChange(item.id);
       return;
     }
 

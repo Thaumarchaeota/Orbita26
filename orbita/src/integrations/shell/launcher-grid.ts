@@ -1,3 +1,4 @@
+import { normalizeUrl } from "../../core/url";
 import { isTauri } from "../../core/data/client";
 import type { AppEntry, AppLink, BookmarkEntry, BookmarkLink, LauncherFolder, LauncherLeafBase } from "../../core/data/types";
 import {
@@ -62,11 +63,6 @@ type LauncherGridConfig<L extends LeafBase, E extends LauncherEntry<L>> = {
   pickPayload?: () => Promise<string | null>;
   promptEditReadonlyPayload?: boolean;
 };
-
-function normalizeUrl(url: string): string {
-  const t = url.trim();
-  return t.startsWith("http") ? t : `https://${t}`;
-}
 
 function payloadOf<L extends LeafBase>(leaf: L, key: PayloadKey): string {
   return (key === "url" ? leaf.url : leaf.path) ?? "";

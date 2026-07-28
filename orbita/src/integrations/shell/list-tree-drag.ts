@@ -1,6 +1,6 @@
 import type { LocalDropPosition } from "./local-tree";
+import { DRAG_THRESHOLD, createPointerGhost, movePointerGhost } from "../../ui/pointer-drag";
 
-const DRAG_THRESHOLD = 5;
 const INTO_DWELL_MS = 320;
 const ZONE_BEFORE = 0.28;
 const ZONE_AFTER = 0.72;
@@ -166,19 +166,11 @@ export function bindListTreeDrag(
     if (!pointerRow) return;
     dragging = true;
     const rect = pointerRow.getBoundingClientRect();
-    ghost = pointerRow.cloneNode(true) as HTMLElement;
-    ghost.classList.add("local-tree-row-ghost");
-    ghost.style.width = `${rect.width}px`;
-    ghost.style.position = "fixed";
-    ghost.style.left = "0";
-    ghost.style.top = "0";
-    ghost.style.zIndex = "300";
-    ghost.style.pointerEvents = "none";
-    ghost.style.willChange = "transform";
-    document.body.appendChild(ghost);
+    const { ghost: g } = createPointerGhost(pointerRow, "local-tree-row-ghost");
+    ghost = g;
     ghostOX = e.clientX - rect.left;
     ghostOY = e.clientY - rect.top;
-    ghost.style.transform = `translate3d(${e.clientX - ghostOX}px, ${e.clientY - ghostOY}px, 0)`;
+    movePointerGhost(ghost, e.clientX, e.clientY, ghostOX, ghostOY);
     pointerRow.classList.add("is-drag-source");
     pointerRow.style.visibility = "hidden";
     container.classList.add("is-dragging");
@@ -191,7 +183,7 @@ export function bindListTreeDrag(
       startDrag(e);
     }
     if (ghost) {
-      ghost.style.transform = `translate3d(${e.clientX - ghostOX}px, ${e.clientY - ghostOY}px, 0)`;
+      movePointerGhost(ghost, e.clientX, e.clientY, ghostOX, ghostOY);
     }
 
     const hover = rowAtPoint(e.clientX, e.clientY, container, pointerRow);

@@ -1,14 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauri } from "../../core/data/client";
 
 export type ObsidianNote = {
   path: string;
   name: string;
   modified: number;
 };
-
-function isTauri() {
-  return "__TAURI_INTERNALS__" in window;
-}
 
 export async function listObsidianNotes(limit = 50): Promise<ObsidianNote[]> {
   if (isTauri()) {

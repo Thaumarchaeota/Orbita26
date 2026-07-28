@@ -33,6 +33,9 @@ const LBL_ADD = "\u6dfb\u52a0";
 const LBL_SEARCH_IN = (name: string) => `\u5728 ${name} \u4e2d\u641c\u7d22`;
 const LBL_DELETE_TITLE = "\u5220\u9664\u786e\u8ba4";
 const LBL_DELETE_MSG = (name: string) => `\u786e\u5b9a\u5220\u9664\u300c${name}\u300d\uff1f`;
+const LBL_ADD_FAV_TITLE = "\u6dfb\u52a0\u5230\u6536\u85cf";
+const LBL_ADD_FAV_MSG = (name: string) => `\u662f\u5426\u5c06\u300c${name}\u300d\u6dfb\u52a0\u5230\u672c\u5730\u6587\u4ef6\u6536\u85cf\uff1f`;
+const LBL_ADD_FAV_CONFIRM = "\u6dfb\u52a0";
 const LBL_V2RAY_TITLE = "\u542f\u52a8 v2rayN";
 const LBL_V2RAY_FAIL = "\u542f\u52a8 v2rayN \u5931\u8d25";
 
@@ -113,8 +116,13 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
   const folderOverlay = mountFolderOverlay(root);
   const askDelete = (name: string, trigger: HTMLElement) =>
     confirmDelete(LBL_DELETE_TITLE, LBL_DELETE_MSG(name), trigger);
+  const askAddFavorite = (name: string, trigger: HTMLElement) =>
+    confirmDelete(LBL_ADD_FAV_TITLE, LBL_ADD_FAV_MSG(name), trigger, {
+      confirmLabel: LBL_ADD_FAV_CONFIRM,
+      danger: false,
+    });
 
-  mountLocalPanel(sidebar.querySelector("#localPanel")!, root, askDelete);
+  mountLocalPanel(sidebar.querySelector("#localPanel")!, root, askDelete, askAddFavorite);
 
   const bookmarksRef = { current: loadBookmarks() };
   const appsRef = { current: loadApps() };

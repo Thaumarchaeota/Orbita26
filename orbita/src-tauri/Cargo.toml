@@ -1,6 +1,6 @@
 [package]
 name = "orbita"
-version = "0.0.10"
+version = "0.0.11"
 description = "Orbita desktop hub"
 authors = ["you"]
 edition = "2021"
@@ -28,6 +28,7 @@ url = "2"
 sysinfo = "0.33"
 windows = { version = "0.60", features = [
   "Win32_Foundation",
+  "Win32_Globalization",
   "Win32_Graphics_Dwm",
   "Win32_Graphics_Gdi",
   "Win32_Storage_FileSystem",

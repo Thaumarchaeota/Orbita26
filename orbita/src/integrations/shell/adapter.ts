@@ -1,8 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl as tauriOpenUrl } from "@tauri-apps/plugin-opener";
+import { isTauri } from "../../core/data/client";
 
 export async function openUrl(url: string): Promise<void> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     await tauriOpenUrl(url);
     return;
   }
@@ -10,7 +11,7 @@ export async function openUrl(url: string): Promise<void> {
 }
 
 export async function launchV2ray(): Promise<void> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     await invoke("launch_v2ray");
     return;
   }
@@ -18,7 +19,7 @@ export async function launchV2ray(): Promise<void> {
 }
 
 export async function pickAppFile(): Promise<string | null> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     return await invoke<string | null>("pick_app_file");
   }
   const path = prompt("程序路径");
@@ -26,7 +27,7 @@ export async function pickAppFile(): Promise<string | null> {
 }
 
 export async function pickLocalFile(): Promise<string | null> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     return await invoke<string | null>("pick_local_file");
   }
   const path = prompt("文件路径");
@@ -34,7 +35,7 @@ export async function pickLocalFile(): Promise<string | null> {
 }
 
 export async function pickLocalFolder(): Promise<string | null> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     return await invoke<string | null>("pick_local_folder");
   }
   const path = prompt("文件夹路径");
@@ -42,15 +43,46 @@ export async function pickLocalFolder(): Promise<string | null> {
 }
 
 export async function openLocalPath(path: string): Promise<void> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     await invoke("open_local_path", { path });
     return;
   }
   alert("需完整 App 打开本地路径");
 }
 
+export async function openWithCursor(path: string): Promise<void> {
+  if (isTauri()) {
+    await invoke("open_with_cursor", { path });
+    return;
+  }
+  alert("需完整 App 用 Cursor 打开");
+}
+
+export type EverythingHit = { path: string; name: string; isDir: boolean };
+
+export async function searchEverything(query: string, limit = 50): Promise<EverythingHit[]> {
+  if (isTauri()) {
+    return await invoke<EverythingHit[]>("search_everything", { query, limit });
+  }
+  return [];
+}
+
+export async function getFileTypeIcons(
+  items: Pick<EverythingHit, "path" | "isDir">[],
+): Promise<Map<string, string>> {
+  if (!isTauri() || !items.length) return new Map();
+  const rows = await invoke<{ path: string; data_url: string | null }[]>("get_file_type_icons", {
+    items: items.map((i) => ({ path: i.path, is_dir: i.isDir })),
+  });
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    if (row.data_url) map.set(row.path, row.data_url);
+  }
+  return map;
+}
+
 export async function launchApp(path: string): Promise<void> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     await invoke("launch_app", { path });
     return;
   }
@@ -58,34 +90,34 @@ export async function launchApp(path: string): Promise<void> {
 }
 
 export async function cacheAppIcon(appId: string, path: string): Promise<string | null> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     return await invoke<string | null>("cache_app_icon", { appId, path });
   }
   return null;
 }
 
 export async function deleteAppIcon(path: string): Promise<void> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     await invoke("delete_app_icon", { path });
   }
 }
 
 export async function readAppIconData(path: string): Promise<string | null> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     return await invoke<string | null>("read_app_icon_data", { path });
   }
   return null;
 }
 
 export async function cacheFavicon(bookmarkId: string, url: string): Promise<string | null> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     return await invoke<string | null>("cache_favicon", { bookmarkId, url });
   }
   return null;
 }
 
 export async function deleteFavicon(path: string): Promise<void> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     await invoke("delete_favicon", { path });
   }
 }

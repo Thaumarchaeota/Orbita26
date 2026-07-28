@@ -12,8 +12,10 @@ export function mountStatsBar(root: HTMLElement) {
 
   let frames = 0;
   let lastFpsAt = performance.now();
+  let fpsLoop = true;
 
   const tickFps = (now: number) => {
+    if (!fpsLoop) return;
     frames += 1;
     if (now - lastFpsAt >= 1000) {
       fpsEl.textContent = String(frames);
@@ -22,6 +24,18 @@ export function mountStatsBar(root: HTMLElement) {
     }
     requestAnimationFrame(tickFps);
   };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      fpsLoop = false;
+      return;
+    }
+    fpsLoop = true;
+    frames = 0;
+    lastFpsAt = performance.now();
+    requestAnimationFrame(tickFps);
+  });
+
   requestAnimationFrame(tickFps);
 
   const poll = async () => {

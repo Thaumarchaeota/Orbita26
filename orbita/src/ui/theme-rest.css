@@ -1,0 +1,918 @@
+﻿.search-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.engines-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 14px;
+}
+.engine-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-active);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--border-active);
+  box-shadow: 0 2px 12px var(--shadow);
+  transition: transform .4s var(--spring), background .5s var(--ease), border-color .5s var(--ease), box-shadow .5s var(--ease);
+  pointer-events: none;
+}
+.engines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 440px;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+.engines button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  opacity: .4;
+  transition: opacity .3s var(--ease), transform .3s var(--spring);
+}
+.engines button:hover { opacity: .65; transform: scale(1.06); }
+.engines button.active { opacity: 1; transform: scale(1.02); }
+.engines svg { width: 20px; height: 20px; transition: transform .3s var(--spring); }
+.engines button.active svg { transform: scale(1.08); }
+.engines button[data-id="github"] svg path { fill: var(--github); transition: fill .5s var(--ease); }
+.search-bar {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  height: 50px;
+  padding: 0 6px 0 20px;
+  background: var(--surface-active);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--border);
+  border-radius: 25px;
+  box-shadow: 0 4px 20px var(--shadow);
+  transition: background .5s var(--ease), border-color .5s var(--ease), box-shadow .5s var(--ease);
+}
+.search-bar:focus-within { border-color: var(--focus); }
+.search-bar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  transition: color .5s var(--ease), opacity .25s var(--ease);
+}
+.search-bar input.fade { opacity: 0; }
+.search-bar input::placeholder { color: var(--input-ph); transition: color .5s var(--ease); }
+.search-btn {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--btn-bg);
+  color: var(--toggle-color);
+  cursor: pointer;
+  transition: background .5s var(--ease), color .5s var(--ease), transform .2s var(--spring);
+}
+.search-btn:hover { background: var(--btn-hover); color: #fff; transform: scale(1.06); }
+.search-btn svg { width: 18px; height: 18px; }
+.v2ray-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-active);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow: 0 4px 20px var(--shadow);
+  color: #3b82f6;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .5s var(--ease), border-color .5s var(--ease), box-shadow .5s var(--ease), transform .2s var(--spring);
+}
+.v2ray-btn:hover { transform: scale(1.06); border-color: var(--border-active); }
+.v2ray-btn:active { transform: scale(.95); }
+.v2ray-btn svg { width: 22px; height: 22px; }
+
+.ticktick-section {
+  width: 50%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.ticktick-head-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease), transform 0.2s var(--spring);
+}
+.ticktick-head-btn:hover {
+  color: var(--text);
+  border-color: var(--border-active);
+  transform: scale(1.05);
+}
+.ticktick-head-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.ticktick-success-toast {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+}
+.ticktick-success-toast.is-playing {
+  animation: ticktick-success-fade 1.4s var(--ease) forwards;
+}
+.ticktick-success-burst {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.16);
+  display: grid;
+  place-items: center;
+  transform: scale(0.35);
+  opacity: 0;
+}
+.ticktick-success-toast.is-playing .ticktick-success-burst {
+  animation: ticktick-success-pop 0.72s var(--spring-bounce) forwards;
+}
+.ticktick-success-burst svg {
+  width: 64px;
+  height: 64px;
+}
+.ticktick-success-circle {
+  stroke: #22c55e;
+  stroke-width: 3;
+  fill: rgba(34, 197, 94, 0.12);
+  stroke-dasharray: 176;
+  stroke-dashoffset: 176;
+}
+.ticktick-success-check {
+  stroke: #22c55e;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+}
+.ticktick-success-toast.is-playing .ticktick-success-circle {
+  animation: ticktick-success-circle-draw 0.5s var(--ease) forwards 0.08s;
+}
+.ticktick-success-toast.is-playing .ticktick-success-check {
+  animation: ticktick-success-check-draw 0.42s var(--ease) forwards 0.34s;
+}
+@keyframes ticktick-success-fade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  72% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes ticktick-success-pop {
+  0% { transform: scale(0.35); opacity: 0; }
+  55% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes ticktick-success-circle-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ticktick-success-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+.ticktick-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ticktick-connect {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.ticktick-section.is-authed .ticktick-connect {
+  display: none;
+}
+.ticktick-main {
+  flex: 1;
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+.ticktick-section.is-authed .ticktick-main {
+  display: flex;
+}
+.ticktick-calendar {
+  flex: 0 0 auto;
+  padding: 0 0 8px;
+}
+.ticktick-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ticktick-cal-nav {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ticktick-cal-nav:hover { color: var(--text); background: var(--surface-active); }
+.ticktick-cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+}
+.ticktick-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.ticktick-cal-viewport {
+  position: relative;
+  overflow: hidden;
+  min-height: 96px;
+}
+.ticktick-cal-viewport.is-animating .ticktick-cal-month {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  width: 100%;
+}
+.ticktick-cal-month {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  will-change: transform, opacity, filter;
+}
+.ticktick-cal-cell {
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 10px;
+  cursor: pointer;
+}
+.ticktick-cal-cell.is-empty { pointer-events: none; }
+.ticktick-cal-cell.is-today { color: var(--focus); font-weight: 700; }
+.ticktick-cal-cell.is-active {
+  background: var(--focus);
+  color: #fff;
+}
+.ticktick-cal-cell:hover:not(.is-active):not(.is-empty) {
+  background: var(--surface-active);
+}
+.ticktick-todo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--border);
+  position: relative;
+}
+.ticktick-todo.is-menu-open .ticktick-task-list {
+  filter: blur(5px) brightness(0.55) saturate(0.9);
+  transform: scale(0.992);
+  pointer-events: none;
+  transition: filter 0.32s var(--spring-ios), transform 0.32s var(--spring-ios);
+}
+.ticktick-todo.is-menu-open::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 34px;
+  z-index: 15;
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: 0;
+  pointer-events: none;
+  animation: ticktick-scrim-in 0.3s var(--spring-ios) forwards;
+}
+@keyframes ticktick-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ticktick-todo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+  min-height: 28px;
+  position: relative;
+  z-index: 30;
+}
+.ticktick-project-picker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.ticktick-project-select {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  cursor: pointer;
+}
+.ticktick-project-select:hover { border-color: var(--border); }
+.ticktick-project-chevron svg { width: 12px; height: 12px; opacity: .6; }
+.ticktick-project-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(18, 22, 32, 0.94);
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+}
+[data-theme="light"] .ticktick-project-menu,
+[data-theme="transparent-light"] .ticktick-project-menu {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--border);
+  box-shadow: 0 12px 32px var(--shadow);
+}
+.ticktick-project-item {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.ticktick-project-item:hover,
+.ticktick-project-item.active {
+  background: var(--surface-active);
+}
+.ticktick-todo-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.ticktick-icon-btn {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transition: color 0.25s var(--ease), border-color 0.25s var(--ease), background 0.25s var(--ease);
+}
+.ticktick-icon-btn:hover { color: var(--text); border-color: var(--border-active); }
+.ticktick-icon-btn svg { width: 14px; height: 14px; }
+.ticktick-refresh-icon,
+.ticktick-refresh-done {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: opacity 0.22s var(--ease), transform 0.32s var(--spring);
+}
+.ticktick-refresh-done {
+  opacity: 0;
+  transform: scale(0.45) rotate(-40deg);
+  color: #22c55e;
+}
+.ticktick-icon-btn.is-spinning .ticktick-refresh-icon {
+  animation: ticktick-spin 0.75s linear infinite;
+}
+.ticktick-icon-btn.is-success {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #22c55e;
+}
+.ticktick-icon-btn.is-success .ticktick-refresh-icon {
+  opacity: 0;
+  transform: scale(0.45) rotate(90deg);
+}
+.ticktick-icon-btn.is-success .ticktick-refresh-done {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+.ticktick-check-path {
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18;
+  animation: none;
+}
+.ticktick-icon-btn.is-success .ticktick-check-path {
+  animation: ticktick-check-draw 0.38s var(--ease) forwards 0.12s;
+}
+@keyframes ticktick-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes ticktick-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+.ticktick-task-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  transition: filter 0.32s var(--spring-ios), transform 0.32s var(--spring-ios);
+}
+.ticktick-task-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  font-size: 11px;
+  transition: background 0.2s var(--ease), opacity 0.28s var(--ease), transform 0.28s var(--ease);
+}
+.ticktick-task-row:hover { background: var(--surface-active); }
+.ticktick-task-row.is-completing .ticktick-task-title {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+.ticktick-task-row.is-completing .ticktick-task-check-box {
+  background: var(--focus);
+  border-color: var(--focus);
+}
+.ticktick-task-row.is-completing .ticktick-task-check-mark {
+  opacity: 1;
+  transform: scale(1);
+  stroke-dashoffset: 0;
+}
+.ticktick-task-row.is-removing {
+  opacity: 0;
+  transform: translateX(8px);
+  pointer-events: none;
+}
+.ticktick-task-check {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.ticktick-task-check-box {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  transition: background 0.24s var(--ease), border-color 0.24s var(--ease), transform 0.24s var(--spring-bounce);
+}
+.ticktick-task-check:hover .ticktick-task-check-box {
+  border-color: var(--focus);
+  transform: scale(1.06);
+}
+.ticktick-task-check-mark {
+  width: 10px;
+  height: 8px;
+  stroke: #fff;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  opacity: 0;
+  transform: scale(0.65);
+  transition:
+    opacity 0.2s var(--ease),
+    transform 0.28s var(--spring-bounce),
+    stroke-dashoffset 0.34s var(--ease) 0.05s;
+}
+.ticktick-task-row.is-overdue .ticktick-task-due { color: #ef4444; }
+.ticktick-task-row.is-high .ticktick-task-title { color: #ef4444; }
+.ticktick-task-row.is-medium .ticktick-task-title { color: #f59e0b; }
+.ticktick-task-row.is-low .ticktick-task-title { color: #3b82f6; }
+.ticktick-task-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+}
+.ticktick-task-title:hover { opacity: 0.82; }
+.ticktick-task-edit {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: opacity 0.2s var(--ease), color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.ticktick-task-row:hover .ticktick-task-edit { opacity: 0.85; }
+.ticktick-task-edit:hover {
+  opacity: 1;
+  color: var(--text);
+  background: var(--surface-active);
+}
+.ticktick-task-edit svg { width: 12px; height: 12px; }
+.ticktick-task-due {
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.ticktick-empty {
+  padding: 16px 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+.dialog-field-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ticktick-task-dialog {
+  color-scheme: light dark;
+}
+.ticktick-dialog-pickers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ticktick-field-picker,
+.ticktick-field-toggle {
+  margin-bottom: 10px;
+}
+.ticktick-field-picker-label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.ticktick-field-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ticktick-picker {
+  position: relative;
+}
+.ticktick-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.25s var(--ease),
+    background 0.5s var(--ease),
+    transform 0.2s var(--spring);
+}
+.ticktick-picker-btn:hover {
+  border-color: var(--border-active);
+}
+.ticktick-picker-btn:active {
+  transform: scale(0.985);
+}
+.ticktick-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ticktick-picker-chevron svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.55;
+  transition: transform 0.28s var(--spring-bounce);
+}
+.ticktick-picker-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(18, 22, 32, 0.96);
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+}
+[data-theme="light"] .ticktick-picker-menu,
+[data-theme="transparent-light"] .ticktick-picker-menu {
+  background: rgba(255, 255, 255, 0.98);
+  border-color: var(--border);
+}
+.ticktick-picker-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s var(--ease);
+}
+.ticktick-picker-item:hover,
+.ticktick-picker-item.active {
+  background: var(--surface-active);
+}
+.ticktick-date-menu {
+  max-height: none;
+  padding: 8px;
+  min-width: 240px;
+}
+.ticktick-mini-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ticktick-mini-cal-nav {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.ticktick-mini-cal-nav:hover {
+  color: var(--text);
+  background: var(--surface-active);
+}
+.ticktick-mini-cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+.ticktick-mini-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.ticktick-mini-cal-cell {
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ticktick-mini-cal-cell.is-empty { pointer-events: none; }
+.ticktick-mini-cal-cell.is-today { color: var(--focus); font-weight: 700; }
+.ticktick-mini-cal-cell.is-active {
+  background: var(--focus);
+  color: #fff;
+}
+.ticktick-mini-cal-cell:hover:not(.is-active):not(.is-empty) {
+  background: var(--surface-active);
+}
+.ticktick-time-row {
+  display: flex;
+  gap: 10px;
+}
+.ticktick-time-half {
+  flex: 1;
+  min-width: 0;
+}
+.ticktick-time-menu {
+  max-height: 180px;
+  padding: 6px;
+}
+.ticktick-time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.ticktick-time-col {
+  max-height: 160px;
+  overflow-y: auto;
+}
+.ticktick-time-item {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+}
+.ticktick-time-item:hover,
+.ticktick-time-item.active {
+  background: var(--surface-active);
+  color: var(--focus);
+}
+.ticktick-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+.ticktick-switch-track {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(120, 130, 150, 0.35);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background 0.28s var(--ease), border-color 0.28s var(--ease);
+}
+.ticktick-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+  transition: transform 0.32s var(--spring-bounce);
+}
+.ticktick-switch.is-on .ticktick-switch-track {
+  background: var(--focus);
+  border-color: transparent;
+}
+.ticktick-switch.is-on .ticktick-switch-thumb {
+  transform: translateX(14px);
+}
+.ticktick-detail-dialog .ticktick-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ticktick-detail-dialog .ticktick-detail-meta span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-active);
+  border: 1px solid var(--border);
+}
+.ticktick-detail-content {
+  min-height: 72px;
+  max-height: min(40vh, 240px);
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ticktick-detail-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+[data-theme="transparent-light"] .ticktick-project-menu,
+[data-theme="transparent-dark"] .ticktick-project-menu,
+[data-theme="transparent-light"] .ticktick-picker-menu,
+[data-theme="transparent-dark"] .ticktick-picker-menu,
+[data-theme="transparent-light"] .ai-conv-menu,
+[data-theme="transparent-dark"] .ai-conv-menu {
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+}
+[data-theme="transparent-dark"] .ticktick-project-menu,
+[data-theme="transparent-dark"] .ticktick-picker-menu,
+[data-theme="transparent-dark"] .ai-conv-menu {
+  background: rgba(10, 12, 18, calc(var(--block-opacity, 0.12) * 0.55 + 0.4));
+}
+[data-theme="transparent-light"] .ticktick-project-menu,
+[data-theme="transparent-light"] .ticktick-picker-menu,
+[data-theme="transparent-light"] .ai-conv-menu {
+  background: rgba(255, 255, 255, calc(var(--block-opacity, 0.12) * 0.35 + 0.62));
+}
+.settings-ticktick-status {
+  font-size: 11px;
+  color: var(--muted);
+  align-self: center;
+}
+[data-theme="transparent-light"] .ticktick-main,
+[data-theme="transparent-dark"] .ticktick-main {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-theme="transparent-light"] .ticktick-todo,
+[data-theme="transparent-dark"] .ticktick-todo {
+  border-top-color: rgba(255, 255, 255, calc(var(--block-opacity, 0.12) * 0.5 + 0.06));
+}

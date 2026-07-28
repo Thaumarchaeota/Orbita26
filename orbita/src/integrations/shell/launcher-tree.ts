@@ -1,4 +1,4 @@
-import type { AppEntry, BookmarkEntry, LauncherEntryOf, LauncherFolder, LauncherLeafBase } from "../../core/data/types";
+import type { LauncherEntryOf, LauncherFolder, LauncherLeafBase } from "../../core/data/types";
 
 export type LauncherEntry<L extends LauncherLeafBase = LauncherLeafBase> = LauncherEntryOf<L>;
 export type { LauncherFolder };
@@ -164,34 +164,3 @@ export function getLauncherFolder<L extends LauncherLeafBase>(
   const e = entries.find((x) => x.id === id);
   return e?.kind === "folder" ? (e as LauncherFolder<L>) : null;
 }
-
-export const isBookmarkFolder = (e: BookmarkEntry) => isLauncherFolder(e);
-export const isAppFolder = (e: AppEntry) => isLauncherFolder(e);
-export const flattenBookmarkLeaves = (entries: BookmarkEntry[]) => flattenLauncherLeaves(entries, "link");
-export const flattenAppLeaves = (entries: AppEntry[]) => flattenLauncherLeaves(entries, "app");
-export const moveBookmarkToFolder = (entries: BookmarkEntry[], sourceId: string, folderId: string) =>
-  moveToFolder(entries, sourceId, folderId, "link");
-export const moveAppToFolder = (entries: AppEntry[], sourceId: string, folderId: string) =>
-  moveToFolder(entries, sourceId, folderId, "app");
-export const dissolveRootBookmarkFolders = (entries: BookmarkEntry[]) => dissolveRootFolders(entries);
-export const dissolveRootAppFolders = (entries: AppEntry[]) => dissolveRootFolders(entries);
-export const moveBookmarkToRoot = (entries: BookmarkEntry[], sourceId: string, folderId: string) =>
-  moveToRoot(entries, sourceId, folderId);
-export const moveAppToRoot = (entries: AppEntry[], sourceId: string, folderId: string) =>
-  moveToRoot(entries, sourceId, folderId);
-export const reorderFolderBookmarks = (entries: BookmarkEntry[], folderId: string, orderedIds: string[]) =>
-  reorderFolderChildren(entries, folderId, orderedIds);
-export const reorderFolderApps = (entries: AppEntry[], folderId: string, orderedIds: string[]) =>
-  reorderFolderChildren(entries, folderId, orderedIds);
-export const mergeBookmarksIntoNewFolder = (entries: BookmarkEntry[], sourceId: string, targetId: string) =>
-  mergeIntoNewFolder(entries, sourceId, targetId, "link");
-export const mergeAppsIntoNewFolder = (entries: AppEntry[], sourceId: string, targetId: string) =>
-  mergeIntoNewFolder(entries, sourceId, targetId, "app");
-export const removeBookmarkEntry = (entries: BookmarkEntry[], id: string) => removeEntry(entries, id);
-export const removeAppEntry = (entries: AppEntry[], id: string) => removeEntry(entries, id);
-export const updateBookmarkFolderName = (entries: BookmarkEntry[], id: string, name: string) =>
-  updateFolderName(entries, id, name);
-export const updateAppFolderName = (entries: AppEntry[], id: string, name: string) =>
-  updateFolderName(entries, id, name);
-export const getBookmarkFolder = (entries: BookmarkEntry[], id: string) => getLauncherFolder(entries, id);
-export const getAppFolder = (entries: AppEntry[], id: string) => getLauncherFolder(entries, id);

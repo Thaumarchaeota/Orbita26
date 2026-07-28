@@ -565,6 +565,10 @@ pub fn cache_favicons_dir(data_dir: &str) -> PathBuf {
     Path::new(data_dir).join("cache").join("favicons")
 }
 
+pub fn cache_file_type_icons_dir(data_dir: &str) -> PathBuf {
+    Path::new(data_dir).join("cache").join("file-type-icons")
+}
+
 fn validate_conversation_id(id: &str) -> Result<(), String> {
     let ok = id.len() == 36
         && id.as_bytes().iter().enumerate().all(|(i, b)| match i {
