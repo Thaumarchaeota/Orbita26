@@ -10,6 +10,7 @@ import {
   writeLocalFiles,
   writeSettings,
 } from "./client";
+import { applyFontPrefs } from "./fonts";
 import type { AppSettings, AppTheme, UiPrefs } from "./types";
 
 let cached: AppSettings | null = null;
@@ -35,7 +36,11 @@ export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSet
   const next: AppSettings = {
     ...current,
     ...patch,
-    ui: { ...current.ui, ...(patch.ui ?? {}) },
+    ui: {
+      ...current.ui,
+      ...(patch.ui ?? {}),
+      fonts: { ...current.ui.fonts, ...(patch.ui?.fonts ?? {}) },
+    },
     integrations: {
       v2ray: { ...current.integrations.v2ray, ...(patch.integrations?.v2ray ?? {}) },
       zotero: { ...current.integrations.zotero, ...(patch.integrations?.zotero ?? {}) },
@@ -75,6 +80,7 @@ export function applyUiPrefs(ui: UiPrefs) {
   root.style.setProperty("--dock-left-span", String(dockSpan));
   root.style.setProperty("--local-dock-cols", String(localCols));
   root.style.setProperty("--launcher-dock-cols", String(dockSpan + localCols));
+  applyFontPrefs(ui.fonts, root);
 }
 
 export function applyTheme(theme: AppTheme) {

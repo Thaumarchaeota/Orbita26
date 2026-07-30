@@ -341,6 +341,7 @@
   max-width: 88%;
   padding: 8px 12px;
   border-radius: 14px;
+  font-family: var(--font-ai);
   font-size: 12px;
   line-height: 1.45;
   word-break: break-word;

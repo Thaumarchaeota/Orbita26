@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { defaultFontPrefs, normalizeFontPrefs } from "./fonts";
 import type {
   AiConfig,
   AppEntry,
@@ -85,6 +86,7 @@ export function defaultUiPrefs(): UiPrefs {
     blockOpacity: 12,
     topGrid: { ...DEFAULT_TOP_GRID },
     dockLeftGrid: { ...DEFAULT_DOCK_LEFT_GRID },
+    fonts: defaultFontPrefs(),
   };
 }
 
@@ -282,6 +284,7 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
     blockOpacity: clampBlockOpacity(uiRaw?.blockOpacity),
     topGrid: topDock.top,
     dockLeftGrid: topDock.dock,
+    fonts: normalizeFontPrefs(uiRaw?.fonts),
   };
   return {
     version: Math.max(typeof migrated.version === "number" ? migrated.version : 0, 5),

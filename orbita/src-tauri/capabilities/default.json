@@ -8,6 +8,11 @@
   },
   "permissions": [
     "core:default",
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-cursor-position",
+    "core:window:allow-inner-position",
+    "core:window:allow-inner-size",
+    "core:window:allow-scale-factor",
     "opener:default",
     "dialog:default"
   ]

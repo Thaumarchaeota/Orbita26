@@ -1,4 +1,6 @@
 use std::process::Command;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, WindowEvent};
@@ -15,6 +17,8 @@ mod hwmon;
 mod obsidian;
 mod window_shell;
 mod zotero;
+
+static LAST_BLUR: Mutex<Option<Instant>> = Mutex::new(None);
 
 fn programs_menu_path() -> Result<String, String> {
     #[cfg(target_os = "windows")]
@@ -444,12 +448,15 @@ async fn dida_delete_task(
         .map_err(|e| e.to_string())?
 }
 
+#[tauri::command]
+fn repair_window(window: tauri::WebviewWindow, reload: bool) -> Result<(), String> {
+    window_shell::repair_window(&window, reload)
+}
+
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
-        let _ = window_shell::fit_work_area(&win);
-        window_shell::fix_transparent_chrome(&win);
         window_shell::attach_to_taskbar(&win);
-        window_shell::bring_to_front(&win);
+        let _ = window_shell::repair_window(&win, true);
     }
 }
 
@@ -510,10 +517,25 @@ pub fn run() {
                 .build(app)?;
 
             let win_for_close = win.clone();
+            let win_for_focus = win.clone();
             win.on_window_event(move |event| {
-                if let WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    window_shell::detach_from_taskbar(&win_for_close);
+                match event {
+                    WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        window_shell::detach_from_taskbar(&win_for_close);
+                    }
+                    WindowEvent::Focused(false) => {
+                        *LAST_BLUR.lock().unwrap() = Some(Instant::now());
+                    }
+                    WindowEvent::Focused(true) => {
+                        let reload = LAST_BLUR
+                            .lock()
+                            .unwrap()
+                            .map(|t| t.elapsed() > Duration::from_secs(180))
+                            .unwrap_or(false);
+                        let _ = window_shell::repair_window(&win_for_focus, reload);
+                    }
+                    _ => {}
                 }
             });
 
@@ -568,7 +590,8 @@ pub fn run() {
             dida_create_task,
             dida_update_task,
             dida_complete_task,
-            dida_delete_task
+            dida_delete_task,
+            repair_window
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

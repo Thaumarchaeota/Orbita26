@@ -104,6 +104,55 @@ fn default_apps_grid() -> GridPrefs {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct FontPrefs {
+    #[serde(default = "default_font_base")]
+    pub base: String,
+    #[serde(default = "default_font_inherit")]
+    pub launcher: String,
+    #[serde(default = "default_font_inherit")]
+    pub file_tree: String,
+    #[serde(default = "default_font_literature")]
+    pub literature: String,
+    #[serde(default = "default_font_inherit")]
+    pub note: String,
+    #[serde(default = "default_font_inherit")]
+    pub ai: String,
+    #[serde(default = "default_font_clock")]
+    pub clock: String,
+}
+
+fn default_font_base() -> String {
+    "system".into()
+}
+
+fn default_font_inherit() -> String {
+    "inherit".into()
+}
+
+fn default_font_literature() -> String {
+    "harding".into()
+}
+
+fn default_font_clock() -> String {
+    "ubuntu".into()
+}
+
+impl Default for FontPrefs {
+    fn default() -> Self {
+        Self {
+            base: default_font_base(),
+            launcher: default_font_inherit(),
+            file_tree: default_font_inherit(),
+            literature: default_font_literature(),
+            note: default_font_inherit(),
+            ai: default_font_inherit(),
+            clock: default_font_clock(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct UiPrefs {
     #[serde(default = "default_engine_id")]
     pub engine_id: String,
@@ -121,6 +170,8 @@ pub struct UiPrefs {
     pub bookmarks_grid: GridPrefs,
     #[serde(default = "default_apps_grid", skip_serializing)]
     pub apps_grid: GridPrefs,
+    #[serde(default)]
+    pub fonts: FontPrefs,
 }
 
 fn default_block_opacity() -> u8 {
@@ -146,6 +197,7 @@ impl Default for UiPrefs {
             dock_left_grid: default_dock_left_grid(),
             bookmarks_grid: default_bookmarks_grid(),
             apps_grid: default_apps_grid(),
+            fonts: FontPrefs::default(),
         }
     }
 }

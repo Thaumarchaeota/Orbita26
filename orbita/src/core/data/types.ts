@@ -1,3 +1,5 @@
+import type { FontPrefs } from "./fonts";
+
 export type GridPrefs = {
   cols: number;
   rows: number;
@@ -13,6 +15,7 @@ export type UiPrefs = {
   blockOpacity: number;
   topGrid: GridPrefs;
   dockLeftGrid: GridPrefs;
+  fonts: FontPrefs;
 };
 
 export type V2rayIntegration = {

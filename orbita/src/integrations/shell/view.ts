@@ -72,10 +72,11 @@ function renderEngines(container: HTMLElement, indicator: HTMLElement) {
 }
 
 function startClock(timeEl: HTMLElement, dateEl: HTMLElement) {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const tick = () => {
     const n = new Date();
     timeEl.textContent = n.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-    dateEl.textContent = n.toLocaleDateString("zh-CN", { weekday: "long", month: "long", day: "numeric" });
+    dateEl.textContent = `${months[n.getMonth()]}${n.getDate()}`;
   };
   tick();
   setInterval(tick, 1000);

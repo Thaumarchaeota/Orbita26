@@ -323,7 +323,7 @@
   font-size: 11px;
   line-height: 1.35;
   color: var(--text);
-  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-family: var(--font-base);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -343,6 +343,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+#literatureList .local-file-name {
+  font-family: var(--font-literature);
+}
+#noteList .local-file-name {
+  font-family: var(--font-note);
 }
 .local-note-badge {
   flex-shrink: 0;
@@ -877,6 +883,7 @@
 .local-tree-label {
   flex: 1;
   min-width: 0;
+  font-family: var(--font-file-tree);
   line-height: 16px;
   white-space: nowrap;
   overflow: hidden;
@@ -1059,6 +1066,7 @@
   min-width: 0;
   max-width: 100%;
   flex-shrink: 0;
+  font-family: var(--font-launcher);
   line-height: 1.35;
   height: calc(1.35em + 1px);
   text-align: center;
@@ -1258,7 +1266,6 @@
 [data-theme="dark"] .icon-moon { opacity: 0; transform: rotate(60deg) scale(.6); }
 [data-theme="dark"] .icon-sun { opacity: 1; transform: rotate(0); }
 .time {
-  font-family: Ubuntu, sans-serif;
   font-size: 32px;
   font-weight: 300;
   line-height: 1;
@@ -1323,6 +1330,7 @@
 }
 .clock-block {
   flex-shrink: 0;
+  font-family: var(--font-clock);
   text-align: left;
   padding-right: 4px;
 }

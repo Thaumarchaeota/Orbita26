@@ -43,6 +43,18 @@ pub fn detach_from_taskbar(window: &WebviewWindow) {
     bring_to_front(window);
 }
 
+pub fn repair_window(window: &WebviewWindow, reload: bool) -> Result<(), String> {
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = fit_work_area(window);
+    fix_transparent_chrome(window);
+    if reload {
+        window.reload().map_err(|e| e.to_string())?;
+    }
+    bring_to_front(window);
+    Ok(())
+}
+
 pub fn bring_to_front(window: &WebviewWindow) {
     #[cfg(target_os = "windows")]
     {

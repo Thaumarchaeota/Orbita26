@@ -7,11 +7,52 @@ import {
   patchSettings,
 } from "../../core/settings";
 import type { GridPrefs } from "../../core/data/types";
+import {
+  FONT_PRESET_IDS,
+  FONT_PRESET_LABELS,
+  defaultFontPrefs,
+  type FontBasePreset,
+  type FontPrefs,
+  type FontPresetId,
+} from "../../core/data/fonts";
 import { normalizeGridLayoutPrefs, DEFAULT_TOP_GRID, DEFAULT_DOCK_LEFT_GRID } from "../../core/data/client";
 import { SETTINGS_GEAR_SVG } from "../ai/icons";
 import { pickAppFile, pickLocalFolder } from "./adapter";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
 import { didaAuthStatus, didaConnect, didaDisconnect, invokeError } from "../ticktick/client";
+
+const FONT_SLOT_FIELDS: {
+  key: keyof FontPrefs;
+  label: string;
+  inherit: boolean;
+}[] = [
+  { key: "base", label: "界面默认", inherit: false },
+  { key: "launcher", label: "应用/书签", inherit: true },
+  { key: "fileTree", label: "文件树", inherit: true },
+  { key: "literature", label: "文献标题", inherit: true },
+  { key: "note", label: "笔记条目", inherit: true },
+  { key: "ai", label: "AI 消息", inherit: true },
+  { key: "clock", label: "时钟/日期", inherit: false },
+];
+
+function fontSelectHtml(slot: (typeof FONT_SLOT_FIELDS)[number]): string {
+  const id = `settingsFont${slot.key[0].toUpperCase()}${slot.key.slice(1)}`;
+  const inheritOpt = slot.inherit ? `<option value="inherit">跟随默认</option>` : "";
+  const opts = FONT_PRESET_IDS.map(
+    (preset) => `<option value="${preset}">${FONT_PRESET_LABELS[preset]}</option>`,
+  ).join("");
+  return `
+    <div class="dialog-field">
+      <label for="${id}">${slot.label}</label>
+      <select id="${id}" data-font-slot="${slot.key}">
+        ${inheritOpt}${opts}
+      </select>
+    </div>`;
+}
+
+function readFontSelect(select: HTMLSelectElement): FontPresetId | FontBasePreset {
+  return select.value as FontPresetId | FontBasePreset;
+}
 
 export function mountSettingsButton(root: HTMLElement) {
   const mount = root.querySelector<HTMLElement>("#settingsMount") ?? root;
@@ -47,6 +88,8 @@ function mountSettingsDialog(root: HTMLElement) {
           <input id="settingsBlockOpacity" type="range" min="0" max="100" value="12">
           <div class="settings-opacity-hint">0 为全透明，100 为不透明</div>
         </div>
+        <div class="dialog-section-title">字体</div>
+        ${FONT_SLOT_FIELDS.map(fontSelectHtml).join("")}
         <div class="dialog-field">
           <label>上方网格（应用）</label>
           <div class="settings-grid-row">
@@ -176,13 +219,24 @@ function mountSettingsDialog(root: HTMLElement) {
   const appsColsInput = backdrop.querySelector<HTMLInputElement>("#settingsAppsCols")!;
   const appsRowsInput = backdrop.querySelector<HTMLInputElement>("#settingsAppsRows")!;
   const themeBtns = backdrop.querySelectorAll<HTMLButtonElement>("[data-theme]");
+  const fontSelects = backdrop.querySelectorAll<HTMLSelectElement>("[data-font-slot]");
 
   let draftTheme: AppTheme = "light";
   let draftBlockOpacity = 12;
   let draftTopGrid: GridPrefs = { ...DEFAULT_TOP_GRID };
   let draftDockLeftGrid: GridPrefs = { ...DEFAULT_DOCK_LEFT_GRID };
+  let draftFonts: FontPrefs = defaultFontPrefs();
   let savedSettings = getSettings();
   let resolvePending: ((value: boolean) => void) | null = null;
+
+  function readDraftFonts(): FontPrefs {
+    const next = { ...draftFonts };
+    fontSelects.forEach((select) => {
+      const key = select.dataset.fontSlot as keyof FontPrefs;
+      next[key] = readFontSelect(select) as never;
+    });
+    return next;
+  }
 
   function readDraftUi() {
     return {
@@ -190,6 +244,7 @@ function mountSettingsDialog(root: HTMLElement) {
       blockOpacity: draftBlockOpacity,
       topGrid: draftTopGrid,
       dockLeftGrid: draftDockLeftGrid,
+      fonts: readDraftFonts(),
     };
   }
 
@@ -272,6 +327,7 @@ function mountSettingsDialog(root: HTMLElement) {
     draftBlockOpacity = settings.ui.blockOpacity;
     draftTopGrid = { ...settings.ui.topGrid };
     draftDockLeftGrid = { ...settings.ui.dockLeftGrid };
+    draftFonts = { ...settings.ui.fonts };
     blockOpacityInput.value = String(draftBlockOpacity);
     blockOpacityVal.textContent = String(draftBlockOpacity);
     fillGridInputs(draftTopGrid, "top");
@@ -289,6 +345,10 @@ function mountSettingsDialog(root: HTMLElement) {
     });
     themeBtns.forEach((btn) => {
       btn.classList.toggle("dialog-btn-primary", btn.dataset.theme === draftTheme);
+    });
+    fontSelects.forEach((select) => {
+      const key = select.dataset.fontSlot as keyof FontPrefs;
+      select.value = draftFonts[key];
     });
     syncBlockFieldVisibility();
   }
@@ -311,7 +371,14 @@ function mountSettingsDialog(root: HTMLElement) {
   blockOpacityInput.addEventListener("input", () => {
     draftBlockOpacity = Number(blockOpacityInput.value);
     blockOpacityVal.textContent = String(draftBlockOpacity);
-    applyUiPrefs({ ...savedSettings.ui, blockOpacity: draftBlockOpacity });
+    applyUiPrefs({ ...savedSettings.ui, blockOpacity: draftBlockOpacity, fonts: readDraftFonts() });
+  });
+
+  fontSelects.forEach((select) => {
+    select.addEventListener("change", () => {
+      draftFonts = readDraftFonts();
+      applyUiPrefs(readDraftUi());
+    });
   });
 
   const previewLayout = () => {
