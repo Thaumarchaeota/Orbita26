@@ -146,7 +146,7 @@ export async function closeDialog(backdrop: HTMLElement, trigger?: MotionTrigger
   p.style.removeProperty("--motion-fly-scale");
 }
 
-const CROSSFADE_MS = 200;
+const CROSSFADE_MS = 120;
 
 export async function crossfadeSwap(el: HTMLElement, swap: () => void) {
   if (!motionEnabled()) {

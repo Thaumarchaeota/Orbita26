@@ -3,7 +3,7 @@ import { isTauri } from "../core/data/client";
 import { getSettings, isTransparentTheme } from "../core/settings";
 
 const INTERACTIVE =
-  ".shell-top-inner,.shell-sidebar,.ai-section,.ticktick-section,.top-tray,.dialog-backdrop,.folder-overlay-scrim,.folder-overlay-panel,.launcher-tile,.local-tree-row,.launcher-tile-ghost,.local-tree-row-ghost,button,input,a,textarea,select,[contenteditable='true']";
+  ".shell-top-inner,.shell-sidebar,.ai-section,.ticktick-section,.top-tray,.dialog-backdrop,.folder-overlay-scrim,.folder-overlay-panel,.launcher-tile,.local-tree-row,.local-ctx-menu,.launcher-tile-ghost,.local-tree-row-ghost,button,input,a,textarea,select,[contenteditable='true']";
 
 let enabled = false;
 let ignoring = false;

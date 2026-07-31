@@ -1,5 +1,6 @@
 import "./ui/shell.css";
 import { initClickThrough } from "./ui/click-through";
+import { initHoverTips } from "./ui/hover-tip";
 import { initWakeRepair } from "./ui/wake-repair";
 import { initSettings } from "./core/settings";
 import { initAiConfig } from "./integrations/ai/config";
@@ -19,6 +20,7 @@ registerIntegration(ticktickIntegration);
 void (async () => {
   await initSettings();
   initClickThrough();
+  initHoverTips();
   initWakeRepair();
   hydrateShellStore();
   await Promise.all([initAiConfig(), initBookmarks(), initApps(), initLocalFiles()]);

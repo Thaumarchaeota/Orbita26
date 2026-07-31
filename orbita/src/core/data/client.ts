@@ -1,22 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
-import { defaultFontPrefs, normalizeFontPrefs } from "./fonts";
+import { normalizeFontPrefs } from "./fonts";
+import { defaultAiConfig, defaultIntegrations, defaultUiPrefs, DEFAULT_DOCK_LEFT_GRID, DEFAULT_TOP_GRID } from "./defaults";
 import type {
-  AiConfig,
   AppEntry,
   AppItem,
   AppSettings,
   AppTheme,
   Bookmark,
   BookmarkEntry,
-  Integrations,
   LocalEntry,
   GridPrefs,
   UiPrefs,
 } from "./types";
 
-export const DEFAULT_GRID_GAP = 8;
-export const DEFAULT_TOP_GRID: GridPrefs = { cols: 6, rows: 3, tileScale: 100, colGap: 8, rowGap: 8 };
-export const DEFAULT_DOCK_LEFT_GRID: GridPrefs = { cols: 2, rows: 5, tileScale: 100, colGap: 8, rowGap: 8 };
+export { DEFAULT_GRID_GAP, DEFAULT_TOP_GRID, DEFAULT_DOCK_LEFT_GRID, defaultAiConfig, defaultIntegrations, defaultUiPrefs } from "./defaults";
 
 export function isTauri() {
   return "__TAURI_INTERNALS__" in window;
@@ -40,54 +37,6 @@ function readWebJson<T>(name: string, fallback: T): T {
 
 function writeWebJson(name: string, value: unknown) {
   localStorage.setItem(webKey(name), JSON.stringify(value));
-}
-
-export function defaultAiConfig(): AiConfig {
-  const id = "deepseek-default";
-  return {
-    defaultPrompt: "",
-    activeEntryId: id,
-    activeModel: "deepseek-chat",
-    entries: [
-      {
-        id,
-        name: "DeepSeek",
-        apiKey: "",
-        baseUrl: "https://api.deepseek.com",
-        models: ["deepseek-chat", "deepseek-reasoner"],
-      },
-    ],
-  };
-}
-
-export function defaultIntegrations(): Integrations {
-  return {
-    v2ray: { exePath: "" },
-    zotero: {
-      dataDir: "",
-      articleNoteDir: "",
-    },
-    obsidian: { vaultDir: "" },
-    ticktick: {
-      clientId: "m5iR14msV0KXA5fDYt",
-      clientSecret: "QsjOxN217ijYZAPOH4GnZJxiyCVdp7s1",
-      redirectUri: "http://127.0.0.1:8765/callback",
-      accessToken: "",
-      defaultProjectId: "inbox",
-    },
-  };
-}
-
-export function defaultUiPrefs(): UiPrefs {
-  return {
-    engineId: "google",
-    localTab: "file",
-    activeConversationId: null,
-    blockOpacity: 12,
-    topGrid: { ...DEFAULT_TOP_GRID },
-    dockLeftGrid: { ...DEFAULT_DOCK_LEFT_GRID },
-    fonts: defaultFontPrefs(),
-  };
 }
 
 function clampInt(value: unknown, fallback: number, min: number, max: number): number {
@@ -295,14 +244,13 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
       v2ray: { ...base.integrations.v2ray, ...(raw.integrations?.v2ray ?? {}) },
       zotero: { ...base.integrations.zotero, ...(raw.integrations?.zotero ?? {}) },
       obsidian: { ...base.integrations.obsidian, ...(raw.integrations?.obsidian ?? {}) },
+      everything: { ...base.integrations.everything, ...(raw.integrations?.everything ?? {}) },
+      cursor: { ...base.integrations.cursor, ...(raw.integrations?.cursor ?? {}) },
       ticktick: {
         ...base.integrations.ticktick,
         ...(raw.integrations?.ticktick ?? {}),
-        clientId:
-          raw.integrations?.ticktick?.clientId?.trim() || base.integrations.ticktick.clientId,
-        clientSecret:
-          raw.integrations?.ticktick?.clientSecret?.trim() ||
-          base.integrations.ticktick.clientSecret,
+        clientId: raw.integrations?.ticktick?.clientId?.trim() ?? "",
+        clientSecret: raw.integrations?.ticktick?.clientSecret?.trim() ?? "",
         redirectUri:
           raw.integrations?.ticktick?.redirectUri?.trim() ||
           base.integrations.ticktick.redirectUri,

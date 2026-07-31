@@ -252,13 +252,13 @@ export function mountLocalEntryDialog(root: HTMLElement) {
       <div class="dialog-field" id="localEntryColorField">
         <label>图标颜色</label>
         <div class="local-color-picks" id="localEntryColorPicks">
-          <button type="button" class="local-color-swatch is-default is-active" data-color="" title="默认灰度"></button>
-          <button type="button" class="local-color-swatch" data-color="#1565c0" style="--swatch:#1565c0" title="蓝"></button>
-          <button type="button" class="local-color-swatch" data-color="#2e7d32" style="--swatch:#2e7d32" title="绿"></button>
-          <button type="button" class="local-color-swatch" data-color="#c5a038" style="--swatch:#c5a038" title="金"></button>
-          <button type="button" class="local-color-swatch" data-color="#e53935" style="--swatch:#e53935" title="红"></button>
-          <button type="button" class="local-color-swatch" data-color="#7c3aed" style="--swatch:#7c3aed" title="紫"></button>
-          <input type="color" class="local-color-input" id="localEntryDialogColor" value="#888888" title="自定义">
+          <button type="button" class="local-color-swatch is-default is-active" data-color="" data-tip="默认灰度"></button>
+          <button type="button" class="local-color-swatch" data-color="#1565c0" style="--swatch:#1565c0" data-tip="蓝"></button>
+          <button type="button" class="local-color-swatch" data-color="#2e7d32" style="--swatch:#2e7d32" data-tip="绿"></button>
+          <button type="button" class="local-color-swatch" data-color="#c5a038" style="--swatch:#c5a038" data-tip="金"></button>
+          <button type="button" class="local-color-swatch" data-color="#e53935" style="--swatch:#e53935" data-tip="红"></button>
+          <button type="button" class="local-color-swatch" data-color="#7c3aed" style="--swatch:#7c3aed" data-tip="紫"></button>
+          <input type="color" class="local-color-input" id="localEntryDialogColor" value="#888888" data-tip="自定义">
         </div>
       </div>
       <div class="dialog-actions">

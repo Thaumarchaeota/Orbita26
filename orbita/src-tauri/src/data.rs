@@ -262,16 +262,44 @@ impl Default for ObsidianIntegration {
     }
 }
 
-const DEFAULT_TICKTICK_CLIENT_ID: &str = "m5iR14msV0KXA5fDYt";
-const DEFAULT_TICKTICK_CLIENT_SECRET: &str = "QsjOxN217ijYZAPOH4GnZJxiyCVdp7s1";
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EverythingIntegration {
+    #[serde(default)]
+    pub exe_path: String,
+}
+
+impl Default for EverythingIntegration {
+    fn default() -> Self {
+        Self {
+            exe_path: String::new(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CursorIntegration {
+    #[serde(default)]
+    pub exe_path: String,
+}
+
+impl Default for CursorIntegration {
+    fn default() -> Self {
+        Self {
+            exe_path: String::new(),
+        }
+    }
+}
+
 const DEFAULT_TICKTICK_REDIRECT: &str = "http://127.0.0.1:8765/callback";
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TicktickIntegration {
-    #[serde(default = "default_ticktick_client_id")]
+    #[serde(default)]
     pub client_id: String,
-    #[serde(default = "default_ticktick_client_secret")]
+    #[serde(default)]
     pub client_secret: String,
     #[serde(default = "default_ticktick_redirect")]
     pub redirect_uri: String,
@@ -285,14 +313,6 @@ fn default_ticktick_project() -> String {
     "inbox".into()
 }
 
-fn default_ticktick_client_id() -> String {
-    DEFAULT_TICKTICK_CLIENT_ID.into()
-}
-
-fn default_ticktick_client_secret() -> String {
-    DEFAULT_TICKTICK_CLIENT_SECRET.into()
-}
-
 fn default_ticktick_redirect() -> String {
     DEFAULT_TICKTICK_REDIRECT.into()
 }
@@ -300,8 +320,8 @@ fn default_ticktick_redirect() -> String {
 impl Default for TicktickIntegration {
     fn default() -> Self {
         Self {
-            client_id: default_ticktick_client_id(),
-            client_secret: default_ticktick_client_secret(),
+            client_id: String::new(),
+            client_secret: String::new(),
             redirect_uri: default_ticktick_redirect(),
             access_token: String::new(),
             default_project_id: default_ticktick_project(),
@@ -318,6 +338,10 @@ pub struct Integrations {
     pub zotero: ZoteroIntegration,
     #[serde(default)]
     pub obsidian: ObsidianIntegration,
+    #[serde(default)]
+    pub everything: EverythingIntegration,
+    #[serde(default)]
+    pub cursor: CursorIntegration,
     #[serde(default)]
     pub ticktick: TicktickIntegration,
 }

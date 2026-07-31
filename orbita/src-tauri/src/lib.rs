@@ -88,8 +88,13 @@ fn open_local_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn open_with_cursor(path: String) -> Result<(), String> {
-    Command::new("cursor")
+fn open_with_cursor(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let settings = data::read_settings(&app)?;
+    let exe = settings.integrations.cursor.exe_path.trim();
+    if exe.is_empty() {
+        return Err("请先在设置中配置 Cursor 路径".into());
+    }
+    Command::new(exe)
         .arg(&path)
         .spawn()
         .map_err(|e| format!("打开 Cursor 失败: {e}"))?;
@@ -97,8 +102,78 @@ fn open_with_cursor(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn search_everything(query: String, limit: Option<u32>) -> Result<Vec<everything::EverythingHit>, String> {
-    everything::search(&query, limit.unwrap_or(50))
+fn open_with_dialog(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::path::Path;
+        let p = Path::new(&path);
+        if !p.is_file() {
+            return Err(if p.is_dir() {
+                "请选择文件".into()
+            } else {
+                format!("文件不存在: {path}")
+            });
+        }
+        Command::new("rundll32")
+            .args(["shell32.dll,OpenAs_RunDLL", &path])
+            .spawn()
+            .map_err(|e| format!("打开方式失败: {e}"))?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = path;
+        Err("仅支持 Windows".into())
+    }
+}
+
+#[tauri::command]
+fn open_recycle_bin() -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .arg("shell:RecycleBinFolder")
+            .spawn()
+            .map_err(|e| format!("打开回收站失败: {e}"))?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("仅支持 Windows".into())
+    }
+}
+
+#[tauri::command]
+fn reveal_path_in_explorer(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::path::Path;
+        let p = Path::new(&path);
+        if !p.exists() {
+            return Err(format!("路径不存在: {path}"));
+        }
+        let status = if p.is_dir() {
+            Command::new("explorer").arg(&path).status()
+        } else {
+            Command::new("explorer").args(["/select,", &path]).status()
+        };
+        status.map_err(|e| format!("打开资源管理器失败: {e}"))?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = path;
+        Err("仅支持 Windows".into())
+    }
+}
+
+#[tauri::command]
+fn search_everything(
+    app: tauri::AppHandle,
+    query: String,
+    limit: Option<u32>,
+) -> Result<Vec<everything::EverythingHit>, String> {
+    everything::search(&app, &query, limit.unwrap_or(50))
 }
 
 #[tauri::command]
@@ -549,6 +624,9 @@ pub fn run() {
             pick_local_folder,
             open_local_path,
             open_with_cursor,
+            open_with_dialog,
+            reveal_path_in_explorer,
+            open_recycle_bin,
             search_everything,
             pick_app_file,
             cache_app_icon,

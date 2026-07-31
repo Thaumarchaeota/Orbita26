@@ -46,7 +46,7 @@ export function renderTile(
   if (!item) {
     const slotAttr = slot !== undefined ? ` data-slot="${slot}"` : "";
     return `
-      <div class="launcher-tile is-empty" role="button" tabindex="0"${slotAttr} title="${escAttr(emptyLabel)}">
+      <div class="launcher-tile is-empty" role="button" tabindex="0"${slotAttr}>
         <span class="launcher-tile-content">
           <span class="launcher-avatar launcher-avatar-empty">${PLUS_SVG}</span>
           <span class="launcher-name">${escHtml(emptyLabel)}</span>
@@ -63,7 +63,7 @@ export function renderTile(
       ? `<span class="launcher-tile-edit" data-action="edit-folder" aria-label="重命名">${EDIT_SVG}</span>`
       : "";
     return `
-      <div class="launcher-tile is-folder${editMode ? " is-editing" : ""}" role="button" tabindex="0" data-id="${escAttr(item.id)}" data-kind="folder" title="${escAttr(item.name)}">
+      <div class="launcher-tile is-folder${editMode ? " is-editing" : ""}" role="button" tabindex="0" data-id="${escAttr(item.id)}" data-kind="folder">
         ${deleteBtn}
         <span class="launcher-tile-content">
           <span class="launcher-tile-main">
@@ -92,7 +92,7 @@ export function renderTile(
     : `<span class="launcher-avatar" style="--avatar-color:${color}">${initial}</span>`;
   const kindAttr = item.kind ? ` data-kind="${escAttr(item.kind)}"` : "";
   return `
-    <div class="launcher-tile${editMode ? " is-editing" : ""}" role="button" tabindex="0" data-id="${escAttr(item.id)}"${kindAttr} ${dataAttrs} title="${escAttr(item.name)}">
+    <div class="launcher-tile${editMode ? " is-editing" : ""}" role="button" tabindex="0" data-id="${escAttr(item.id)}"${kindAttr} ${dataAttrs}>
       ${deleteBtn}
       <span class="launcher-tile-content">
         <span class="launcher-tile-main">

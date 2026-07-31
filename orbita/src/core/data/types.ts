@@ -31,6 +31,14 @@ export type ObsidianIntegration = {
   vaultDir: string;
 };
 
+export type EverythingIntegration = {
+  exePath: string;
+};
+
+export type CursorIntegration = {
+  exePath: string;
+};
+
 export type TicktickIntegration = {
   clientId: string;
   clientSecret: string;
@@ -43,6 +51,8 @@ export type Integrations = {
   v2ray: V2rayIntegration;
   zotero: ZoteroIntegration;
   obsidian: ObsidianIntegration;
+  everything: EverythingIntegration;
+  cursor: CursorIntegration;
   ticktick: TicktickIntegration;
 };
 

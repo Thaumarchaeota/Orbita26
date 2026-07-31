@@ -58,6 +58,30 @@ export async function openWithCursor(path: string): Promise<void> {
   alert("需完整 App 用 Cursor 打开");
 }
 
+export async function openWithSystemDialog(path: string): Promise<void> {
+  if (isTauri()) {
+    await invoke("open_with_dialog", { path });
+    return;
+  }
+  alert("需完整 App 选择打开方式");
+}
+
+export async function openRecycleBin(): Promise<void> {
+  if (isTauri()) {
+    await invoke("open_recycle_bin");
+    return;
+  }
+  alert("需完整 App 打开回收站");
+}
+
+export async function revealPathInExplorer(path: string): Promise<void> {
+  if (isTauri()) {
+    await invoke("reveal_path_in_explorer", { path });
+    return;
+  }
+  alert("需完整 App 打开文件路径");
+}
+
 export type EverythingHit = { path: string; name: string; isDir: boolean };
 
 export async function searchEverything(query: string, limit = 50): Promise<EverythingHit[]> {

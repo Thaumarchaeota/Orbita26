@@ -16,7 +16,6 @@ import {
 } from "./conversations";
 import { AI_SVG, BRAIN_SVG, CHEVRON_SVG, WEB_SVG } from "./icons";
 import { mountTextDialog } from "./prompt-dialog";
-import { mountAiSettingsButton } from "./settings-dialog";
 import { mountConfirmDialog } from "../shell/dialog";
 import { EDIT_SVG } from "../shell/tiles";
 
@@ -24,9 +23,8 @@ const PROMPT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 const DELETE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
 
 const CONV_EXPANDED_MAX = 148;
-const CONV_ANIM_MS = 380;
-const CONV_CLOSE_MS = 300;
-const CONV_MENU_FADE_MS = 180;
+const CONV_ANIM_MS = 300;
+const CONV_CLOSE_MS = 180;
 
 const MODEL_INLINE_MAX = 24;
 
@@ -57,18 +55,17 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
           <div class="ai-conv-menu scroll-slim motion-popover" id="aiConvMenu"></div>
         </div>
         <div class="ai-topbar-actions">
-          <button type="button" class="ai-icon-btn" id="aiNewConv" title="新对话">+</button>
-          <span id="aiSettingsMount"></span>
+          <button type="button" class="ai-icon-btn" id="aiNewConv" data-tip="新对话">+</button>
         </div>
       </div>
       <div class="ai-messages scroll-slim" id="aiMessages"></div>
       <div class="ai-bottom">
-        <button type="button" class="ai-prompt-btn" id="aiConvPrompt" title="对话 Prompt">${PROMPT_SVG}</button>
+        <button type="button" class="ai-prompt-btn" id="aiConvPrompt" data-tip="对话 Prompt">${PROMPT_SVG}</button>
         <form class="ai-composer" id="aiForm">
           <div class="ai-composer-box">
             <div class="ai-composer-tools">
-              <button type="button" class="ai-tool-btn" disabled title="推理（即将支持）">${BRAIN_SVG}</button>
-              <button type="button" class="ai-tool-btn" disabled title="联网（即将支持）">${WEB_SVG}</button>
+              <button type="button" class="ai-tool-btn" disabled data-tip="推理（即将支持）">${BRAIN_SVG}</button>
+              <button type="button" class="ai-tool-btn" disabled data-tip="联网（即将支持）">${WEB_SVG}</button>
             </div>
             <input type="text" id="aiInput" placeholder="输入消息…" autocomplete="off">
             <button type="button" class="ai-model-btn" id="aiModelBtn">模型</button>
@@ -92,7 +89,6 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   const sendBtn = aside.querySelector<HTMLButtonElement>("#aiSendBtn")!;
   const modelBtn = aside.querySelector<HTMLButtonElement>("#aiModelBtn")!;
   const modelMenu = aside.querySelector<HTMLElement>("#aiModelMenu")!;
-  const settingsMount = aside.querySelector<HTMLElement>("#aiSettingsMount")!;
 
   const promptDialog = mountTextDialog(dialogRoot);
   const confirmDelete = mountConfirmDialog(dialogRoot);
@@ -211,13 +207,23 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     measureConvCollapsedWidth();
   }
 
-  async function closeConvPicker() {
+  async function closeConvPicker(instant = false) {
     if (!isPopoverOpen(convMenu) && !convPicker.classList.contains("is-expanded")) return;
-    if (convAnimating) return;
-    await closePopover(convMenu);
+    if (convAnimating && !instant) return;
+    if (instant) {
+      void closePopover(convMenu);
+      if (!convPicker.classList.contains("is-expanded")) return;
+      setConvAnimMode(null);
+      convAnimating = false;
+      setConvWidth(measureLabelWidth());
+      convPicker.classList.remove("is-expanded");
+      measureConvCollapsedWidth();
+      return;
+    }
+    if (isPopoverOpen(convMenu)) {
+      await closePopover(convMenu);
+    }
     if (!convPicker.classList.contains("is-expanded")) return;
-    await new Promise<void>((r) => window.setTimeout(r, CONV_MENU_FADE_MS * 0.45));
-    if (isPopoverOpen(convMenu)) return;
     const targetW = measureLabelWidth();
     await animateConvWidth(targetW, "collapse");
     convPicker.classList.remove("is-expanded");
@@ -264,8 +270,8 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
           <div class="ai-conv-row ${conversation?.id === c.id ? "active" : ""}" data-id="${escAttr(c.id)}">
             <button type="button" class="ai-conv-item" data-id="${escAttr(c.id)}">${escapeHtml(c.title)}</button>
             <div class="ai-conv-row-actions">
-              <button type="button" class="ai-conv-action" data-action="edit" data-id="${escAttr(c.id)}" title="重命名">${EDIT_SVG}</button>
-              <button type="button" class="ai-conv-action" data-action="delete" data-id="${escAttr(c.id)}" title="删除">${DELETE_SVG}</button>
+              <button type="button" class="ai-conv-action" data-action="edit" data-id="${escAttr(c.id)}" data-tip="重命名">${EDIT_SVG}</button>
+              <button type="button" class="ai-conv-action" data-action="delete" data-id="${escAttr(c.id)}" data-tip="删除">${DELETE_SVG}</button>
             </div>
           </div>
         `,
@@ -306,7 +312,8 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   function syncModelBtn() {
     if (!conversation) return;
     modelBtn.textContent = displayModelInline(conversation.activeModel);
-    modelBtn.title = conversation.activeModel;
+    modelBtn.removeAttribute("title");
+    modelBtn.dataset.tip = "当前模型";
   }
 
   function paintModelMenu() {
@@ -367,12 +374,12 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
 
   async function switchConversation(id: string) {
     if (streaming) return;
+    void closeConvPicker(true);
     conversation = await loadConversation(id);
     setActiveConversationId(id);
     syncConvLabel();
     renderMessages();
     syncModelBtn();
-    void closeConvPicker();
     await paintConvMenu();
   }
 
@@ -462,7 +469,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     paintModelMenu();
   }
 
-  mountAiSettingsButton(settingsMount, dialogRoot, refreshUi);
+  window.addEventListener("orbita:ai-config", refreshUi);
 
   convSelect.addEventListener("click", (e) => {
     e.stopPropagation();

@@ -16,7 +16,7 @@ import {
 import { dockLeftGridCapacity, topGridCapacity } from "./grid-slots";
 import { mountAppDialog, mountBookmarkDialog, mountConfirmDialog } from "./dialog";
 import { mountLocalPanel } from "./local-panel";
-import { mountSettingsButton } from "./settings-dialog";
+import { mountSettingsButton } from "../settings";
 import { mountFolderOverlay } from "./folder-overlay";
 import { mountAppLauncherGrid, mountBookmarkLauncherGrid } from "./launcher-grid";
 import { mountStatsBar } from "./stats-bar";
@@ -33,9 +33,6 @@ const LBL_ADD = "\u6dfb\u52a0";
 const LBL_SEARCH_IN = (name: string) => `\u5728 ${name} \u4e2d\u641c\u7d22`;
 const LBL_DELETE_TITLE = "\u5220\u9664\u786e\u8ba4";
 const LBL_DELETE_MSG = (name: string) => `\u786e\u5b9a\u5220\u9664\u300c${name}\u300d\uff1f`;
-const LBL_ADD_FAV_TITLE = "\u6dfb\u52a0\u5230\u6536\u85cf";
-const LBL_ADD_FAV_MSG = (name: string) => `\u662f\u5426\u5c06\u300c${name}\u300d\u6dfb\u52a0\u5230\u672c\u5730\u6587\u4ef6\u6536\u85cf\uff1f`;
-const LBL_ADD_FAV_CONFIRM = "\u6dfb\u52a0";
 const LBL_V2RAY_TITLE = "\u542f\u52a8 v2rayN";
 const LBL_V2RAY_FAIL = "\u542f\u52a8 v2rayN \u5931\u8d25";
 
@@ -65,7 +62,7 @@ function renderEngines(container: HTMLElement, indicator: HTMLElement) {
   const { engineId } = shellStore.getState();
   container.innerHTML = ENGINES.map(
     (e) =>
-      `<button type="button" data-id="${e.id}" class="${e.id === engineId ? "active" : ""}" title="${e.name}">${e.icon}</button>`,
+      `<button type="button" data-id="${e.id}" class="${e.id === engineId ? "active" : ""}" data-tip="${e.name}">${e.icon}</button>`,
   ).join("");
   const active = container.querySelector<HTMLButtonElement>(`button[data-id="${engineId}"]`);
   requestAnimationFrame(() => moveIndicator(indicator, active));
@@ -89,7 +86,7 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
     <section class="launcher-section">
       <div class="launcher-head">
         <span class="launcher-title">${APP_SVG}${LBL_APPS}</span>
-        <button type="button" class="launcher-head-add" id="appsAddBtn" title="${LBL_ADD}" aria-label="${LBL_ADD}">+</button>
+        <button type="button" class="launcher-head-add" id="appsAddBtn" data-tip="${LBL_ADD}" aria-label="${LBL_ADD}">+</button>
       </div>
       <div class="launcher-grid-scroll bookmarks-scroll">
         <div class="launcher-grid bookmarks-grid" id="appsGrid"></div>
@@ -99,7 +96,7 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
       <div class="launcher-dock-apps">
         <div class="launcher-head">
           <span class="launcher-title">${BOOKMARK_SVG}${LBL_BOOKMARKS}</span>
-          <button type="button" class="launcher-head-add" id="bookmarksAddBtn" title="${LBL_ADD}" aria-label="${LBL_ADD}">+</button>
+          <button type="button" class="launcher-head-add" id="bookmarksAddBtn" data-tip="${LBL_ADD}" aria-label="${LBL_ADD}">+</button>
         </div>
         <div class="launcher-grid-scroll apps-scroll">
           <div class="launcher-grid apps-grid" id="bookmarksGrid"></div>
@@ -117,13 +114,8 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
   const folderOverlay = mountFolderOverlay(root);
   const askDelete = (name: string, trigger: HTMLElement) =>
     confirmDelete(LBL_DELETE_TITLE, LBL_DELETE_MSG(name), trigger);
-  const askAddFavorite = (name: string, trigger: HTMLElement) =>
-    confirmDelete(LBL_ADD_FAV_TITLE, LBL_ADD_FAV_MSG(name), trigger, {
-      confirmLabel: LBL_ADD_FAV_CONFIRM,
-      danger: false,
-    });
 
-  mountLocalPanel(sidebar.querySelector("#localPanel")!, root, askDelete, askAddFavorite);
+  mountLocalPanel(sidebar.querySelector("#localPanel")!, root);
 
   const bookmarksRef = { current: loadBookmarks() };
   const appsRef = { current: loadApps() };
@@ -187,7 +179,7 @@ export function mountShell(root: HTMLElement) {
               <input type="text" id="searchInput" autofocus>
               <button type="submit" class="search-btn">${SEARCH_SVG}</button>
             </form>
-            <button type="button" class="v2ray-btn" id="v2rayBtn" title="${LBL_V2RAY_TITLE}">${V2RAY_SVG}</button>
+            <button type="button" class="v2ray-btn" id="v2rayBtn" data-tip="${LBL_V2RAY_TITLE}">${V2RAY_SVG}</button>
           </div>
         </div>
       </header>

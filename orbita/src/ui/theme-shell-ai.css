@@ -1,4 +1,4 @@
-﻿.shell {
+.shell {
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -68,7 +68,7 @@
   transition: width 0.36s var(--spring-bounce);
 }
 .ai-conv-picker.is-collapsing {
-  transition-duration: 0.28s;
+  transition-duration: 0.18s;
   transition-timing-function: var(--spring-ios);
 }
 .ai-conv-track {
@@ -76,7 +76,7 @@
   transition: width 0.36s var(--spring-bounce);
 }
 .ai-conv-picker.is-collapsing .ai-conv-track {
-  transition-duration: 0.28s;
+  transition-duration: 0.18s;
   transition-timing-function: var(--spring-ios);
 }
 .ai-conv-select {
@@ -365,15 +365,17 @@
 .ai-prompt-btn {
   width: 36px;
   height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
+  border: none;
+  border-radius: 8px;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  opacity: .7;
+  transition: background .15s, color .15s, opacity .15s;
 }
 .ai-prompt-btn svg {
   width: 16px;
@@ -382,6 +384,7 @@
 .ai-prompt-btn:hover {
   background: var(--glass-hover-bg);
   color: var(--text);
+  opacity: 1;
 }
 .ai-composer {
   flex: 1;
@@ -650,6 +653,42 @@
 }
 .dialog-panel-wide {
   max-width: 420px;
+}
+.dialog-panel.dialog-panel-settings {
+  max-width: 560px;
+  width: min(92vw, 560px);
+}
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 0 2px;
+  overflow-x: auto;
+}
+.settings-tab {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+}
+.settings-tab:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.settings-tab.is-active {
+  color: var(--toggle-color);
+  background: var(--surface-active);
+  border-color: var(--border-strong);
+}
+.dialog-panel.dialog-panel-settings .dialog-scroll {
+  max-height: min(68vh, 520px);
 }
 .dialog-scroll {
   max-height: min(60vh, 420px);

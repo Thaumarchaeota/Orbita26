@@ -3,6 +3,8 @@ roadmap.md
 调试指南.md
 
 scripts/env.ps1
+scripts/test_dida365.py
+scripts/fix-logo.py
 
 .env
 .env.*

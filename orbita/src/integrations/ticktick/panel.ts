@@ -1,9 +1,8 @@
 import { getSettings, loadSettings, patchSettings } from "../../core/settings";
-import { defaultIntegrations } from "../../core/data/client";
 import { escAttr, escHtml } from "../../core/html";
-import { closePopover, isPopoverOpen, openPopover, type MotionTrigger } from "../../ui/motion";
+import { closePopover, crossfadeSwap, isPopoverOpen, openPopover, type MotionTrigger } from "../../ui/motion";
+import { mountContextMenu } from "../../ui/context-menu";
 import { CHEVRON_SVG } from "../ai/icons";
-import { mountConfirmDialog } from "../shell/dialog";
 import {
   didaAuthStatus,
   didaCompleteTask,
@@ -24,15 +23,14 @@ import {
   mountTaskDetailDialog,
   mountTaskDialog,
 } from "./dialog";
-import { mountTicktickSettingsButton } from "./settings-dialog";
 import { mountSuccessToast } from "./success-toast";
+import { registerTicktickProjectsProvider } from "../settings";
 import type { DidaProject, DidaTask } from "./types";
 
 const TASK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 const REFRESH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
 const REFRESH_DONE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path class="ticktick-check-path" d="M7.5 12.2l2.6 2.6 5.4-5.4"/></svg>`;
 const PLUS_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
-const EDIT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 const CHECK_MARK_SVG = `<svg class="ticktick-task-check-mark" viewBox="0 0 12 10" aria-hidden="true"><polyline points="1.8 5.2 4.6 7.8 10.2 1.8"/></svg>`;
 
 const COMPLETE_DELAY_MS = 5000;
@@ -69,7 +67,6 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   section.innerHTML = `
     <div class="launcher-head">
       <span class="launcher-title">${TASK_SVG}任务</span>
-      <span id="ticktickSettingsMount"></span>
     </div>
     <div class="ticktick-body" id="ticktickBody">
       <div class="ticktick-connect" id="ticktickConnect">
@@ -96,11 +93,11 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
               <div class="ticktick-project-menu scroll-slim motion-popover" id="ticktickProjectMenu"></div>
             </div>
             <div class="ticktick-todo-actions">
-              <button type="button" class="ticktick-icon-btn" id="ticktickRefresh" title="刷新">
+              <button type="button" class="ticktick-icon-btn" id="ticktickRefresh" data-tip="刷新">
                 <span class="ticktick-refresh-icon">${REFRESH_SVG}</span>
                 <span class="ticktick-refresh-done">${REFRESH_DONE_SVG}</span>
               </button>
-              <button type="button" class="ticktick-icon-btn" id="ticktickAdd" title="新建任务">${PLUS_SVG}</button>
+              <button type="button" class="ticktick-icon-btn" id="ticktickAdd" data-tip="新建任务">${PLUS_SVG}</button>
             </div>
           </div>
           <div class="ticktick-task-list scroll-slim" id="ticktickTaskList"></div>
@@ -121,13 +118,13 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   const refreshBtn = section.querySelector<HTMLButtonElement>("#ticktickRefresh")!;
   const addBtn = section.querySelector<HTMLButtonElement>("#ticktickAdd")!;
   const todoEl = section.querySelector<HTMLElement>(".ticktick-todo")!;
-  const settingsMount = section.querySelector<HTMLElement>("#ticktickSettingsMount")!;
 
   const taskDialog = mountTaskDialog(dialogRoot);
   const taskDetailDialog = mountTaskDetailDialog(dialogRoot);
-  const confirmDelete = mountConfirmDialog(dialogRoot);
   const playSuccess = mountSuccessToast(section);
-  mountTicktickSettingsButton(settingsMount, dialogRoot, () => projects);
+  const ctxAc = new AbortController();
+  const taskCtxMenu = mountContextMenu(ctxAc.signal);
+  registerTicktickProjectsProvider(() => projects);
 
   let projects: DidaProject[] = [];
   let allTasks: DidaTask[] = [];
@@ -137,6 +134,7 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   let calMonth = new Date().getMonth();
   let loading = false;
   let calAnimating = false;
+  let taskListReady = false;
   const pendingComplete = new Map<string, number>();
 
   const setConnectedUi = (connected: boolean) => {
@@ -281,7 +279,6 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
             </button>
             <button type="button" class="ticktick-task-title" data-action="detail">${escHtml(t.title)}</button>
             <span class="ticktick-task-due">${escHtml(due)}</span>
-            <button type="button" class="ticktick-task-edit" data-action="edit" title="编辑">${EDIT_SVG}</button>
           </div>
         `;
   };
@@ -345,7 +342,13 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   };
 
   const paintTasks = () => {
-    syncTaskRows(visibleTasks());
+    const update = () => syncTaskRows(visibleTasks());
+    if (!taskListReady) {
+      update();
+      taskListReady = true;
+      return;
+    }
+    void crossfadeSwap(taskListEl, update);
   };
 
   const clearPending = (key: string) => {
@@ -418,17 +421,16 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
     connectBtn.disabled = true;
     try {
       const current = getSettings();
-      const defaults = defaultIntegrations().ticktick;
       const ticktick = current.integrations.ticktick;
       await patchSettings({
         integrations: {
           ...current.integrations,
           ticktick: {
-            clientId: ticktick.clientId.trim() || defaults.clientId,
-            clientSecret: ticktick.clientSecret.trim() || defaults.clientSecret,
-            redirectUri: ticktick.redirectUri.trim() || defaults.redirectUri,
+            clientId: ticktick.clientId.trim(),
+            clientSecret: ticktick.clientSecret.trim(),
+            redirectUri: ticktick.redirectUri.trim() || "http://127.0.0.1:8765/callback",
             accessToken: ticktick.accessToken,
-            defaultProjectId: ticktick.defaultProjectId || defaults.defaultProjectId,
+            defaultProjectId: ticktick.defaultProjectId || "inbox",
           },
         },
       });
@@ -480,7 +482,7 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
     paintTasks();
   });
 
-  taskListEl.addEventListener("contextmenu", async (e) => {
+  taskListEl.addEventListener("contextmenu", (e) => {
     const row = (e.target as HTMLElement).closest<HTMLElement>(".ticktick-task-row");
     if (!row) return;
     e.preventDefault();
@@ -489,16 +491,46 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
     if (!projectId || !taskId) return;
     const task = allTasks.find((t) => t.projectId === projectId && t.id === taskId);
     if (!task) return;
-    const ok = await confirmDelete("删除任务", `确定删除「${task.title}」？`, e);
-    if (!ok) return;
-    try {
-      clearPending(taskKey(projectId, taskId));
-      row.classList.remove("is-completing", "is-removing");
-      await didaDeleteTask(projectId, taskId);
-      await refresh();
-    } catch (err) {
-      alert(invokeError(err));
-    }
+    taskCtxMenu.show(
+      e.clientX,
+      e.clientY,
+      [
+        { action: "edit", label: "编辑" },
+        { action: "delete", label: "删除任务", danger: true, confirm: true },
+      ],
+      (action, trigger) => {
+        if (action === "edit") {
+          void taskDialog(
+            {
+              mode: "edit",
+              task,
+              projects,
+              defaultProjectId: task.projectId,
+              onSave: async (result) => {
+                await didaUpdateTask(taskId, dialogToUpdatePayload(result));
+                playSuccess();
+                await refresh();
+              },
+            },
+            trigger,
+          );
+          return;
+        }
+        if (action === "delete") {
+          void (async () => {
+            try {
+              clearPending(taskKey(projectId, taskId));
+              row.classList.remove("is-completing", "is-removing");
+              await didaDeleteTask(projectId, taskId);
+              await refresh();
+            } catch (err) {
+              alert(invokeError(err));
+            }
+          })();
+        }
+      },
+    );
+    e.stopPropagation();
   });
 
   taskListEl.addEventListener("click", async (e) => {
@@ -518,22 +550,6 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
     if (action === "detail") {
       taskDetailDialog(task, projectName(task.projectId), actionBtn);
       return;
-    }
-    if (action === "edit") {
-      await taskDialog(
-        {
-          mode: "edit",
-          task,
-          projects,
-          defaultProjectId: task.projectId,
-          onSave: async (result) => {
-            await didaUpdateTask(taskId, dialogToUpdatePayload(result));
-            playSuccess();
-            await refresh();
-          },
-        },
-        actionBtn,
-      );
     }
   });
 

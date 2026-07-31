@@ -1,4 +1,4 @@
-﻿.search-row {
+.search-row {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -112,7 +112,8 @@
 
 .ticktick-section {
   width: 50%;
-  flex: 1;
+  height: calc(var(--launcher-apps-scroll-h) + 52px);
+  flex: 0 0 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -491,7 +492,11 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  transition: filter 0.32s var(--spring-ios), transform 0.32s var(--spring-ios);
+  transition: filter 0.32s var(--spring-ios), transform 0.32s var(--spring-ios), opacity 0.12s var(--ease);
+}
+.ticktick-task-list.motion-crossfade-out,
+.ticktick-task-list.motion-crossfade-in {
+  opacity: 0;
 }
 .ticktick-task-row {
   display: grid;

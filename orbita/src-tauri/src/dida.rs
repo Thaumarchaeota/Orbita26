@@ -19,8 +19,6 @@ const TOKEN_URL: &str = "https://dida365.com/oauth/token";
 const API_BASE: &str = "https://api.dida365.com/open/v1";
 const SCOPE: &str = "tasks:read tasks:write";
 const DEFAULT_PORT: u16 = 8765;
-const DEFAULT_TICKTICK_CLIENT_ID: &str = "m5iR14msV0KXA5fDYt";
-const DEFAULT_TICKTICK_CLIENT_SECRET: &str = "QsjOxN217ijYZAPOH4GnZJxiyCVdp7s1";
 const DEFAULT_TICKTICK_REDIRECT: &str = "http://127.0.0.1:8765/callback";
 
 #[derive(Serialize, Clone)]
@@ -107,7 +105,7 @@ fn open_browser(app: &AppHandle, url: &str) -> Result<(), String> {
 
 pub fn dida_begin_oauth(app: AppHandle) -> Result<String, String> {
     let settings = read_settings(&app)?;
-    let cfg = effective_cfg(&ticktick_cfg(&settings));
+    let cfg = effective_cfg(&ticktick_cfg(&settings))?;
     let mut save = settings.clone();
     save.integrations.ticktick = cfg.clone();
     write_settings(&app, save)?;
@@ -271,18 +269,15 @@ pub fn dida_auth_status(app: AppHandle) -> Result<DidaAuthStatus, String> {
     })
 }
 
-fn effective_cfg(cfg: &TicktickIntegration) -> TicktickIntegration {
+fn effective_cfg(cfg: &TicktickIntegration) -> Result<TicktickIntegration, String> {
     let mut c = cfg.clone();
-    if c.client_id.trim().is_empty() {
-        c.client_id = DEFAULT_TICKTICK_CLIENT_ID.to_string();
-    }
-    if c.client_secret.trim().is_empty() {
-        c.client_secret = DEFAULT_TICKTICK_CLIENT_SECRET.to_string();
+    if c.client_id.trim().is_empty() || c.client_secret.trim().is_empty() {
+        return Err("请先在设置 → 任务中填写 Client ID 和 Client Secret".into());
     }
     if c.redirect_uri.trim().is_empty() {
         c.redirect_uri = DEFAULT_TICKTICK_REDIRECT.to_string();
     }
-    c
+    Ok(c)
 }
 
 fn wait_oauth_code_on(listener: TcpListener) -> Result<String, String> {

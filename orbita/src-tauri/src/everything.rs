@@ -1,7 +1,7 @@
+use crate::data::read_settings;
 use std::path::Path;
 use std::process::Command;
-
-const ES_PATH: &str = r"D:\programs\Everything\es.exe";
+use tauri::AppHandle;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,17 +46,21 @@ fn decode_acp(bytes: &[u8]) -> String {
     }
 }
 
-pub fn search(query: &str, limit: u32) -> Result<Vec<EverythingHit>, String> {
+pub fn search(app: &AppHandle, query: &str, limit: u32) -> Result<Vec<EverythingHit>, String> {
     let q = query.trim();
     if q.is_empty() {
         return Ok(vec![]);
     }
-    if !Path::new(ES_PATH).exists() {
-        return Err(format!("未找到 es.exe: {ES_PATH}"));
+    let es_path = read_settings(app)?.integrations.everything.exe_path.trim().to_string();
+    if es_path.is_empty() {
+        return Err("请先在设置 → 本地中配置 Everything es.exe 路径".into());
+    }
+    if !Path::new(&es_path).exists() {
+        return Err(format!("未找到 es.exe: {es_path}"));
     }
 
     let limit = limit.clamp(1, 200);
-    let output = Command::new(ES_PATH)
+    let output = Command::new(&es_path)
         .args(["-n", &limit.to_string(), "-s", q])
         .output()
         .map_err(|e| format!("执行 es 失败: {e}"))?;

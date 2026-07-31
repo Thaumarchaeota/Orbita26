@@ -1,5 +1,5 @@
 import { getSettings, patchSettings } from "../../core/settings";
-import { defaultAiConfig } from "../../core/data/client";
+import { defaultAiConfig } from "../../core/data/defaults";
 import type { AiConfig, ApiEntry } from "../../core/data/types";
 
 export type { AiConfig, ApiEntry };
