@@ -3,6 +3,7 @@
   grid-template-columns: 1fr minmax(0, 860px) 1fr;
   grid-template-rows: auto auto;
   width: 100%;
+  pointer-events: none;
 }
 .search-band-center {
   grid-column: 2;
@@ -12,12 +13,14 @@
   align-items: center;
   gap: 14px;
   min-width: 0;
+  pointer-events: none;
 }
 .search-bar-line {
   display: flex;
   align-items: center;
   gap: 14px;
   width: 100%;
+  pointer-events: none;
 }
 .engines-wrap {
   position: relative;
@@ -47,6 +50,7 @@
   margin: 0 auto;
   position: relative;
   z-index: 1;
+  pointer-events: auto;
 }
 .engines button {
   width: 40px;
@@ -79,6 +83,7 @@
   border-radius: 25px;
   box-shadow: 0 4px 20px var(--shadow);
   transition: background .5s var(--ease), border-color .5s var(--ease), box-shadow .5s var(--ease);
+  pointer-events: auto;
 }
 .search-bar:focus-within { border-color: var(--focus); }
 .search-bar input {
@@ -123,6 +128,7 @@
   grid-row: 2;
   justify-self: end;
   align-self: center;
+  pointer-events: none;
 }
 .top-toolkit .sys-stats {
   height: auto;
@@ -146,10 +152,12 @@
   display: flex;
   align-items: center;
   gap: 2px;
+  pointer-events: auto;
 }
 .top-toolkit-settings {
   display: flex;
   align-items: center;
+  pointer-events: auto;
 }
 .top-toolkit-icon-btn {
   display: flex;

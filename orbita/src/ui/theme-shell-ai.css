@@ -9,6 +9,7 @@
   position: relative;
   padding: 24px 32px 20px;
   text-align: center;
+  pointer-events: none;
 }
 .shell-top-inner {
   width: 100%;
@@ -413,8 +414,9 @@ html.privacy-mode .primary-mood-btn.has-emoji::after {
   left: 32px;
   bottom: 20px;
   z-index: 3;
+  pointer-events: none;
 }
-.primary-mood-wrap { position: relative; }
+.primary-mood-wrap { position: relative; pointer-events: none; }
 .primary-mood-btn {
   width: 50px;
   height: 50px;
@@ -426,6 +428,7 @@ html.privacy-mode .primary-mood-btn.has-emoji::after {
   cursor: pointer;
   display: grid;
   place-items: center;
+  pointer-events: auto;
 }
 .primary-mood-btn.has-emoji { font-size: 32px; }
 .primary-mood-menu {

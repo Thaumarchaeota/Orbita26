@@ -444,6 +444,11 @@ fn ai_chat_abort(request_id: String) {
     ai::abort(request_id);
 }
 
+#[tauri::command]
+async fn ai_generate_title(request: ai::AiTitleRequest) -> Result<String, String> {
+    ai::generate_title(request).await
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AgentToolConfirmRequest {
@@ -750,6 +755,7 @@ pub fn run() {
             migrate_legacy_caches,
             ai_chat_stream,
             ai_chat_abort,
+            ai_generate_title,
             agent_tool_confirm,
             agent_tool_reject,
             get_system_stats,

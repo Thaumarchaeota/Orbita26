@@ -147,8 +147,8 @@ export function sleepStageRingHtml(opts: {
     </div>`;
 }
 
-const INTAKE_COLORS = ["#d4a054", "#c99248", "#b87e3c", "#a86c38"];
-const EXP_COLORS = ["#4aaa6a", "#3d9260"];
+const INTAKE_COLORS = ["#d4b896", "#d4925a", "#d47a48", "#c46858"];
+const EXP_COLORS = ["#6aab7a", "#2f6e4a"];
 const HYDRATION_COLOR = "#5ba8d4";
 
 function halfArcSegments(
@@ -163,7 +163,7 @@ function halfArcSegments(
   const fillLen = goal > 0 && total > 0 ? halfC * Math.min(1, total / goal) : 0;
   let acc = 0;
   const arc = `rotate(-90 ${cx} ${cx})`;
-  const flipT = flip ? `rotate(180 ${cx} ${cx})` : "";
+  const flipT = flip ? `translate(${cx} ${cx}) scale(-1 1) translate(-${cx} -${cx})` : "";
   const parts = segments
     .filter((s) => s.value > 0)
     .map((seg, i) => {

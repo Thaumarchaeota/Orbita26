@@ -135,7 +135,7 @@ export async function ensureInitialConversation(): Promise<Conversation> {
 export function titleFromMessage(text: string): string {
   const t = text.trim().replace(/\s+/g, " ");
   if (!t) return "新对话";
-  return t.length > 18 ? `${t.slice(0, 18)}…` : t;
+  return t.length > 8 ? `${t.slice(0, 8)}…` : t;
 }
 
 export async function uniqueConversationTitle(base: string, excludeId?: string): Promise<string> {

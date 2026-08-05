@@ -1,8 +1,8 @@
 import { mountContextMenu } from "../../ui/context-menu";
 import { closePopover, isPopoverOpen, openPopover, type MotionTrigger } from "../../ui/motion";
 import { escAttr, escHtml } from "../../core/html";
-import { getAiConfig, saveAiConfig } from "./config";
-import { abortChat, chatStream, type ChatMessage } from "./adapter";
+import { getAiConfig, saveAiConfig, type ApiEntry } from "./config";
+import { abortChat, chatStream, generateConversationTitle, type ChatMessage } from "./adapter";
 import {
   deleteConversation,
   ensureInitialConversation,
@@ -129,6 +129,11 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   let streamHasText = false;
   let messagesScrollHeight = 0;
 
+  function scrollMessagesToEnd() {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    messagesScrollHeight = messagesEl.scrollHeight;
+  }
+
   function isMessagesPinned() {
     return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 96;
   }
@@ -196,8 +201,8 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
 
   function ensureStreamingBubble() {
     if (!streamingBubble) {
-      const bubbles = messagesEl.querySelectorAll<HTMLElement>(".ai-msg-bubble");
-      streamingBubble = bubbles[bubbles.length - 1] ?? null;
+      const msg = messagesEl.querySelector<HTMLElement>(".ai-msg-assistant:last-of-type");
+      streamingBubble = msg?.querySelector<HTMLElement>(".ai-msg-bubble") ?? null;
     }
     if (!streamingBubble) return;
     streamingToolsEl = streamingBubble.querySelector<HTMLElement>(".ai-tool-steps") ?? null;
@@ -252,9 +257,20 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     appendToolStep(name, label);
   }
 
+  function clearThinkingUi() {
+    ensureStreamingBubble();
+    if (!streamingTextEl || streamHasText) return;
+    streamingTextEl.classList.remove("is-thinking");
+    streamingTextEl.classList.add("is-stream-plain");
+    streamingTextEl.textContent = "";
+  }
+
   function finishToolStep(name: string, ok: boolean, summary: string) {
     ensureStreamingBubble();
-    if (!streamingToolsEl) return;
+    if (!streamingToolsEl) {
+      if (!ok) clearThinkingUi();
+      return;
+    }
     const row =
       streamingToolsEl.querySelector<HTMLElement>(`[data-step-id="${lastPendingStepId}"]`) ??
       streamingToolsEl.querySelector<HTMLElement>(".ai-tool-step.is-pending:last-child");
@@ -271,6 +287,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     if (ok && (name.startsWith("journal_") || name === "garmin_sync")) {
       window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
     }
+    if (!ok) clearThinkingUi();
     scrollMessagesIfPinned();
   }
 
@@ -578,12 +595,32 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     renderMessages();
   }
 
+  async function refreshAiTitle(
+    userMsg: string,
+    assistantMsg: string,
+    entry: ApiEntry,
+    model: string,
+  ) {
+    if (!conversation) return;
+    try {
+      const title = await generateConversationTitle(userMsg, assistantMsg, entry, model);
+      if (!title.trim()) return;
+      conversation.title = await uniqueConversationTitle(title.trim(), conversation.id);
+      await saveConversation(conversation);
+      syncConvLabel();
+      await paintConvMenu();
+    } catch {
+      /* keep provisional title */
+    }
+  }
+
   async function sendMessage(text: string) {
     if (!conversation) return;
     const trimmed = text.trim();
     if (!trimmed || streaming) return;
 
-    if (conversation.messages.length === 0) {
+    const isFirstRound = conversation.messages.length === 0;
+    if (isFirstRound) {
       const base = titleFromMessage(trimmed);
       conversation.title = await uniqueConversationTitle(base, conversation.id);
     }
@@ -596,7 +633,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     conversation.messages.push(assistant);
     renderMessages();
     prepStreamingBubble();
-    syncMessagesScrollHeight();
+    scrollMessagesToEnd();
 
     const config = getAiConfig();
     const entry = config.entries.find((e) => e.id === conversation!.activeEntryId) ?? config.entries[0];
@@ -620,6 +657,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
       entry,
       conversation.activeModel,
       (event) => {
+        if (gen !== activeStreamGen) return;
         if (event.type === "chunk") {
           const delta = event.content;
           assistant.content += delta;
@@ -665,6 +703,9 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     resetStreamingRefs();
     await persistConversation();
     renderMessages();
+    if (isFirstRound && assistant.content.trim() && entry) {
+      void refreshAiTitle(trimmed, assistant.content, entry, conversation.activeModel);
+    }
     input.focus();
   }
 

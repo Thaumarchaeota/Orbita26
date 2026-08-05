@@ -3,7 +3,7 @@ import { MEAL_SLOT_LABELS, normalizeMealSlot, type MealSlot } from "../../core/d
 import { MOOD_EMOJI_PRESETS } from "../../core/data/mood-emojis";
 import { escHtml } from "../../core/html";
 import { bindDialog } from "../../ui/motion";
-import { beijingToday } from "../journal/client";
+import { beijingToday, journalList } from "../journal/client";
 
 export type ToolConfirmEvent = {
   confirmId?: string;
@@ -93,11 +93,24 @@ function collectMealTags(form: HTMLFormElement): string[] {
     .filter(Boolean);
 }
 
-function mealFormFields(args: Record<string, unknown>, withId = false): string {
+async function loadHydrationMl(date: string): Promise<number> {
+  try {
+    const { entries } = await journalList({ date });
+    const daily = entries.find((e) => e.kind === "daily" && e.date === date);
+    if (!daily?.data || typeof daily.data !== "object") return 0;
+    const ml = (daily.data as Record<string, unknown>).hydrationMl;
+    return typeof ml === "number" && Number.isFinite(ml) ? Math.round(ml) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function mealFormFields(args: Record<string, unknown>, withId = false, hydrationMl = 0): string {
   const today = beijingToday();
   const slot = normalizeMealSlot(str(args, "slot", "snack"));
   const items = strArr(args, "items");
   return `
+    ${!withId ? `<p class="settings-hint">今日喝水：${hydrationMl} ml（佳明同步，喝水请在今日面板记录）</p>` : ""}
     <div class="dialog-field"><label>日期</label><input type="date" name="date" value="${escHtml(str(args, "date", today))}"></div>
     ${withId ? `<div class="dialog-field"><label>ID</label><input type="text" name="id" value="${escHtml(str(args, "id"))}"></div>` : ""}
     <div class="dialog-field"><label>餐次</label><select name="slot">${mealSlotOptions(slot)}</select></div>
@@ -196,10 +209,14 @@ function readForm(name: string, form: HTMLFormElement): Record<string, unknown> 
   return out;
 }
 
-export function openToolConfirm(
+export async function openToolConfirm(
   root: HTMLElement,
   event: ToolConfirmEvent,
 ): Promise<Record<string, unknown> | null> {
+  const hydrationMl =
+    event.name === "journal_add_meal"
+      ? await loadHydrationMl(str(event.args, "date", beijingToday()))
+      : 0;
   return new Promise((resolve) => {
     const backdrop = document.createElement("div");
     backdrop.className = "dialog-backdrop";
@@ -207,7 +224,7 @@ export function openToolConfirm(
     backdrop.innerHTML = `
       <form class="dialog-panel" id="toolConfirmForm">
         <div class="dialog-title">${escHtml(title)}</div>
-        ${formFields(event.name, event.args)}
+        ${event.name === "journal_add_meal" ? mealFormFields(event.args, false, hydrationMl) : formFields(event.name, event.args)}
         <div class="dialog-actions">
           <button type="button" class="dialog-btn" data-action="cancel">取消</button>
           <button type="submit" class="dialog-btn dialog-btn-primary">确认执行</button>
@@ -262,7 +279,11 @@ export async function confirmAgentTool(
   const confirmId = resolveConfirmId(event);
   const args = await openToolConfirm(root, event);
   if (!args) {
-    await invoke("agent_tool_reject", { req: { confirmId } });
+    try {
+      await invoke("agent_tool_reject", { req: { confirmId } });
+    } catch {
+      /* backend may already be aborted */
+    }
     return false;
   }
   await invoke("agent_tool_confirm", { req: { confirmId, args } });

@@ -88,6 +88,8 @@ fn build_agent_system_prompt(app: &AppHandle) -> String {
          {now_line}\n\
          规则：\n\
          - 仅当用户明确要求时才调用工具；不要编造已执行的操作。\n\
+         - 用户描述吃了/喝了什么、要记吃饭/记餐饮时：直接调用 journal_add_meal 弹出确认，勿只用文字追问。\n\
+         - journal_add_meal 的 kcal 可先估计（不确定用 confidence: low），勿因热量未确认就不调工具。\n\
          - 路径必须是用户给出的、在磁盘上存在的绝对路径（如 D:\\\\folder\\\\file.txt），不要猜测路径。\n\
          - open_path：用默认程序打开文件/文件夹；reveal_path：仅在资源管理器中定位。\n\
          - 滴答：日期时间一律以「当前本地时间」为准换算；用户说明天9点/10点时，算出 dueOn+dueTime（如 09:00）。\n\
@@ -102,6 +104,7 @@ fn build_agent_system_prompt(app: &AppHandle) -> String {
          - garmin_login：仅用户明确要求重新登录时使用；会触发 SSO。\n\
          - bkeasy_summary 查今日/本月支出；beancount_add_transaction 尚未实现勿假装成功。\n\
          - 吃饭：journal_add_meal / journal_update_meal / journal_delete_meal；热量多为 AI 估计，回答时说明是估计值。\n\
+         - 喝水量来自佳明同步，不能用工具记录；用户问喝水时用 journal_snapshot 告知当前 ml。\n\
          {ticktick_line}\n\
          {garmin_line}"
     )
@@ -334,20 +337,32 @@ async fn await_tool_confirm(
     name: &str,
     args: Value,
     on_event: &Channel<AiStreamEvent>,
+    flag: &AtomicBool,
 ) -> Result<Value, String> {
     let confirm_id = Uuid::new_v4().to_string();
     let label = start_label(name);
     let rx = register_tool_confirm(confirm_id.clone());
     let _ = on_event.send(AiStreamEvent::ToolConfirm {
-        confirm_id,
+        confirm_id: confirm_id.clone(),
         name: name.to_string(),
         label,
         args,
     });
-    match rx.await {
-        Ok(Ok(edited)) => Ok(edited),
-        Ok(Err(reason)) => Err(reason),
-        Err(_) => Err("确认已取消".into()),
+    tokio::select! {
+        res = rx => match res {
+            Ok(Ok(edited)) => Ok(edited),
+            Ok(Err(reason)) => Err(reason),
+            Err(_) => Err("确认已取消".into()),
+        },
+        _ = async {
+            loop {
+                if check_aborted(flag) {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+            let _ = crate::agent::resolve_tool_confirm(&confirm_id, Err("确认已取消".into()));
+        } => Err("确认已取消".into()),
     }
 }
 
@@ -356,9 +371,10 @@ async fn execute_tool_call(
     name: &str,
     args: Value,
     on_event: &Channel<AiStreamEvent>,
+    flag: &AtomicBool,
 ) -> (bool, String) {
     let final_args = if tools::requires_confirm(name) {
-        match await_tool_confirm(name, args, on_event).await {
+        match await_tool_confirm(name, args, on_event, flag).await {
             Ok(a) => a,
             Err(e) => return (false, e),
         }
@@ -488,7 +504,7 @@ pub async fn run(
                 let args: Value = serde_json::from_str(&call.function.arguments)
                     .unwrap_or_else(|_| json!({}));
 
-                let (ok, result) = execute_tool_call(&app, &name, args, &on_event).await;
+                let (ok, result) = execute_tool_call(&app, &name, args, &on_event, &flag).await;
 
                 let summary = tool_summary(&name, ok, &result);
                 let _ = on_event.send(AiStreamEvent::ToolDone {

@@ -426,7 +426,7 @@ impl AgentTool for JournalAddMeal {
         "journal_add_meal"
     }
     fn description(&self) -> &str {
-        "记录吃饭。kcal 为估计热量；slot 为 breakfast/lunch/dinner/snack；items 为吃了啥的列表。热量为估计值。"
+        "用户描述进食或要记吃饭时必须调用。kcal 可估计（不确定填 confidence: low）；slot 为 breakfast/lunch/dinner/snack；items 为食物列表。"
     }
     fn parameters(&self) -> Value {
         json!({

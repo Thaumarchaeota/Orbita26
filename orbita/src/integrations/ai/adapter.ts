@@ -52,3 +52,21 @@ export async function abortChat(requestId: string): Promise<void> {
   if (!isTauri()) return;
   await invoke("ai_chat_abort", { requestId });
 }
+
+export async function generateConversationTitle(
+  userMessage: string,
+  assistantMessage: string,
+  entry: ApiEntry,
+  model: string,
+): Promise<string> {
+  if (!isTauri()) throw new Error("需使用 dev.bat 运行");
+  return await invoke<string>("ai_generate_title", {
+    request: {
+      apiKey: entry.apiKey,
+      baseUrl: entry.baseUrl,
+      model,
+      userMessage,
+      assistantMessage,
+    },
+  });
+}
