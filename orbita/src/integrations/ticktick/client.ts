@@ -64,6 +64,11 @@ export async function didaCompleteTask(projectId: string, taskId: string): Promi
   await invoke("dida_complete_task", { projectId, taskId });
 }
 
+export async function didaReopenTask(projectId: string, taskId: string): Promise<void> {
+  if (!isTauri()) return;
+  await invoke("dida_reopen_task", { projectId, taskId });
+}
+
 export async function didaDeleteTask(projectId: string, taskId: string): Promise<void> {
   if (!isTauri()) return;
   await invoke("dida_delete_task", { projectId, taskId });

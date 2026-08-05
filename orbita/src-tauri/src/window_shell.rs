@@ -1,3 +1,4 @@
+use std::time::Duration;
 use tauri::WebviewWindow;
 
 const BLEED_L: i32 = 12;
@@ -43,16 +44,34 @@ pub fn detach_from_taskbar(window: &WebviewWindow) {
     bring_to_front(window);
 }
 
-pub fn repair_window(window: &WebviewWindow, reload: bool) -> Result<(), String> {
+pub fn repair_window_show(window: &WebviewWindow) -> Result<(), String> {
     let _ = window.unminimize();
     let _ = window.show();
     let _ = fit_work_area(window);
     fix_transparent_chrome(window);
-    if reload {
-        window.reload().map_err(|e| e.to_string())?;
-    }
     bring_to_front(window);
     Ok(())
+}
+
+pub fn repair_window_focus(window: &WebviewWindow) -> Result<(), String> {
+    let _ = window.unminimize();
+    let _ = window.show();
+    bring_to_front(window);
+    let win = window.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(80));
+        fix_transparent_chrome(&win);
+    });
+    Ok(())
+}
+
+pub fn repair_window(window: &WebviewWindow, reload: bool) -> Result<(), String> {
+    if reload {
+        repair_window_show(window)?;
+        window.reload().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+    repair_window_focus(window)
 }
 
 pub fn bring_to_front(window: &WebviewWindow) {

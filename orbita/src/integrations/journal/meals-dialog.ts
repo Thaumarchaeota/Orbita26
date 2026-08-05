@@ -85,7 +85,7 @@ function bindTagInput(root: HTMLElement) {
   list.querySelectorAll<HTMLElement>(".meal-tag").forEach((el) => bindTagEl(el, list));
 }
 
-function bindTagEl(el: HTMLElement, list: HTMLElement) {
+function bindTagEl(el: HTMLElement, _list: HTMLElement) {
   el.querySelector(".meal-tag-del")!.addEventListener("click", () => el.remove());
   el.addEventListener("dblclick", () => {
     const old = el.dataset.tag ?? "";

@@ -16,7 +16,6 @@ import {
   buildSleepTip,
   calorieRingHtml,
   formatSleepCenter,
-  formatSleepStageDuration,
   hydrationRingHtml,
   lifeRingHtml,
   sleepStageRingHtml,

@@ -1,36 +1,47 @@
-import { buildGridSlots } from "./grid-slots";
 import {
   capturePositions,
   flipElements,
   DRAG_THRESHOLD,
   createPointerGhost,
   movePointerGhost,
+  animatePopIn,
 } from "../../ui/pointer-drag";
 
-export function displaySlots<T extends { id: string; slot?: number }>(
-  items: T[],
-  maxItems?: number,
-): (T | null)[] {
-  if (maxItems !== undefined) return buildGridSlots(items, maxItems);
-  return [...items, null];
-}
+export type TileGridDragHandoff = {
+  sourceId: string;
+  ghost: HTMLElement;
+  ghostOffsetX: number;
+  ghostOffsetY: number;
+  ghostHalfW: number;
+  ghostHalfH: number;
+  clientX: number;
+  clientY: number;
+  capturePointerId: number;
+  external?: boolean;
+  placeholderHtml?: string;
+};
 
 export type TileGridOptions<T extends { id: string; name: string }> = {
-  gridCapacity?: () => number;
+  denseItems?: boolean;
   isFolder?: (item: T) => boolean;
   onMoveToFolder?: (sourceId: string, folderId: string) => void;
-  onMerge?: (sourceId: string, targetId: string) => void;
+  onMerge?: (sourceId: string, targetId: string) => string | void;
   onRemove?: (items: T[], id: string) => T[];
   dragOutPanel?: HTMLElement;
   onDragOutHover?: (active: boolean) => void;
   onMoveOut?: (sourceId: string) => void;
+  onDragOutLeave?: (sourceId: string, handoff: TileGridDragHandoff) => boolean;
+  onExternalCommit?: (sourceId: string, slot: number, absorb?: { kind: "into" | "merge"; targetId: string }) => void;
+  onExternalCancel?: (sourceId: string) => void;
   onRenameFolder?: (item: T, trigger: HTMLElement) => T[] | null | Promise<T[] | null>;
 };
 
-const ABSORB_DWELL_MS = 200;
-const ZONE_IN = 0.38;
-const ZONE_OUT = 0.33;
 const GHOST_SCALE = 1;
+const FLIP_DRAG_SEC = 0.22;
+const REORDER_DWELL_MS = 20;
+const ABSORB_DWELL_MS = 200;
+const ZONE_IN = 0.35;
+const ZONE_OUT = 0.30;
 
 function tileEl(target: EventTarget | null): HTMLElement | null {
   return (target as HTMLElement).closest<HTMLElement>(".launcher-tile");
@@ -41,7 +52,7 @@ function captureTilePositions(grid: HTMLElement): Map<string, DOMRect> {
 }
 
 function flipAnimate(grid: HTMLElement, before: Map<string, DOMRect>) {
-  flipElements(grid, before, ".launcher-tile[data-id]");
+  flipElements(grid, before, ".launcher-tile[data-id]", "data-id", FLIP_DRAG_SEC);
 }
 
 function orderFromDom<T extends { id: string; slot?: number }>(grid: HTMLElement, items: T[]): T[] {
@@ -55,14 +66,38 @@ function orderFromDom<T extends { id: string; slot?: number }>(grid: HTMLElement
   return result;
 }
 
-function tileAtPoint(x: number, y: number, grid: HTMLElement): HTMLElement | null {
+function tileAtPoint(x: number, y: number, grid: HTMLElement, skip?: HTMLElement | null): HTMLElement | null {
   const direct = tileEl(document.elementFromPoint(x, y));
-  if (direct && grid.contains(direct)) return direct;
+  if (direct && grid.contains(direct) && direct !== skip) return direct;
   for (const tile of grid.querySelectorAll<HTMLElement>(".launcher-tile")) {
+    if (tile === skip) continue;
     const r = tile.getBoundingClientRect();
     if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return tile;
   }
   return null;
+}
+
+function pointerInGrid(x: number, y: number, grid: HTMLElement): boolean {
+  const r = grid.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+
+function isAppendZone(x: number, y: number, grid: HTMLElement, skip?: HTMLElement | null): boolean {
+  if (!pointerInGrid(x, y, grid)) return false;
+  const tiles = Array.from(grid.querySelectorAll<HTMLElement>(".launcher-tile")).filter(
+    (t) => t !== skip && !t.classList.contains("is-empty") && t.dataset.id,
+  );
+  if (!tiles.length) return true;
+  const last = tiles[tiles.length - 1]!;
+  const r = last.getBoundingClientRect();
+  if (y >= r.top && y <= r.bottom && x > r.left + r.width * 0.5) return true;
+  if (y > r.bottom) return true;
+  return false;
+}
+
+function outsidePanel(panel: HTMLElement, x: number, y: number): boolean {
+  const r = panel.getBoundingClientRect();
+  return x < r.left || x > r.right || y < r.top || y > r.bottom;
 }
 
 function inAbsorbZone(tile: HTMLElement, x: number, y: number, latched: boolean): boolean {
@@ -74,49 +109,6 @@ function inAbsorbZone(tile: HTMLElement, x: number, y: number, latched: boolean)
   return relX > lo && relX < hi && relY > lo && relY < hi;
 }
 
-function readGridCols(grid: HTMLElement): number {
-  const root = getComputedStyle(document.documentElement);
-  if (grid.classList.contains("bookmarks-grid")) {
-    const n = parseInt(root.getPropertyValue("--bookmarks-cols").trim(), 10);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  if (grid.classList.contains("apps-grid")) {
-    const n = parseInt(root.getPropertyValue("--apps-cols").trim(), 10);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  const tiles = grid.querySelectorAll<HTMLElement>(".launcher-tile");
-  if (!tiles.length) return 1;
-  const rowTop = tiles[0]!.offsetTop;
-  let cols = 0;
-  for (const t of tiles) {
-    if (Math.abs(t.offsetTop - rowTop) > 2) break;
-    cols++;
-  }
-  return Math.max(1, cols);
-}
-
-function slotFromPoint(grid: HTMLElement, x: number, y: number): number | null {
-  const tiles = grid.querySelectorAll<HTMLElement>(".launcher-tile");
-  if (!tiles.length) return null;
-  const cell = tiles[0]!.getBoundingClientRect();
-  const gridRect = grid.getBoundingClientRect();
-  const style = getComputedStyle(grid);
-  const gapX = parseFloat(style.columnGap || style.gap) || 8;
-  const gapY = parseFloat(style.rowGap || style.gap) || 8;
-  const cols = readGridCols(grid);
-  const stepX = cell.width + gapX;
-  const stepY = cell.height + gapY;
-  const col = Math.max(0, Math.min(cols - 1, Math.floor((x - gridRect.left + stepX / 2) / stepX)));
-  const row = Math.max(0, Math.floor((y - gridRect.top + stepY / 2) / stepY));
-  const slot = row * cols + col;
-  return slot < tiles.length ? slot : tiles.length - 1;
-}
-
-function outsidePanel(panel: HTMLElement, x: number, y: number): boolean {
-  const r = panel.getBoundingClientRect();
-  return x < r.left || x > r.right || y < r.top || y > r.bottom;
-}
-
 export function bindTileGrid<T extends { id: string; name: string; slot?: number }>(
   grid: HTMLElement,
   getItems: () => T[],
@@ -126,11 +118,11 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   onAdd: (trigger: HTMLElement, slot: number) => T[] | null | Promise<T[] | null>,
   onEdit: (item: T, trigger: HTMLElement) => T[] | null | Promise<T[] | null>,
   confirmDelete: (id: string, name: string, trigger: HTMLElement) => Promise<boolean>,
-  maxItems?: number,
+  _maxItems?: number,
   options: TileGridOptions<T> = {},
 ) {
+  const denseItems = !!options.denseItems;
   const folderOps = !!(options.onMerge || options.onMoveToFolder);
-  const fixedSlots = !!options.gridCapacity;
 
   let editMode = false;
   let pointerId: string | null = null;
@@ -141,10 +133,15 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   let suppressClick = false;
   let previewDirty = false;
   let lastHoverKey: string | null = null;
+  let pendingHoverKey: string | null = null;
+  let hoverSince = 0;
   let ghost: HTMLElement | null = null;
   let ghostOffsetX = 0;
   let ghostOffsetY = 0;
+  let ghostHalfW = 0;
+  let ghostHalfH = 0;
   let outsideFolder = false;
+  let capturePointerId: number | null = null;
   let absorbTile: HTMLElement | null = null;
   let absorbTargetId: string | null = null;
   let absorbKind: "merge" | "into" | null = null;
@@ -152,110 +149,23 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   let absorbReady = false;
   let lastClientX = 0;
   let lastClientY = 0;
-  let capturePointerId: number | null = null;
-  let pendingMove: { x: number; y: number } | null = null;
-  let moveRafId = 0;
-  let dragSlotCtx: {
-    gridRect: DOMRect;
-    cell: DOMRect;
-    gapX: number;
-    gapY: number;
-    cols: number;
-    tileCount: number;
-  } | null = null;
-
-  const clearDragSlotCtx = () => {
-    dragSlotCtx = null;
-  };
-
-  const initDragSlotCtx = () => {
-    const tiles = grid.querySelectorAll<HTMLElement>(".launcher-tile");
-    if (!tiles.length) return;
-    const style = getComputedStyle(grid);
-    dragSlotCtx = {
-      gridRect: grid.getBoundingClientRect(),
-      cell: tiles[0]!.getBoundingClientRect(),
-      gapX: parseFloat(style.columnGap || style.gap) || 8,
-      gapY: parseFloat(style.rowGap || style.gap) || 8,
-      cols: readGridCols(grid),
-      tileCount: tiles.length,
-    };
-  };
-
-  const slotFromPointCached = (x: number, y: number): number | null => {
-    if (!dragSlotCtx) return slotFromPoint(grid, x, y);
-    const { gridRect, cell, gapX, gapY, cols, tileCount } = dragSlotCtx;
-    const stepX = cell.width + gapX;
-    const stepY = cell.height + gapY;
-    const col = Math.max(0, Math.min(cols - 1, Math.floor((x - gridRect.left + stepX / 2) / stepX)));
-    const row = Math.max(0, Math.floor((y - gridRect.top + stepY / 2) / stepY));
-    const slot = row * cols + col;
-    return slot < tileCount ? slot : tileCount - 1;
-  };
-
-  const schedulePointerMove = (x: number, y: number) => {
-    pendingMove = { x, y };
-    if (moveRafId) return;
-    moveRafId = requestAnimationFrame(() => {
-      moveRafId = 0;
-      if (!pendingMove) return;
-      onPointerMove(pendingMove.x, pendingMove.y);
-      pendingMove = null;
-    });
-  };
+  let handedOff = false;
+  let handoffAttempted = false;
+  let externalDrag = false;
 
   const paint = () => {
     const items = getItems();
-    const cap = options.gridCapacity?.() ?? maxItems;
     grid.classList.toggle("is-edit-mode", editMode);
-    grid.innerHTML = displaySlots(items, cap)
-      .map((item, slot) => render(item, editMode, !editMode && !!item, slot))
-      .join("");
-  };
-
-  const paintSlotAt = (slotIndex: number) => {
-    const items = getItems();
-    const cap = options.gridCapacity?.() ?? maxItems;
-    const slots = displaySlots(items, cap);
-    const item = slots[slotIndex] ?? null;
-    const html = render(item, editMode, !editMode && !!item, slotIndex);
-    const child = grid.children[slotIndex] as HTMLElement | undefined;
-    const wrap = document.createElement("div");
-    wrap.innerHTML = html.trim();
-    const newEl = wrap.firstElementChild as HTMLElement | null;
-    if (!newEl) return;
-    if (child) child.replaceWith(newEl);
-    else grid.appendChild(newEl);
-  };
-
-  const paintSlotsForId = (id: string) => {
-    const cap = options.gridCapacity?.() ?? maxItems;
-    const slots = displaySlots(getItems(), cap);
-    const slotIndex = slots.findIndex((s) => s?.id === id);
-    if (slotIndex >= 0) paintSlotAt(slotIndex);
-  };
-
-  const paintSlotsForDeleted = (deletedId: string) => {
-    const deletedSlot = Array.from(grid.children).findIndex(
-      (c) => (c as HTMLElement).dataset.id === deletedId,
-    );
-    if (deletedSlot >= 0) paintSlotAt(deletedSlot);
-  };
-
-  const paintItemChange = (id?: string, deletedId?: string) => {
-    if (editMode) {
-      paint();
-      return;
+    if (denseItems) {
+      const sorted = [...items].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+      grid.innerHTML = sorted
+        .map((item, index) => render(item, editMode, !editMode, index))
+        .join("");
+    } else {
+      grid.innerHTML = [...items, null]
+        .map((item, slot) => render(item, editMode, !editMode && !!item, slot))
+        .join("");
     }
-    if (fixedSlots && deletedId) {
-      paintSlotsForDeleted(deletedId);
-      return;
-    }
-    if (fixedSlots && id) {
-      paintSlotsForId(id);
-      return;
-    }
-    paint();
   };
 
   const paintWithFlip = () => {
@@ -264,13 +174,24 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     requestAnimationFrame(() => flipAnimate(grid, before));
   };
 
+  const paintItemChange = () => {
+    if (editMode) paint();
+    else paintWithFlip();
+  };
+
   const exitEditMode = () => {
     if (!editMode) return;
     editMode = false;
     paint();
   };
 
-  const clearAbsorbMarks = () => {
+  const setOutsideFolder = (active: boolean) => {
+    if (active === outsideFolder) return;
+    outsideFolder = active;
+    options.onDragOutHover?.(active);
+  };
+
+  const clearAbsorb = () => {
     grid.querySelectorAll(".is-drop-merge, .is-drop-into").forEach((el) => {
       el.classList.remove("is-drop-merge", "is-drop-into");
     });
@@ -281,15 +202,155 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     absorbReady = false;
   };
 
-  const setOutsideFolder = (active: boolean) => {
-    if (active === outsideFolder) return;
-    outsideFolder = active;
-    options.onDragOutHover?.(active);
+  const updateAbsorb = (x: number, y: number): boolean => {
+    if (!folderOps || !pointerId || !pointerTile) return false;
+
+    const under = tileAtPoint(x, y, grid, pointerTile);
+    if (!under || under.classList.contains("is-empty") || !under.dataset.id) {
+      clearAbsorb();
+      return false;
+    }
+
+    const latched = absorbTile === under;
+    if (!inAbsorbZone(under, x, y, latched)) {
+      clearAbsorb();
+      return false;
+    }
+
+    const id = under.dataset.id!;
+    const item = getItems().find((i) => i.id === id);
+    const isFolder = (item && options.isFolder?.(item)) || under.dataset.kind === "folder";
+
+    if (isFolder && options.onMoveToFolder) {
+      if (absorbTile !== under) {
+        clearAbsorb();
+        absorbTile = under;
+        absorbTargetId = id;
+        absorbKind = "into";
+        absorbSince = Date.now();
+      }
+    } else if (!isFolder && options.onMerge) {
+      const source = getItems().find((i) => i.id === pointerId);
+      if (source && options.isFolder?.(source)) {
+        clearAbsorb();
+        return false;
+      }
+      if (absorbTile !== under) {
+        clearAbsorb();
+        absorbTile = under;
+        absorbTargetId = id;
+        absorbKind = "merge";
+        absorbSince = Date.now();
+      }
+    } else {
+      clearAbsorb();
+      return false;
+    }
+
+    absorbReady = Date.now() - absorbSince >= ABSORB_DWELL_MS;
+    under.classList.toggle("is-drop-into", absorbKind === "into");
+    under.classList.toggle("is-drop-merge", absorbKind === "merge");
+    return true;
+  };
+
+  const hitPoint = (x: number, y: number) => {
+    if (!ghost) return { x, y };
+    return { x: x - ghostOffsetX + ghostHalfW, y: y - ghostOffsetY + ghostHalfH };
+  };
+
+  const slotFromDom = (sourceId: string | null) => {
+    if (!sourceId) return 0;
+    let slot = 0;
+    for (const el of grid.querySelectorAll<HTMLElement>(".launcher-tile[data-id]")) {
+      if (el.dataset.id === sourceId) return slot;
+      slot += 1;
+    }
+    return slot;
+  };
+
+  const releaseDragForHandoff = () => {
+    if (!pointerId || !pointerDragging) return;
+    const capId = capturePointerId;
+    const tile = pointerTile;
+    detachDocDrag();
+    if (capId !== null && tile?.hasPointerCapture(capId)) {
+      try {
+        tile.releasePointerCapture(capId);
+      } catch {
+        /* ignore */
+      }
+    }
+    tile?.classList.remove("is-dragging", "is-drag-source");
+    grid.classList.remove("is-reordering");
+    clearAbsorb();
+    setOutsideFolder(false);
+    ghost = null;
+    pointerId = null;
+    pointerTile = null;
+    pointerDragging = false;
+    previewDirty = false;
+    lastHoverKey = null;
+    pendingHoverKey = null;
+    outsideFolder = false;
+    capturePointerId = null;
+    handedOff = true;
+  };
+
+  const acceptDragHandoff = (h: TileGridDragHandoff): boolean => {
+    if (pointerId || editMode) return false;
+
+    let tile: HTMLElement | null = null;
+    externalDrag = !!h.external;
+    if (h.external && h.placeholderHtml) {
+      const wrap = document.createElement("div");
+      wrap.innerHTML = h.placeholderHtml.trim();
+      tile = wrap.querySelector<HTMLElement>(".launcher-tile");
+      if (!tile) return false;
+      tile.classList.add("is-drag-placeholder");
+      grid.appendChild(tile);
+      previewDirty = true;
+    } else {
+      paint();
+      tile = grid.querySelector<HTMLElement>(`.launcher-tile[data-id="${h.sourceId}"]`);
+      if (!tile) return false;
+    }
+
+    pointerId = h.sourceId;
+    pointerTile = tile;
+    pointerDragging = true;
+    ghost = h.ghost;
+    ghostOffsetX = h.ghostOffsetX;
+    ghostOffsetY = h.ghostOffsetY;
+    ghostHalfW = h.ghostHalfW;
+    ghostHalfH = h.ghostHalfH;
+    capturePointerId = h.capturePointerId;
+    previewDirty = h.external ? true : false;
+    lastHoverKey = null;
+    pendingHoverKey = null;
+    outsideFolder = false;
+    handedOff = false;
+
+    grid.classList.add("is-reordering");
+    tile.classList.add("is-dragging", "is-drag-source");
+    tile.style.visibility = "hidden";
+    moveGhost(h.clientX, h.clientY);
+    document.addEventListener("pointermove", onDocPointerMove, true);
+    document.addEventListener("pointerup", onDocPointerUp, true);
+    document.addEventListener("pointercancel", onDocPointerCancel, true);
+    try {
+      document.body.setPointerCapture(h.capturePointerId);
+    } catch {
+      /* ignore */
+    }
+    onPointerMove(h.clientX, h.clientY);
+    return true;
   };
 
   const removeGhost = () => {
     ghost?.remove();
     ghost = null;
+    ghostHalfW = 0;
+    ghostHalfH = 0;
     if (pointerTile) {
       pointerTile.classList.remove("is-drag-source", "is-dragging");
       pointerTile.style.visibility = "";
@@ -305,6 +366,8 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     ghost = g;
     ghostOffsetX = x - rect.left;
     ghostOffsetY = y - rect.top;
+    ghostHalfW = rect.width / 2;
+    ghostHalfH = rect.height / 2;
     tile.classList.add("is-drag-source");
     tile.style.visibility = "hidden";
   };
@@ -312,20 +375,6 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   const moveGhost = (x: number, y: number) => {
     if (!ghost) return;
     movePointerGhost(ghost, x, y, ghostOffsetX, ghostOffsetY, GHOST_SCALE);
-  };
-
-  const previewMoveToSlot = (targetSlot: number) => {
-    if (!pointerId || !pointerTile) return;
-    const count = grid.children.length;
-    if (targetSlot < 0 || targetSlot >= count) return;
-    const current = Array.from(grid.children).indexOf(pointerTile);
-    if (current === targetSlot) return;
-    const ref = grid.children[targetSlot] as HTMLElement;
-    if (!ref || ref === pointerTile) return;
-    const before = captureTilePositions(grid);
-    grid.insertBefore(pointerTile, ref);
-    flipAnimate(grid, before);
-    previewDirty = true;
   };
 
   const previewMoveTo = (hover: HTMLElement) => {
@@ -337,56 +386,33 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     previewDirty = true;
   };
 
-  const updateAbsorb = (x: number, y: number) => {
-    if (!folderOps || !pointerId || !pointerTile) return false;
+  const previewMoveAfter = (hover: HTMLElement) => {
+    if (!pointerTile || hover === pointerTile) return;
+    const next = hover.nextElementSibling;
+    if (next === pointerTile) return;
+    const before = captureTilePositions(grid);
+    if (next) grid.insertBefore(pointerTile, next);
+    else grid.appendChild(pointerTile);
+    flipAnimate(grid, before);
+    previewDirty = true;
+  };
 
-    const under = tileAtPoint(x, y, grid);
-    if (!under || under === pointerTile || under.classList.contains("is-empty") || !under.dataset.id) {
-      clearAbsorbMarks();
-      return false;
+  const previewMoveToEnd = () => {
+    if (!pointerTile) return;
+    const trailing = grid.querySelector<HTMLElement>(".launcher-tile.is-empty:last-child");
+    if (trailing && trailing !== pointerTile) {
+      if (pointerTile.nextElementSibling === trailing) return;
+      const before = captureTilePositions(grid);
+      grid.insertBefore(pointerTile, trailing);
+      flipAnimate(grid, before);
+      previewDirty = true;
+      return;
     }
-
-    const latched = absorbTile === under;
-    if (!inAbsorbZone(under, x, y, latched)) {
-      clearAbsorbMarks();
-      return false;
-    }
-
-    const id = under.dataset.id!;
-    const item = getItems().find((i) => i.id === id);
-    const isFolder = (item && options.isFolder?.(item)) || under.dataset.kind === "folder";
-
-    if (isFolder && options.onMoveToFolder) {
-      if (absorbTile !== under) {
-        clearAbsorbMarks();
-        absorbTile = under;
-        absorbTargetId = id;
-        absorbKind = "into";
-        absorbSince = Date.now();
-      }
-    } else if (!isFolder && options.onMerge) {
-      const source = getItems().find((i) => i.id === pointerId);
-      if (source && options.isFolder?.(source)) {
-        clearAbsorbMarks();
-        return false;
-      }
-      if (absorbTile !== under) {
-        clearAbsorbMarks();
-        absorbTile = under;
-        absorbTargetId = id;
-        absorbKind = "merge";
-        absorbSince = Date.now();
-      }
-    } else {
-      clearAbsorbMarks();
-      return false;
-    }
-
-    const show = Date.now() - absorbSince >= ABSORB_DWELL_MS;
-    absorbReady = show;
-    under.classList.toggle("is-drop-into", absorbKind === "into" && show);
-    under.classList.toggle("is-drop-merge", absorbKind === "merge" && show);
-    return true;
+    if (grid.lastElementChild === pointerTile) return;
+    const before = captureTilePositions(grid);
+    grid.appendChild(pointerTile);
+    flipAnimate(grid, before);
+    previewDirty = true;
   };
 
   const resetTileTransforms = () => {
@@ -397,9 +423,9 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   };
 
   const detachDocDrag = () => {
-    document.removeEventListener("pointermove", onDocPointerMove);
-    document.removeEventListener("pointerup", onDocPointerUp);
-    document.removeEventListener("pointercancel", onDocPointerCancel);
+    document.removeEventListener("pointermove", onDocPointerMove, true);
+    document.removeEventListener("pointerup", onDocPointerUp, true);
+    document.removeEventListener("pointercancel", onDocPointerCancel, true);
   };
 
   const onDocPointerCancel = (e: PointerEvent) => {
@@ -417,11 +443,10 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       pointerDragging = true;
       grid.classList.add("is-reordering");
       pointerTile.classList.add("is-dragging");
-      if (fixedSlots) initDragSlotCtx();
       createGhost(pointerTile, e.clientX, e.clientY);
     }
     moveGhost(e.clientX, e.clientY);
-    schedulePointerMove(e.clientX, e.clientY);
+    onPointerMove(e.clientX, e.clientY);
   };
 
   const onDocPointerUp = (e: PointerEvent) => {
@@ -433,98 +458,149 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
   const onPointerMove = (x: number, y: number) => {
     lastClientX = x;
     lastClientY = y;
+    const { x: hx, y: hy } = hitPoint(x, y);
+
     if (options.dragOutPanel) {
-      setOutsideFolder(outsidePanel(options.dragOutPanel, x, y));
-    }
-
-    if (updateAbsorb(x, y)) {
-      lastHoverKey = null;
-      return;
-    }
-
-    if (fixedSlots) {
-      const slot = slotFromPointCached(x, y);
-      if (slot === null) {
-        lastHoverKey = null;
-        return;
+      const outside = outsidePanel(options.dragOutPanel, hx, hy);
+      if (outside && pointerDragging && !handedOff && !handoffAttempted && options.onDragOutLeave && pointerId && ghost) {
+        handoffAttempted = true;
+        const payload: TileGridDragHandoff = {
+          sourceId: pointerId,
+          ghost,
+          ghostOffsetX,
+          ghostOffsetY,
+          ghostHalfW,
+          ghostHalfH,
+          clientX: x,
+          clientY: y,
+          capturePointerId: capturePointerId ?? 0,
+        };
+        if (options.onDragOutLeave(payload.sourceId, payload)) {
+          releaseDragForHandoff();
+          return;
+        }
+        handoffAttempted = false;
       }
-      const key = `slot_${slot}`;
-      if (key === lastHoverKey) return;
-      lastHoverKey = key;
-      previewMoveToSlot(slot);
-      return;
+      setOutsideFolder(outside);
+      if (!outside) handoffAttempted = false;
     }
 
-    const hover = tileAtPoint(x, y, grid);
-    if (!hover || hover === pointerTile) {
+    if (updateAbsorb(hx, hy)) {
+      pendingHoverKey = null;
       lastHoverKey = null;
       return;
     }
 
-    const hoverKey = hover.classList.contains("is-empty")
-      ? `__empty_${Array.from(grid.children).indexOf(hover)}`
-      : (hover.dataset.id ?? "");
+    const hover = tileAtPoint(hx, hy, grid, pointerTile);
+    let hoverKey: string | null = null;
+    let apply: (() => void) | null = null;
+
+    if (hover && hover !== pointerTile) {
+      if (hover.classList.contains("is-empty")) {
+        hoverKey = "__append__";
+        apply = previewMoveToEnd;
+      } else {
+        const r = hover.getBoundingClientRect();
+        const after = hx > r.left + r.width * 0.5;
+        hoverKey = `${hover.dataset.id ?? ""}:${after ? "r" : "l"}`;
+        const h = hover;
+        apply = () => (after ? previewMoveAfter(h) : previewMoveTo(h));
+      }
+    } else if (isAppendZone(hx, hy, grid, pointerTile)) {
+      hoverKey = "__append__";
+      apply = previewMoveToEnd;
+    }
+
+    if (!hoverKey || !apply) {
+      pendingHoverKey = null;
+      return;
+    }
     if (hoverKey === lastHoverKey) return;
+    if (hoverKey !== pendingHoverKey) {
+      pendingHoverKey = hoverKey;
+      hoverSince = Date.now();
+      return;
+    }
+    if (Date.now() - hoverSince < REORDER_DWELL_MS) return;
     lastHoverKey = hoverKey;
-    previewMoveTo(hover);
+    apply();
   };
 
   const finishPointer = (e: PointerEvent | undefined, commit: boolean) => {
+    if (handedOff) {
+      handedOff = false;
+      return;
+    }
     detachDocDrag();
-    pointerTile?.classList.remove("is-dragging", "is-drag-source");
+    const tile = pointerTile;
+    const capId = capturePointerId;
+    tile?.classList.remove("is-dragging", "is-drag-source");
     grid.classList.remove("is-reordering");
-    if (capturePointerId !== null && pointerTile?.hasPointerCapture(capturePointerId)) {
-      pointerTile.releasePointerCapture(capturePointerId);
+    if (capId !== null) {
+      try {
+        if (document.body.hasPointerCapture(capId)) document.body.releasePointerCapture(capId);
+        else if (tile?.hasPointerCapture(capId)) tile.releasePointerCapture(capId);
+      } catch {
+        /* ignore */
+      }
     }
 
     const sourceId = pointerId;
     const wasDragging = pointerDragging;
+    const leftFolder = outsideFolder;
+    const upX = e?.clientX ?? lastClientX;
+    const upY = e?.clientY ?? lastClientY;
+    const { x: hx, y: hy } = hitPoint(upX, upY);
     const targetId = absorbTargetId;
     const kind = absorbKind;
     const absorbEl = absorbTile;
     const wasAbsorbReady = absorbReady;
-    const leftFolder = outsideFolder;
-    const upX = e?.clientX ?? lastClientX;
-    const upY = e?.clientY ?? lastClientY;
-    const inZone = absorbEl && inAbsorbZone(absorbEl, upX, upY, true);
+    const inZone = absorbEl && inAbsorbZone(absorbEl, hx, hy, true);
     const shouldAbsorb = !!(targetId && kind && (inZone || wasAbsorbReady));
 
-    clearAbsorbMarks();
+    clearAbsorb();
     resetTileTransforms();
     removeGhost();
     setOutsideFolder(false);
 
     if (wasDragging) suppressClick = true;
 
-    if (wasDragging && commit && sourceId) {
+    if (wasDragging && externalDrag && sourceId) {
+      const slot = slotFromDom(sourceId);
+      if (commit && options.onExternalCommit) {
+        const absorb = shouldAbsorb && targetId && kind ? { kind, targetId } : undefined;
+        options.onExternalCommit(sourceId, slot, absorb);
+      } else if (!commit && options.onExternalCancel) {
+        options.onExternalCancel(sourceId);
+      }
+      pointerTile?.remove();
+      externalDrag = false;
+    } else if (wasDragging && commit && sourceId) {
       if (options.onMoveOut && leftFolder && options.dragOutPanel) {
         options.onMoveOut(sourceId);
       } else if (shouldAbsorb && kind === "into" && options.onMoveToFolder) {
         options.onMoveToFolder(sourceId, targetId);
-        paint();
+        paintItemChange();
       } else if (shouldAbsorb && kind === "merge" && options.onMerge) {
-        options.onMerge(sourceId, targetId);
+        const targetRect = absorbEl?.getBoundingClientRect();
+        const before = captureTilePositions(grid);
+        const folderId = options.onMerge(sourceId, targetId!);
         paint();
+        requestAnimationFrame(() => {
+          flipAnimate(grid, before);
+          if (folderId && targetRect) {
+            const folderEl = grid.querySelector<HTMLElement>(`.launcher-tile[data-id="${folderId}"]`);
+            if (folderEl) animatePopIn(folderEl, targetRect);
+          }
+        });
       } else if (previewDirty) {
         const next = orderFromDom(grid, getItems());
         const prevSlots = new Map(getItems().map((i) => [i.id, i.slot]));
-        const changed =
-          next.length !== getItems().length ||
-          next.some((item) => item.slot !== prevSlots.get(item.id));
+        const changed = next.some((item) => item.slot !== prevSlots.get(item.id));
         if (changed) setItems(next);
-        else paint();
-      } else {
-        paint();
       }
     } else if (wasDragging && previewDirty) {
       paint();
-    }
-
-    clearDragSlotCtx();
-    if (moveRafId) {
-      cancelAnimationFrame(moveRafId);
-      moveRafId = 0;
-      pendingMove = null;
     }
 
     pointerId = null;
@@ -532,8 +608,10 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     pointerDragging = false;
     previewDirty = false;
     lastHoverKey = null;
+    pendingHoverKey = null;
     outsideFolder = false;
     capturePointerId = null;
+    handoffAttempted = false;
   };
 
   paint();
@@ -550,14 +628,16 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     pointerDragging = false;
     previewDirty = false;
     lastHoverKey = null;
+    pendingHoverKey = null;
     outsideFolder = false;
-    capturePointerId = null;
-    clearAbsorbMarks();
+    handedOff = false;
+    handoffAttempted = false;
+    clearAbsorb();
     capturePointerId = e.pointerId;
     tile.setPointerCapture(e.pointerId);
-    document.addEventListener("pointermove", onDocPointerMove);
-    document.addEventListener("pointerup", onDocPointerUp);
-    document.addEventListener("pointercancel", onDocPointerCancel);
+    document.addEventListener("pointermove", onDocPointerMove, true);
+    document.addEventListener("pointerup", onDocPointerUp, true);
+    document.addEventListener("pointercancel", onDocPointerCancel, true);
   });
 
   grid.addEventListener("click", async (e) => {
@@ -580,7 +660,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
         setItems(next);
       }
       editMode = false;
-      paintItemChange(undefined, item.id);
+      paintItemChange();
       return;
     }
 
@@ -593,7 +673,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       if (!item || !options.onRenameFolder) return;
       const next = await Promise.resolve(options.onRenameFolder(item, editFolderBtn));
       if (next) setItems(next);
-      paintItemChange(item.id);
+      paintItemChange();
       return;
     }
 
@@ -606,7 +686,7 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
       if (!item) return;
       const next = await Promise.resolve(onEdit(item, editBtn));
       if (next) setItems(next);
-      paintItemChange(item.id);
+      paintItemChange();
       return;
     }
 
@@ -643,5 +723,5 @@ export function bindTileGrid<T extends { id: string; name: string; slot?: number
     if (e.key === "Escape") exitEditMode();
   });
 
-  return { paint, paintWithFlip };
+  return { paint, paintWithFlip, acceptDragHandoff };
 }

@@ -76,6 +76,15 @@ export function moveToRoot<L extends LauncherLeafBase>(
   sourceId: string,
   folderId: string,
 ): LauncherEntry<L>[] {
+  return commitFolderChildToRoot(entries, folderId, sourceId, Number.MAX_SAFE_INTEGER);
+}
+
+export function commitFolderChildToRoot<L extends LauncherLeafBase>(
+  entries: LauncherEntry<L>[],
+  folderId: string,
+  sourceId: string,
+  slot: number,
+): LauncherEntry<L>[] {
   const folderIdx = entries.findIndex((e) => e.id === folderId && e.kind === "folder");
   if (folderIdx < 0) return entries;
   const folder = entries[folderIdx] as LauncherFolder<L>;
@@ -89,11 +98,12 @@ export function moveToRoot<L extends LauncherLeafBase>(
 
   if (remaining.length === 0) {
     next = next.filter((e) => e.id !== folderId);
-    next.splice(folderIdx, 0, child);
-  } else {
-    next = [...next, child];
   }
-  return dissolveRootFolders(next);
+
+  const roots = [...next].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
+  const at = Math.max(0, Math.min(slot, roots.length));
+  roots.splice(at, 0, { ...child, slot: at } as LauncherEntry<L>);
+  return dissolveRootFolders(roots.map((e, i) => ({ ...e, slot: i })));
 }
 
 export function reorderFolderChildren<L extends LauncherLeafBase>(

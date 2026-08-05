@@ -1,3 +1,4 @@
+import { isTauri } from "../../core/data/client";
 import { ENGINES } from "./engines";
 import { getCurrentEngine, setEngine, shellStore } from "./store";
 import { openUrl } from "./adapter";
@@ -19,6 +20,8 @@ const APP_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const WORK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`;
 const SEARCH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>`;
 const LBL_APPS = "\u5e94\u7528";
+const LBL_WORK = "\u5de5\u4f5c";
+const LBL_WORK_PLACEHOLDER = "\u656c\u8bf7\u671f\u5f85";
 const LBL_ADD = "\u6dfb\u52a0";
 const LBL_SEARCH_IN = (name: string) => `\u5728 ${name} \u4e2d\u641c\u7d22`;
 const LBL_DELETE_TITLE = "\u5220\u9664\u786e\u8ba4";
@@ -121,6 +124,7 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
 }
 
 export function mountShell(root: HTMLElement) {
+  if (!isTauri()) document.body.classList.add("is-web-preview");
   root.innerHTML = `
     <div class="bg bg-light"></div>
     <div class="bg bg-dark"></div>
@@ -202,10 +206,10 @@ export function mountShell(root: HTMLElement) {
   work.id = "workZone";
   work.innerHTML = `
     <div class="launcher-head">
-      <span class="launcher-title">${WORK_SVG}??</span>
+      <span class="launcher-title">${WORK_SVG}${LBL_WORK}</span>
     </div>
     <div class="work-panel">
-      <p class="work-placeholder">???</p>
+      <p class="work-placeholder">${LBL_WORK_PLACEHOLDER}</p>
     </div>
   `;
   body.appendChild(work);

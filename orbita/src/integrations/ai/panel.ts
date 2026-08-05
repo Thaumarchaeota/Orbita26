@@ -117,10 +117,6 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   let activeStreamGen = 0;
   let modelMenuEntryId: string | null = null;
 
-  function escapeHtml(text: string) {
-    return formatPlainText(text);
-  }
-
   let streamingBubble: HTMLElement | null = null;
   let streamingTextEl: HTMLElement | null = null;
   let streamingToolsEl: HTMLElement | null = null;
@@ -228,7 +224,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     row.dataset.stepId = String(id);
     row.dataset.toolName = name;
     const badge = pending ? "待确认" : "执行中";
-    row.innerHTML = `<span class="ai-tool-step-badge">${badge}</span><span class="ai-tool-step-text">${escapeHtml(label)}</span>`;
+    row.innerHTML = `<span class="ai-tool-step-badge">${badge}</span><span class="ai-tool-step-text">${escHtml(label)}</span>`;
     toolsEl.appendChild(row);
     scrollMessagesIfPinned();
   }
@@ -279,7 +275,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
       row.classList.toggle("is-done", ok);
       row.classList.toggle("is-error", !ok);
       const badge = ok ? "完成" : "失败";
-      row.innerHTML = `<span class="ai-tool-step-badge">${badge}</span><span class="ai-tool-step-text">${escapeHtml(summary)}</span>`;
+      row.innerHTML = `<span class="ai-tool-step-badge">${badge}</span><span class="ai-tool-step-text">${escHtml(summary)}</span>`;
     }
     if (ok && name.startsWith("ticktick_")) {
       window.dispatchEvent(new CustomEvent("orbita:ticktick-refresh"));
@@ -431,7 +427,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
       .map(
         (c) => `
           <div class="ai-conv-row ${conversation?.id === c.id ? "active" : ""}" data-id="${escAttr(c.id)}">
-            <button type="button" class="ai-conv-item" data-id="${escAttr(c.id)}">${escapeHtml(c.title)}</button>
+            <button type="button" class="ai-conv-item" data-id="${escAttr(c.id)}">${escHtml(c.title)}</button>
             <div class="ai-conv-row-actions">
               <button type="button" class="ai-conv-action" data-action="edit" data-id="${escAttr(c.id)}" data-tip="重命名">${EDIT_SVG}</button>
               <button type="button" class="ai-conv-action" data-action="delete" data-id="${escAttr(c.id)}" data-tip="删除">${DELETE_SVG}</button>
@@ -495,7 +491,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
             ${config.entries
               .map(
                 (e) =>
-                  `<button type="button" class="ai-model-api ${e.id === previewEntryId ? "active" : ""}" data-entry="${e.id}">${escapeHtml(e.name)}</button>`,
+                  `<button type="button" class="ai-model-api ${e.id === previewEntryId ? "active" : ""}" data-entry="${e.id}">${escHtml(e.name)}</button>`,
               )
               .join("")}
           </div>
@@ -506,7 +502,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
             ${entry?.models
               .map(
                 (m) =>
-                  `<button type="button" class="ai-model-choice ${m === activeModel ? "active" : ""}" data-model="${escapeAttr(m)}">${escapeHtml(modelBaseName(m))}</button>`,
+                  `<button type="button" class="ai-model-choice ${m === activeModel ? "active" : ""}" data-model="${escapeAttr(m)}">${escHtml(modelBaseName(m))}</button>`,
               )
               .join("") ?? `<div class="ai-model-picker-empty">暂无模型</div>`}
           </div>

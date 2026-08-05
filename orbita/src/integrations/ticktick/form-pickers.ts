@@ -77,7 +77,10 @@ export function mountListPicker(
   };
 
   const close = async () => {
-    if (isPopoverOpen(menu)) await closePopover(menu);
+    if (isPopoverOpen(menu)) {
+      await closePopover(menu);
+      btn.classList.remove("is-open");
+    }
   };
   group?.register({ close, menu });
 
@@ -88,6 +91,7 @@ export function mountListPicker(
     }
     await group?.closeOthers(menu);
     paint();
+    btn.classList.add("is-open");
     void openPopover(menu, e.currentTarget as HTMLElement);
   });
 
@@ -164,7 +168,10 @@ export function mountDatePicker(
   };
 
   const close = async () => {
-    if (isPopoverOpen(menu)) await closePopover(menu);
+    if (isPopoverOpen(menu)) {
+      await closePopover(menu);
+      btn.classList.remove("is-open");
+    }
   };
   group?.register({ close, menu });
 
@@ -180,6 +187,7 @@ export function mountDatePicker(
     }
     await group?.closeOthers(menu);
     paint();
+    btn.classList.add("is-open");
     void openPopover(menu, e.currentTarget as HTMLElement);
   });
 
@@ -253,7 +261,10 @@ export function mountTimePicker(
   };
 
   const close = async () => {
-    if (isPopoverOpen(menu)) await closePopover(menu);
+    if (isPopoverOpen(menu)) {
+      await closePopover(menu);
+      btn.classList.remove("is-open");
+    }
   };
   group?.register({ close, menu });
 
@@ -264,6 +275,7 @@ export function mountTimePicker(
     }
     await group?.closeOthers(menu);
     paint();
+    btn.classList.add("is-open");
     void openPopover(menu, e.currentTarget as HTMLElement);
   });
 

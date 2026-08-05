@@ -1,4 +1,3 @@
-import { escAttr, escHtml } from "../../core/html";
 import { isTauri } from "../../core/data/client";
 import type { BookmarkEntry, BookmarkLink } from "../../core/data/types";
 import { normalizeUrl } from "../../core/url";
@@ -26,63 +25,57 @@ import {
 import { bindListTreeDrag, consumeRowClickSuppress } from "./list-tree-drag";
 import { loadBookmarks, saveBookmarks } from "./bookmarks";
 import { FOLDER_OPEN_SVG, FOLDER_SVG, applyShellIcon } from "./local-icons";
+import {
+  renderTreeList,
+  renderTreeLeafRow,
+  renderTreeContainerRow,
+  TREE_CHEVRON_SVG,
+  toggleTreeContainerRow,
+} from "./tree-list-render";
 
 const BOOKMARK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
-const CHEVRON_SVG = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>`;
 const FOLDER_ADD_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5V6.5A2 2 0 0 1 5 4.5h4.5L11 6h8a2 2 0 0 1 2 2v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7.5z"/><line x1="16" y1="17" x2="20" y2="17"/><line x1="18" y1="15" x2="18" y2="19"/></svg>`;
 
 const LBL_BOOKMARKS = "书签";
 const LBL_ADD = "添加";
 
-function renderLinkRow(link: BookmarkLink, depth: number): string {
-  return `
-    <button type="button" class="local-tree-row local-tree-leaf" data-id="${escAttr(link.id)}" data-kind="link" data-url="${escAttr(link.url)}" style="--depth:${depth}">
-      <span class="local-tree-twistie is-leaf"></span>
-      <span class="local-tree-icon local-item-icon is-file">${BOOKMARK_SVG}</span>
-      <span class="local-tree-label">${escHtml(link.name)}</span>
-    </button>
-    <div class="local-tree-after-slot" data-target-id="${escAttr(link.id)}" aria-hidden="true"></div>
-  `;
-}
-
-function renderFolderRow(folder: Extract<BookmarkEntry, { kind: "folder" }>, depth: number, expanded: Set<string>): string {
-  const open = expanded.has(folder.id);
-  const childrenHtml = folder.children.map((c) => renderLinkRow(c, depth + 1)).join("");
-  return `
-    <div class="local-tree-group" data-group-id="${escAttr(folder.id)}">
-      <button type="button" class="local-tree-row local-tree-folder${open ? " is-expanded" : ""}" data-id="${escAttr(folder.id)}" data-kind="folder" style="--depth:${depth}" data-tip="${escAttr(folder.name)}">
-        <span class="local-tree-twistie${open ? " is-open" : ""}">${CHEVRON_SVG}</span>
-        <span class="local-tree-icon local-item-icon is-folder">${open ? FOLDER_OPEN_SVG : FOLDER_SVG}</span>
-        <span class="local-tree-label">${escHtml(folder.name)}</span>
-      </button>
-      <div class="local-tree-children-wrap${open ? " is-open" : ""}">
-        <div class="local-tree-children">${childrenHtml}</div>
-      </div>
-      <div class="local-tree-after-slot" data-target-id="${escAttr(folder.id)}" aria-hidden="true"></div>
-    </div>
-  `;
-}
-
 function renderTree(items: BookmarkEntry[], expanded: Set<string>): string {
-  if (!items.length) return `<div class="local-tree-empty">暂无书签</div>`;
-  return items
-    .map((item) =>
-      item.kind === "folder" ? renderFolderRow(item, 0, expanded) : renderLinkRow(item, 0),
-    )
-    .join("");
+  return renderTreeList({
+    containerKind: "folder",
+    emptyLabel: "暂无书签",
+    expanded,
+    items,
+    isContainer: (item) => item.kind === "folder",
+    renderLeaf: (item, depth) => {
+      if (item.kind !== "link") return "";
+      return renderTreeLeafRow({
+        id: item.id,
+        kind: "link",
+        depth,
+        label: item.name,
+        iconHtml: `<span class="local-tree-icon local-item-icon is-file">${BOOKMARK_SVG}</span>`,
+        url: item.url,
+      });
+    },
+    renderContainer: (item, depth, childrenHtml, open) => {
+      if (item.kind !== "folder") return "";
+      return renderTreeContainerRow({
+        id: item.id,
+        containerKind: "folder",
+        depth,
+        label: item.name,
+        tip: item.name,
+        open,
+        childrenHtml,
+        twistieHtml: TREE_CHEVRON_SVG,
+        iconHtml: `<span class="local-tree-icon local-item-icon is-folder">${open ? FOLDER_OPEN_SVG : FOLDER_SVG}</span>`,
+      });
+    },
+  });
 }
 
 function toggleFolderRow(row: HTMLElement, id: string, open: boolean, expanded: Set<string>) {
-  const group = row.closest<HTMLElement>(".local-tree-group");
-  const wrap = group?.querySelector<HTMLElement>(".local-tree-children-wrap");
-  const twistie = row.querySelector<HTMLElement>(".local-tree-twistie");
-  const icon = row.querySelector<HTMLElement>(".local-tree-icon");
-  if (open) expanded.add(id);
-  else expanded.delete(id);
-  row.classList.toggle("is-expanded", open);
-  twistie?.classList.toggle("is-open", open);
-  wrap?.classList.toggle("is-open", open);
-  if (icon) icon.innerHTML = open ? FOLDER_OPEN_SVG : FOLDER_SVG;
+  toggleTreeContainerRow(row, id, open, expanded, FOLDER_OPEN_SVG, FOLDER_SVG);
 }
 
 function collectLinks(items: BookmarkEntry[]): BookmarkLink[] {

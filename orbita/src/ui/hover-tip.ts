@@ -107,6 +107,7 @@ export function initHoverTips() {
   });
 
   document.addEventListener("mouseover", (e) => {
+    if ((e.target as Element).closest(".local-file-list.is-dragging")) return;
     const el = tipTargetFrom(e.target);
     if (!el) {
       if (activeEl) hideHoverTip();
@@ -120,6 +121,10 @@ export function initHoverTips() {
 
   document.addEventListener("mousemove", (e) => {
     if (!activeEl || !activeFollow) return;
+    if (activeEl.closest(".local-file-list.is-dragging")) {
+      hideHoverTip();
+      return;
+    }
     const text = tipFrom(activeEl);
     if (!text) return;
     positionTip(e.clientX + 12, e.clientY + 16);

@@ -11,6 +11,7 @@ import {
   writeSettings,
 } from "./client";
 import { applyFontPrefs } from "./fonts";
+import { applyThemePrefs, prefsFromTheme } from "./theme-prefs";
 import type { AppSettings, AppTheme, UiPrefs } from "./types";
 
 let cached: AppSettings | null = null;
@@ -100,17 +101,19 @@ export function applyUiPrefs(ui: UiPrefs) {
 }
 
 export function applyTheme(theme: AppTheme) {
-  document.documentElement.setAttribute("data-theme", theme);
+  applyThemePrefs(prefsFromTheme(theme));
 }
 
 export function applyAppearance(settings: AppSettings) {
-  applyTheme(settings.theme);
+  applyThemePrefs(settings.ui.themePrefs);
   applyUiPrefs(settings.ui);
 }
 
 export async function setTheme(theme: AppTheme) {
-  await patchSettings({ theme });
-  applyTheme(theme);
+  const current = getSettings();
+  const themePrefs = prefsFromTheme(theme);
+  await patchSettings({ theme, ui: { ...current.ui, themePrefs } });
+  applyThemePrefs(themePrefs);
 }
 
 function parseLocalJson<T>(key: string): T | null {

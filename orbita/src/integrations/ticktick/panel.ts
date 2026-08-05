@@ -11,6 +11,7 @@ import {
   didaDeleteTask,
   didaFilterTasks,
   didaListProjects,
+  didaReopenTask,
   didaUpdateTask,
   filterTasks,
   formatTaskDue,
@@ -33,7 +34,7 @@ const REFRESH_DONE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 const PLUS_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
 const CHECK_MARK_SVG = `<svg class="ticktick-task-check-mark" viewBox="0 0 12 10" aria-hidden="true"><polyline points="1.8 5.2 4.6 7.8 10.2 1.8"/></svg>`;
 
-const COMPLETE_DELAY_MS = 5000;
+const UNDO_MS = 3000;
 
 const CAL_SPRING: KeyframeAnimationOptions = {
   duration: 580,
@@ -135,7 +136,51 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   let loading = false;
   let calAnimating = false;
   let taskListReady = false;
-  const pendingComplete = new Map<string, number>();
+  let undoTimer = 0;
+  let undoTask: DidaTask | null = null;
+
+  const undoToast = document.createElement("div");
+  undoToast.className = "ticktick-undo-toast";
+  undoToast.setAttribute("aria-hidden", "true");
+  undoToast.innerHTML =
+    '<div class="ticktick-undo-pill"><span class="ticktick-undo-msg">已完成</span><button type="button" class="ticktick-undo-btn">撤销</button></div>';
+  todoEl.appendChild(undoToast);
+  const undoMsg = undoToast.querySelector<HTMLElement>(".ticktick-undo-msg")!;
+  const undoBtn = undoToast.querySelector<HTMLButtonElement>(".ticktick-undo-btn")!;
+
+  const clearUndo = () => {
+    window.clearTimeout(undoTimer);
+    undoTimer = 0;
+    undoTask = null;
+    undoToast.classList.remove("is-visible");
+    undoToast.setAttribute("aria-hidden", "true");
+  };
+
+  const showUndo = (task: DidaTask) => {
+    clearUndo();
+    undoTask = task;
+    undoMsg.textContent = "已完成";
+    undoToast.setAttribute("aria-hidden", "false");
+    undoToast.classList.add("is-visible");
+    undoTimer = window.setTimeout(() => clearUndo(), UNDO_MS);
+  };
+
+  undoBtn.addEventListener("click", () => {
+    const task = undoTask;
+    if (!task) return;
+    clearUndo();
+    void (async () => {
+      try {
+        await didaReopenTask(task.projectId, task.id);
+        if (!allTasks.some((t) => t.id === task.id && t.projectId === task.projectId)) {
+          allTasks = [...allTasks, task];
+        }
+        paintTasks();
+      } catch (err) {
+        alert(invokeError(err));
+      }
+    })();
+  });
 
   const setConnectedUi = (connected: boolean) => {
     section.classList.toggle("is-authed", connected);
@@ -270,10 +315,8 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   const taskRowHtml = (t: DidaTask) => {
     const due = formatTaskDue(t.dueDate);
     const overdue = due === "已过期";
-    const key = taskKey(t.projectId, t.id);
-    const completing = pendingComplete.has(key);
     return `
-          <div class="ticktick-task-row ${priorityClass(t.priority)}${overdue ? " is-overdue" : ""}${completing ? " is-completing" : ""}" data-project="${escAttr(t.projectId)}" data-id="${escAttr(t.id)}">
+          <div class="ticktick-task-row ${priorityClass(t.priority)}${overdue ? " is-overdue" : ""}" data-project="${escAttr(t.projectId)}" data-id="${escAttr(t.id)}">
             <button type="button" class="ticktick-task-check" aria-label="完成" data-action="complete">
               <span class="ticktick-task-check-box">${CHECK_MARK_SVG}</span>
             </button>
@@ -286,12 +329,9 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   const rowMatchesTask = (row: HTMLElement, t: DidaTask) => {
     const due = formatTaskDue(t.dueDate);
     const overdue = due === "已过期";
-    const key = taskKey(t.projectId, t.id);
-    const completing = pendingComplete.has(key);
     const title = row.querySelector(".ticktick-task-title");
     const dueEl = row.querySelector(".ticktick-task-due");
     return (
-      row.classList.contains("is-completing") === completing &&
       row.classList.contains("is-overdue") === overdue &&
       title?.textContent === t.title &&
       dueEl?.textContent === due
@@ -351,35 +391,25 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
     void crossfadeSwap(taskListEl, update);
   };
 
-  const clearPending = (key: string) => {
-    const timer = pendingComplete.get(key);
-    if (timer) window.clearTimeout(timer);
-    pendingComplete.delete(key);
-  };
-
-  const toggleComplete = (row: HTMLElement, projectId: string, taskId: string) => {
-    const key = taskKey(projectId, taskId);
-    if (pendingComplete.has(key)) {
-      clearPending(key);
-      row.classList.remove("is-completing");
-      return;
+  const completeTask = async (
+    row: HTMLElement,
+    projectId: string,
+    taskId: string,
+    task: DidaTask,
+  ) => {
+    row.classList.add("is-removing");
+    try {
+      await didaCompleteTask(projectId, taskId);
+      window.setTimeout(() => {
+        allTasks = allTasks.filter((t) => !(t.projectId === projectId && t.id === taskId));
+        paintTasks();
+        showUndo(task);
+        playSuccess();
+      }, 280);
+    } catch (err) {
+      row.classList.remove("is-removing");
+      alert(invokeError(err));
     }
-    row.classList.add("is-completing");
-    const timer = window.setTimeout(async () => {
-      pendingComplete.delete(key);
-      row.classList.add("is-removing");
-      try {
-        await didaCompleteTask(projectId, taskId);
-        window.setTimeout(() => {
-          allTasks = allTasks.filter((t) => !(t.projectId === projectId && t.id === taskId));
-          paintTasks();
-        }, 280);
-      } catch (err) {
-        row.classList.remove("is-completing", "is-removing");
-        alert(invokeError(err));
-      }
-    }, COMPLETE_DELAY_MS);
-    pendingComplete.set(key, timer);
   };
 
   const playRefreshSuccess = () => {
@@ -519,7 +549,7 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
         if (action === "delete") {
           void (async () => {
             try {
-              clearPending(taskKey(projectId, taskId));
+              clearUndo();
               row.classList.remove("is-completing", "is-removing");
               await didaDeleteTask(projectId, taskId);
               await refresh();
@@ -544,7 +574,7 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
     if (!task) return;
     const action = actionBtn.dataset.action;
     if (action === "complete") {
-      toggleComplete(row, projectId, taskId);
+      void completeTask(row, projectId, taskId, task);
       return;
     }
     if (action === "detail") {

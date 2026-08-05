@@ -83,3 +83,40 @@ export function movePointerGhost(
 ) {
   ghost.style.transform = `translate3d(${x - offsetX}px, ${y - offsetY}px, 0) scale(${scale})`;
 }
+
+const MERGE_POP_SEC = 0.36;
+const MORPH_SEC = 0.38;
+
+function runAppearTransition(el: HTMLElement, from: { dx: number; dy: number; scale: number }, durationSec: number) {
+  el.style.transition = "none";
+  el.style.transform = `translate(${from.dx}px, ${from.dy}px) scale(${from.scale})`;
+  el.style.opacity = "0.55";
+  requestAnimationFrame(() => {
+    el.style.transition = `transform ${durationSec}s var(--spring), opacity ${durationSec * 0.9}s var(--ease)`;
+    el.style.transform = "";
+    el.style.opacity = "";
+    const done = () => {
+      el.style.transition = "";
+      el.style.opacity = "";
+      el.removeEventListener("transitionend", done);
+    };
+    el.addEventListener("transitionend", done);
+  });
+}
+
+export function animatePopIn(el: HTMLElement, fromRect: DOMRect, durationSec = MERGE_POP_SEC) {
+  const to = el.getBoundingClientRect();
+  const dx = fromRect.left + fromRect.width / 2 - (to.left + to.width / 2);
+  const dy = fromRect.top + fromRect.height / 2 - (to.top + to.height / 2);
+  runAppearTransition(el, { dx, dy, scale: 0.58 }, durationSec);
+}
+
+export function animateFromRect(el: HTMLElement, fromRect: DOMRect, durationSec = MORPH_SEC) {
+  const to = el.getBoundingClientRect();
+  const sx = fromRect.width / Math.max(to.width, 1);
+  const sy = fromRect.height / Math.max(to.height, 1);
+  const scale = Math.min(sx, sy, 1.12);
+  const dx = fromRect.left + fromRect.width / 2 - (to.left + to.width / 2);
+  const dy = fromRect.top + fromRect.height / 2 - (to.top + to.height / 2);
+  runAppearTransition(el, { dx, dy, scale }, durationSec);
+}

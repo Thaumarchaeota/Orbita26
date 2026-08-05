@@ -1,16 +1,21 @@
 import { defaultAiConfig } from "../../../core/data/defaults";
 import type { AiConfig, ApiEntry } from "../../../core/data/types";
 import { escAttr, escHtml } from "../../../core/html";
+import { enhancePasswordFields } from "../form-controls";
 
 export const aiTabHtml = `
-  <div class="settings-tab-panel" data-tab-panel="ai" hidden>
-    <div class="dialog-field">
-      <label for="aiDefaultPrompt">默认 Prompt</label>
-      <textarea id="aiDefaultPrompt" rows="4"></textarea>
+  <div class="settings-tab-panel" data-tab-panel="ai">
+    <div class="settings-section">
+      <div class="settings-section-title">默认 Prompt</div>
+      <div class="dialog-field">
+        <textarea id="aiDefaultPrompt" rows="4"></textarea>
+      </div>
     </div>
-    <div class="dialog-section-title">API</div>
-    <div id="aiEntriesList"></div>
-    <button type="button" class="dialog-btn" id="aiAddEntry">添加 API</button>
+    <div class="settings-section">
+      <div class="settings-section-title">API</div>
+      <div id="aiEntriesList"></div>
+      <button type="button" class="dialog-btn" id="aiAddEntry">添加 API</button>
+    </div>
   </div>`;
 
 export function renderEntryCard(entry: ApiEntry): string {
@@ -65,6 +70,7 @@ export function bindAiTab(root: HTMLElement) {
   function paintEntries(entries: ApiEntry[]) {
     listEl.innerHTML = entries.map(renderEntryCard).join("");
     bindEntryEvents();
+    enhancePasswordFields(listEl);
   }
 
   function bindEntryEvents() {

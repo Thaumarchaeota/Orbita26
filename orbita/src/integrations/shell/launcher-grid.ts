@@ -1,19 +1,15 @@
-import { normalizeUrl } from "../../core/url";
 import { isTauri } from "../../core/data/client";
-import type { AppEntry, AppLink, BookmarkEntry, BookmarkLink, LauncherFolder, LauncherLeafBase } from "../../core/data/types";
+import type { AppEntry, AppLink, LauncherFolder, LauncherLeafBase } from "../../core/data/types";
 import {
   cacheAppIcon,
-  cacheFavicon,
   deleteAppIcon,
-  deleteFavicon,
   launchApp,
-  openUrl,
   pickAppFile,
   readAppIconData,
   webFaviconSrc,
 } from "./adapter";
 import { guessAppName } from "./apps";
-import { mountAppDialog, mountBookmarkDialog, mountFolderRenameDialog } from "./dialog";
+import { mountAppDialog, mountFolderRenameDialog } from "./dialog";
 import { mountFolderOverlay } from "./folder-overlay";
 import {
   dissolveRootFolders,
@@ -22,19 +18,16 @@ import {
   isLauncherFolder,
   mergeIntoNewFolder,
   moveToFolder,
-  moveToRoot,
+  commitFolderChildToRoot,
   removeEntry,
   reorderFolderChildren,
   updateFolderName,
   type LauncherEntry,
 } from "./launcher-tree";
-import {
-  firstEmptySlot,
-  migrateDenseSlots,
-  normalizeGridEntries,
-} from "./grid-slots";
+import { normalizeDenseEntries } from "./grid-slots";
 import { renderTile } from "./tiles";
 import { bindTileGrid } from "./tile-grid";
+import { animateFromRect, animatePopIn, capturePositions, flipElements } from "../../ui/pointer-drag";
 
 const LBL_ADD = "添加";
 
@@ -56,7 +49,7 @@ type LauncherGridConfig<L extends LeafBase, E extends LauncherEntry<L>> = {
   folderOverlay: ReturnType<typeof mountFolderOverlay>;
   dialogRoot: HTMLElement;
   confirmDelete: (name: string, trigger: HTMLElement) => Promise<boolean>;
-  prompt: ReturnType<typeof mountBookmarkDialog> | ReturnType<typeof mountAppDialog>;
+  prompt: ReturnType<typeof mountAppDialog>;
   onActivateLeaf: (leaf: L) => void | Promise<void>;
   cacheIcon: (id: string, payload: string) => Promise<string | null | undefined>;
   deleteIcon: (iconPath: string) => void | Promise<void>;
@@ -82,12 +75,50 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
   const pendingIcons = new Set<string>();
   const promptRenameFolder = mountFolderRenameDialog(cfg.dialogRoot);
   let items = cfg.ref.current;
+  let pendingLift: { folderId: string; itemId: string; leaf: L } | null = null;
 
-  if (!items.some((e) => e.slot !== undefined)) {
-    items = migrateDenseSlots(items) as E[];
+  items = normalizeDenseEntries(items) as E[];
+  cfg.ref.current = items;
+  cfg.save(items);
+
+  const captureGrid = () => capturePositions(cfg.gridEl, ".launcher-tile[data-id]");
+
+  const mergeItems = (sourceId: string, targetId: string) => {
+    const targetSlot = items.find((e) => e.id === targetId)?.slot;
+    items = mergeIntoNewFolder(items, sourceId, targetId, cfg.leafKind) as E[];
     cfg.ref.current = items;
     cfg.save(items);
-  }
+    return items.find((e) => isLauncherFolder(e) && e.slot === targetSlot)?.id;
+  };
+
+  const commitLiftAnimate = (
+    folderId: string,
+    itemId: string,
+    slot: number,
+    after?: (next: E[]) => E[],
+  ) => {
+    const folder = getLauncherFolder(items, folderId);
+    const dissolveLeafId =
+      folder && folder.children.length === 2
+        ? folder.children.find((c) => c.id !== itemId)?.id ?? null
+        : null;
+    const folderRect = dissolveLeafId
+      ? cfg.gridEl.querySelector<HTMLElement>(`[data-id="${folderId}"]`)?.getBoundingClientRect()
+      : null;
+    const before = captureGrid();
+    items = commitFolderChildToRoot(items, folderId, itemId, slot) as E[];
+    if (after) items = after(items);
+    cfg.ref.current = items;
+    cfg.save(items);
+    repaintBase();
+    requestAnimationFrame(() => {
+      flipElements(cfg.gridEl, before, ".launcher-tile[data-id]", "data-id", 0.28);
+      if (dissolveLeafId && folderRect) {
+        const leafEl = cfg.gridEl.querySelector<HTMLElement>(`[data-id="${dissolveLeafId}"]`);
+        if (leafEl) animateFromRect(leafEl, folderRect);
+      }
+    });
+  };
 
   function applyWebFallback(leaf: L) {
     if (cfg.payloadKey === "url" && leaf.url) {
@@ -108,7 +139,11 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
   }
 
   function folderPreview(folder: LauncherFolder<L>) {
-    return folder.children.map((c) => ({
+    const lift = pendingLift?.folderId === folder.id ? pendingLift : null;
+    const children = lift
+      ? folder.children.filter((c) => c.id !== lift.itemId)
+      : folder.children;
+    return children.map((c) => ({
       name: c.name,
       iconSrc: iconSrcCache.get(c.id),
     }));
@@ -141,10 +176,7 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
   }
 
   async function promptAdd(trigger: HTMLElement, initialPayload = "") {
-    if (cfg.payloadKey === "url") {
-      return (cfg.prompt as ReturnType<typeof mountBookmarkDialog>)(undefined, trigger);
-    }
-    return (cfg.prompt as ReturnType<typeof mountAppDialog>)(
+    return cfg.prompt(
       { name: guessAppName(initialPayload), path: initialPayload },
       false,
       trigger,
@@ -152,13 +184,7 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
   }
 
   async function promptEdit(leaf: L, trigger: HTMLElement) {
-    if (cfg.payloadKey === "url") {
-      return (cfg.prompt as ReturnType<typeof mountBookmarkDialog>)(
-        { name: leaf.name, url: leaf.url ?? "" },
-        trigger,
-      );
-    }
-    return (cfg.prompt as ReturnType<typeof mountAppDialog>)(
+    return cfg.prompt(
       { name: leaf.name, path: leaf.path ?? "" },
       !!cfg.promptEditReadonlyPayload,
       trigger,
@@ -205,7 +231,8 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
     })();
   }
 
-  async function addAtSlot(slot: number, trigger: HTMLElement): Promise<E[] | null> {
+  async function addAtEnd(trigger: HTMLElement): Promise<E[] | null> {
+    if (items.length >= cfg.capacity()) return null;
     let initialPayload = "";
     if (cfg.pickPayload) {
       const picked = await cfg.pickPayload();
@@ -214,10 +241,9 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
     }
     const data = await promptAdd(trigger, initialPayload);
     if (!data) return null;
-    const resolvedPayload = cfg.payloadKey === "url"
-      ? normalizeUrl((data as { url: string }).url)
-      : (data as { path: string }).path.trim();
+    const resolvedPayload = data.path.trim();
     const id = crypto.randomUUID();
+    const slot = items.length;
     const link = {
       kind: cfg.leafKind,
       id,
@@ -256,9 +282,7 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
         }
         const data = await promptAdd(addTrigger, initialPayload);
         if (!data) return null;
-        const resolvedPayload = cfg.payloadKey === "url"
-          ? normalizeUrl((data as { url: string }).url)
-          : (data as { path: string }).path.trim();
+        const resolvedPayload = data.path.trim();
         const id = crypto.randomUUID();
         const link = {
           kind: cfg.leafKind,
@@ -287,15 +311,19 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
         const leaf = item as L;
         const data = await promptEdit(leaf, editTrigger);
         if (!data) return null;
-        const resolvedPayload = cfg.payloadKey === "url"
-          ? normalizeUrl((data as { url: string }).url)
-          : (data as { path: string }).path.trim();
+        const resolvedPayload = data.path.trim();
         items = cfg.updateLeafInFolder(folderId, leaf.id, data.name, resolvedPayload);
         cfg.ref.current = items;
         return getLauncherFolder(items, folderId)?.children ?? null;
       },
       confirmDelete: (_id, name, delTrigger) => cfg.confirmDelete(name, delTrigger),
       onReorder: (fid, children) => {
+        const folderBefore = getLauncherFolder(items, fid);
+        const willDissolve = !!folderBefore && children.length === 1;
+        const dissolveLeafId = willDissolve ? folderBefore!.children[0]!.id : null;
+        const folderRect = willDissolve
+          ? cfg.gridEl.querySelector<HTMLElement>(`[data-id="${fid}"]`)?.getBoundingClientRect()
+          : null;
         items = reorderFolderChildren(
           items,
           fid,
@@ -306,17 +334,39 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
         cfg.save(items);
         if (!getLauncherFolder(items, fid)) {
           void cfg.folderOverlay.close();
-          repaintFlip();
+          repaintBase();
+          if (dissolveLeafId && folderRect) {
+            requestAnimationFrame(() => {
+              const leafEl = cfg.gridEl.querySelector<HTMLElement>(`[data-id="${dissolveLeafId}"]`);
+              if (leafEl) animateFromRect(leafEl, folderRect);
+            });
+          }
           return;
         }
         repaint();
         cfg.folderOverlay.repaint();
       },
       onMoveOut: (fid, itemId) => {
-        items = moveToRoot(items, itemId, fid) as E[];
-        cfg.ref.current = items;
-        cfg.save(items);
-        repaintFlip();
+        commitLiftAnimate(fid, itemId, items.length);
+      },
+      onDragOutLeave: (_fid, itemId, handoff) => {
+        const folder = getLauncherFolder(items, folderId);
+        const leaf = folder?.children.find((c) => c.id === itemId);
+        if (!leaf) return false;
+        pendingLift = { folderId, itemId, leaf: leaf as L };
+        repaint();
+        const ok = grid.acceptDragHandoff({
+          ...handoff,
+          external: true,
+          placeholderHtml: renderLauncherTile(leaf as E, false, items.length),
+        });
+        if (!ok) {
+          pendingLift = null;
+          repaint();
+          return false;
+        }
+        cfg.folderOverlay.dismissForDrag();
+        return true;
       },
     }, trigger);
   }
@@ -366,15 +416,13 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
       if (isLauncherFolder(item)) openFolder(item.id, trigger);
       else void cfg.onActivateLeaf(item as L);
     },
-    async (trigger, slot) => addAtSlot(slot, trigger),
+    async (trigger) => addAtEnd(trigger),
     async (item, trigger) => {
       if (isLauncherFolder(item)) return null;
       const leaf = item as L;
       const data = await promptEdit(leaf, trigger);
       if (!data) return null;
-      const resolvedPayload = cfg.payloadKey === "url"
-        ? normalizeUrl((data as { url: string }).url)
-        : (data as { path: string }).path.trim();
+      const resolvedPayload = data.path.trim();
       let icon = leaf.icon;
       if (resolvedPayload !== payloadOf(leaf, cfg.payloadKey)) {
         if (leaf.icon) void cfg.deleteIcon(leaf.icon);
@@ -392,18 +440,14 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
     async (_id, name, trigger) => (await cfg.confirmDelete(name, trigger)) ? true : false,
     undefined,
     {
-      gridCapacity: cfg.capacity,
+      denseItems: true,
       isFolder: (item) => isLauncherFolder(item as E),
       onMoveToFolder: (sourceId, folderId) => {
         items = moveToFolder(items, sourceId, folderId, cfg.leafKind) as E[];
         cfg.ref.current = items;
         cfg.save(items);
       },
-      onMerge: (sourceId, targetId) => {
-        items = mergeIntoNewFolder(items, sourceId, targetId, cfg.leafKind) as E[];
-        cfg.ref.current = items;
-        cfg.save(items);
-      },
+      onMerge: (sourceId, targetId) => mergeItems(sourceId, targetId),
       onRemove: (list, id) => removeEntry(list as E[], id) as E[],
       onRenameFolder: async (item, trigger) => {
         const name = await promptRenameFolder(item.name, trigger);
@@ -413,20 +457,54 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
         cfg.save(items);
         return items;
       },
+      onExternalCommit: (sourceId, slot, absorb) => {
+        if (!pendingLift || pendingLift.itemId !== sourceId) return;
+        const { folderId: fid, itemId } = pendingLift;
+        if (absorb?.kind === "into" && absorb.targetId === fid) {
+          pendingLift = null;
+          repaint();
+          return;
+        }
+        pendingLift = null;
+        if (absorb?.kind === "into") {
+          commitLiftAnimate(fid, itemId, slot, (next) =>
+            moveToFolder(next, sourceId, absorb.targetId, cfg.leafKind) as E[]);
+        } else if (absorb?.kind === "merge") {
+          const targetRect = cfg.gridEl
+            .querySelector<HTMLElement>(`[data-id="${absorb.targetId}"]`)
+            ?.getBoundingClientRect();
+          const targetSlot = items.find((e) => e.id === absorb.targetId)?.slot;
+          commitLiftAnimate(fid, itemId, slot, (next) =>
+            mergeIntoNewFolder(next, sourceId, absorb.targetId, cfg.leafKind) as E[]);
+          const folderId = items.find((e) => isLauncherFolder(e) && e.slot === targetSlot)?.id;
+          if (folderId && targetRect) {
+            requestAnimationFrame(() => {
+              const el = cfg.gridEl.querySelector<HTMLElement>(`[data-id="${folderId}"]`);
+              if (el) animatePopIn(el, targetRect);
+            });
+          }
+        } else {
+          commitLiftAnimate(fid, itemId, slot);
+        }
+      },
+      onExternalCancel: (sourceId) => {
+        if (!pendingLift || pendingLift.itemId !== sourceId) return;
+        pendingLift = null;
+        repaint();
+      },
     },
   );
 
   const repaintBase = grid.paint;
   const repaintFlip = grid.paintWithFlip;
   const repaint = () => {
-    cfg.addBtn.disabled = firstEmptySlot(items, cfg.capacity()) === null;
+    cfg.addBtn.disabled = items.length >= cfg.capacity();
     repaintBase();
   };
 
   cfg.addBtn.addEventListener("click", async (e) => {
-    const slot = firstEmptySlot(items, cfg.capacity());
-    if (slot === null) return;
-    const next = await addAtSlot(slot, e.currentTarget as HTMLElement);
+    if (items.length >= cfg.capacity()) return;
+    const next = await addAtEnd(e.currentTarget as HTMLElement);
     if (!next) return;
     items = next;
     cfg.ref.current = items;
@@ -437,29 +515,17 @@ export function mountLauncherGrid<L extends LeafBase, E extends LauncherEntry<L>
   return {
     repaint,
     normalizeOnPrefsChange: () => {
-      items = normalizeGridEntries(items, cfg.capacity()) as E[];
+      items = normalizeDenseEntries(items) as E[];
+      const cap = cfg.capacity();
+      if (items.length > cap) {
+        items = normalizeDenseEntries(items.slice(0, cap)) as E[];
+      }
       cfg.ref.current = items;
       cfg.save(items);
       repaint();
     },
     syncMissingIcons,
   };
-}
-
-export function mountBookmarkLauncherGrid(
-  cfg: Omit<
-    LauncherGridConfig<BookmarkLink, BookmarkEntry>,
-    "leafKind" | "payloadKey" | "onActivateLeaf" | "cacheIcon" | "deleteIcon"
-  >,
-) {
-  return mountLauncherGrid<BookmarkLink, BookmarkEntry>({
-    ...cfg,
-    leafKind: "link",
-    payloadKey: "url",
-    onActivateLeaf: (leaf) => openUrl(leaf.url),
-    cacheIcon: cacheFavicon,
-    deleteIcon: deleteFavicon,
-  });
 }
 
 export function mountAppLauncherGrid(

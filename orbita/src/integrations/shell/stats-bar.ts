@@ -12,31 +12,60 @@ export function mountStatsBar(root: HTMLElement) {
 
   let frames = 0;
   let lastFpsAt = performance.now();
-  let fpsLoop = true;
+  let fpsActive = false;
+  let pollTimer = 0;
 
   const tickFps = (now: number) => {
-    if (!fpsLoop) return;
+    if (!fpsActive) return;
     frames += 1;
     if (now - lastFpsAt >= 1000) {
-      fpsEl.textContent = String(frames);
+      fpsEl.textContent = String(Math.max(frames, 0));
       frames = 0;
       lastFpsAt = now;
     }
     requestAnimationFrame(tickFps);
   };
 
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      fpsLoop = false;
-      return;
-    }
-    fpsLoop = true;
+  const startFps = () => {
+    if (fpsActive) return;
+    fpsActive = true;
     frames = 0;
     lastFpsAt = performance.now();
+    fpsEl.textContent = "0";
     requestAnimationFrame(tickFps);
-  });
+  };
 
-  requestAnimationFrame(tickFps);
+  const stopFps = () => {
+    fpsActive = false;
+  };
+
+  const stopPoll = () => {
+    if (pollTimer) {
+      window.clearInterval(pollTimer);
+      pollTimer = 0;
+    }
+  };
+
+  const startPoll = () => {
+    if (pollTimer) return;
+    void poll();
+    pollTimer = window.setInterval(() => void poll(), 5000);
+  };
+
+  const stopLoops = () => {
+    stopFps();
+    stopPoll();
+  };
+
+  const startLoops = () => {
+    startFps();
+    startPoll();
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopLoops();
+    else startLoops();
+  });
 
   const poll = async () => {
     try {
@@ -49,6 +78,5 @@ export function mountStatsBar(root: HTMLElement) {
     }
   };
 
-  void poll();
-  window.setInterval(poll, 2000);
+  if (!document.hidden) startLoops();
 }

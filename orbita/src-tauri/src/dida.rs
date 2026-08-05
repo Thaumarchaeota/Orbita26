@@ -456,6 +456,24 @@ pub fn dida_complete_task(
     Ok(())
 }
 
+pub fn dida_reopen_task(
+    app: AppHandle,
+    project_id: String,
+    task_id: String,
+) -> Result<(), String> {
+    let (_, token) = require_token(&app)?;
+    api_post(
+        &token,
+        &format!("/task/{task_id}"),
+        &json!({
+            "id": task_id,
+            "projectId": project_id,
+            "status": 0,
+        }),
+    )?;
+    Ok(())
+}
+
 pub fn dida_delete_task(
     app: AppHandle,
     project_id: String,

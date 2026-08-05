@@ -1,0 +1,394 @@
+.dialog-panel.dialog-panel-settings {
+  display: flex;
+  flex-direction: column;
+  width: min(92vw, 560px);
+  max-width: 560px;
+  height: min(72vh, 580px);
+  max-height: min(72vh, 580px);
+  padding: 0;
+  overflow: hidden;
+}
+.dialog-panel.dialog-panel-settings .dialog-title {
+  margin-bottom: 12px;
+}
+.settings-header {
+  flex-shrink: 0;
+  padding: 20px 20px 0;
+}
+.settings-tabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0 2px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.settings-tabs::-webkit-scrollbar {
+  display: none;
+}
+.settings-tab {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.settings-tab:hover {
+  color: var(--text);
+  background: var(--glass-hover-bg);
+}
+.settings-tab.is-active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--focus) 14%, transparent);
+}
+.settings-tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--focus);
+  transition: transform 0.32s var(--spring), width 0.32s var(--spring), opacity 0.2s var(--ease);
+  pointer-events: none;
+}
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px 20px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+}
+.settings-body::-webkit-scrollbar {
+  width: 6px;
+}
+.settings-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.settings-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.settings-body::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  background-clip: padding-box;
+}
+.settings-footer {
+  flex-shrink: 0;
+  padding: 12px 20px 20px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+.settings-tab-panels {
+  position: relative;
+  min-height: 0;
+}
+.settings-tab-panel {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition:
+    opacity 0.26s var(--ease),
+    transform 0.3s var(--spring),
+    visibility 0.26s;
+  pointer-events: none;
+}
+.settings-tab-panel.is-active {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+}
+.settings-section {
+  margin-bottom: 14px;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+.settings-section:last-child {
+  margin-bottom: 0;
+}
+.settings-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.dialog-panel-settings .dialog-section-title {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+.settings-field-inline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 10px;
+}
+.settings-field-inline .dialog-field {
+  margin-bottom: 0;
+}
+.settings-font-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.dialog-field-compact label {
+  margin-bottom: 4px;
+}
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.settings-row .dialog-btn {
+  flex: 0 0 auto;
+}
+.settings-select {
+  position: relative;
+  display: block;
+}
+.settings-select select {
+  width: 100%;
+  height: 40px;
+  padding: 0 36px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-base);
+  font-size: 13px;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.settings-select select:hover {
+  border-color: var(--border-active);
+}
+.settings-select select:focus {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 22%, transparent);
+}
+.settings-select-chevron {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: transform 0.28s var(--spring-bounce), color 0.2s var(--ease);
+}
+.settings-select-chevron svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+.settings-select.is-open .settings-select-chevron {
+  transform: rotate(90deg);
+  color: var(--text);
+}
+.password-field {
+  position: relative;
+  display: block;
+}
+.password-field input {
+  width: 100%;
+  padding-right: 42px;
+}
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.password-toggle:hover {
+  color: var(--text);
+  background: var(--glass-hover-bg);
+}
+.password-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+.settings-picker-host .ticktick-field-picker {
+  margin-bottom: 10px;
+}
+.settings-picker-host .ticktick-picker-btn.is-open .ticktick-picker-chevron svg {
+  transform: rotate(90deg);
+}
+.dialog-panel-settings .settings-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+.settings-theme-branch-hint {
+  margin: 0 0 10px;
+}
+.dialog-panel-settings .settings-theme-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.dialog-panel-settings .settings-path-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.dialog-panel-settings .settings-path-row .dialog-btn {
+  flex-shrink: 0;
+  min-width: 64px;
+}
+.settings-ticktick-status {
+  font-size: 12px;
+  color: var(--muted);
+}
+.dialog-panel-settings .dialog-field {
+  margin-bottom: 10px;
+}
+.dialog-panel-settings .dialog-field:last-child {
+  margin-bottom: 0;
+}
+.settings-binary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.settings-binary-row .dialog-btn {
+  width: 100%;
+}
+.settings-palette-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.settings-palette-swatch {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s var(--spring), border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+.settings-palette-swatch:hover {
+  transform: scale(1.06);
+  border-color: var(--border-active);
+}
+.settings-palette-swatch.is-active {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 30%, transparent);
+}
+.settings-palette-swatch.is-custom {
+  border-radius: 999px;
+}
+.settings-opacity-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.settings-theme-section {
+  padding-bottom: 12px;
+}
+.settings-subtabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  margin: 0 0 12px;
+  padding: 0 2px 8px;
+}
+.settings-subtab {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.settings-subtab:hover {
+  color: var(--text);
+  background: var(--glass-hover-bg);
+}
+.settings-subtab.is-active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--focus) 12%, transparent);
+}
+.settings-subtab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--focus);
+  transition: transform 0.32s var(--spring), width 0.32s var(--spring), opacity 0.2s var(--ease);
+  pointer-events: none;
+}
+.settings-subtab-panels {
+  position: relative;
+  min-height: 0;
+}
+.settings-subtab-panel {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition:
+    opacity 0.28s var(--ease),
+    transform 0.32s var(--spring),
+    visibility 0.28s;
+  pointer-events: none;
+}
+.settings-subtab-panel.is-active {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+}
+@media (max-width: 520px) {
+  .settings-font-grid {
+    grid-template-columns: 1fr;
+  }
+  .dialog-panel-settings .settings-theme-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

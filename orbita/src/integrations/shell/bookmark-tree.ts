@@ -1,22 +1,23 @@
 import type { BookmarkEntry, BookmarkFolder, BookmarkLink } from "../../core/data/types";
+import {
+  insertTreeNode,
+  locateTreeNode,
+  moveTreeNode,
+  removeTreeNode,
+  type TreeDropPosition,
+  type TreeOps,
+} from "../../core/tree-ops";
 
-export type BookmarkDropPosition = "before" | "after" | "into";
+export type BookmarkDropPosition = TreeDropPosition;
 
-type Loc = { parentId: string | null; index: number; node: BookmarkEntry };
-
-function findLoc(nodes: BookmarkEntry[], id: string, parentId: string | null): Loc | null {
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i]!;
-    if (node.id === id) return { parentId, index: i, node };
-    if (node.kind === "folder") {
-      for (let j = 0; j < node.children.length; j++) {
-        const child = node.children[j]!;
-        if (child.id === id) return { parentId: node.id, index: j, node: child };
-      }
-    }
-  }
-  return null;
-}
+const bookmarkTreeOps: TreeOps<BookmarkEntry> = {
+  containerKind: "folder",
+  recursive: false,
+  getChildren: (node) => (node.kind === "folder" ? node.children : []),
+  setChildren: (node, children) =>
+    node.kind === "folder" ? { ...node, children: children as BookmarkLink[] } : node,
+  canDropInto: (source, target) => target.kind === "folder" && source.kind !== "folder",
+};
 
 function updateFolderChildren(
   nodes: BookmarkEntry[],
@@ -29,42 +30,8 @@ function updateFolderChildren(
   });
 }
 
-function removeFromParent(tree: BookmarkEntry[], parentId: string | null, index: number): {
-  tree: BookmarkEntry[];
-  removed: BookmarkEntry | BookmarkLink;
-} {
-  if (parentId === null) {
-    const next = [...tree];
-    const [removed] = next.splice(index, 1);
-    return { tree: next, removed: removed! };
-  }
-  const parent = findLoc(tree, parentId, null);
-  if (!parent || parent.node.kind !== "folder") throw new Error("parent not found");
-  const kids = [...parent.node.children];
-  const [removed] = kids.splice(index, 1);
-  return { tree: updateFolderChildren(tree, parentId, kids), removed: removed! };
-}
-
-function insertIntoParent(
-  tree: BookmarkEntry[],
-  parentId: string | null,
-  index: number,
-  node: BookmarkEntry | BookmarkLink,
-): BookmarkEntry[] {
-  if (parentId === null) {
-    const next = [...tree];
-    next.splice(Math.max(0, Math.min(index, next.length)), 0, node as BookmarkEntry);
-    return next;
-  }
-  const parent = findLoc(tree, parentId, null);
-  if (!parent || parent.node.kind !== "folder") return tree;
-  const kids = [...parent.node.children];
-  kids.splice(Math.max(0, Math.min(index, kids.length)), 0, node as BookmarkLink);
-  return updateFolderChildren(tree, parentId, kids);
-}
-
-export function locateBookmarkEntry(tree: BookmarkEntry[], id: string): Loc | null {
-  return findLoc(tree, id, null);
+export function locateBookmarkEntry(tree: BookmarkEntry[], id: string) {
+  return locateTreeNode(tree, id, bookmarkTreeOps);
 }
 
 export function moveBookmarkNode(
@@ -73,55 +40,20 @@ export function moveBookmarkNode(
   targetId: string | null,
   position: BookmarkDropPosition,
 ): BookmarkEntry[] {
-  const src = findLoc(tree, sourceId, null);
-  if (!src) return tree;
-
-  if (!targetId) {
-    const { tree: without, removed } = removeFromParent(tree, src.parentId, src.index);
-    if (position === "before") return insertIntoParent(without, null, 0, removed);
-    return insertIntoParent(without, null, without.length, removed);
-  }
-
-  if (sourceId === targetId) return tree;
-
-  const tgt = findLoc(tree, targetId, null);
-  if (!tgt) return tree;
-
-  if (position === "into") {
-    if (tgt.node.kind !== "folder" || src.node.kind === "folder") return tree;
-  }
-
-  const fromIndex = src.index;
-  const fromParentId = src.parentId;
-
-  let toParentId: string | null;
-  let toIndex: number;
-
-  if (position === "into") {
-    if (tgt.node.kind !== "folder") return tree;
-    toParentId = tgt.node.id;
-    toIndex = tgt.node.children.length;
-  } else {
-    toParentId = tgt.parentId;
-    toIndex = position === "before" ? tgt.index : tgt.index + 1;
-    if (fromParentId === toParentId && fromIndex < toIndex) toIndex--;
-  }
-
-  const { tree: without, removed } = removeFromParent(tree, fromParentId, fromIndex);
-  return insertIntoParent(without, toParentId, toIndex, removed);
+  return moveTreeNode(tree, sourceId, targetId, position, bookmarkTreeOps);
 }
 
 export function removeBookmarkEntry(tree: BookmarkEntry[], id: string): BookmarkEntry[] {
-  const loc = findLoc(tree, id, null);
+  const loc = locateBookmarkEntry(tree, id);
   if (!loc) return tree;
 
-  const { tree: without, removed } = removeFromParent(tree, loc.parentId, loc.index);
+  const { tree: without, removed } = removeTreeNode(tree, loc.parentId, loc.index, bookmarkTreeOps);
   if (removed.kind !== "folder") return without;
 
   const folder = removed as BookmarkFolder;
   let next = without;
   for (let i = 0; i < folder.children.length; i++) {
-    next = insertIntoParent(next, loc.parentId, loc.index + i, folder.children[i]!);
+    next = insertTreeNode(next, loc.parentId, loc.index + i, folder.children[i]!, bookmarkTreeOps);
   }
   return next;
 }
@@ -138,7 +70,7 @@ export function addBookmarkFolder(tree: BookmarkEntry[], name: string): Bookmark
 
 export function addBookmarkLink(tree: BookmarkEntry[], link: BookmarkLink, parentId: string | null): BookmarkEntry[] {
   if (!parentId) return [...tree, link];
-  const parent = findLoc(tree, parentId, null);
+  const parent = locateBookmarkEntry(tree, parentId);
   if (!parent || parent.node.kind !== "folder") return [...tree, link];
   return updateFolderChildren(tree, parentId, [...parent.node.children, link]);
 }

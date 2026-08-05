@@ -288,6 +288,63 @@ impl Default for LifeRingGoals {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct OpaqueThemePrefs {
+    #[serde(default = "default_theme_palette")]
+    pub palette: String,
+    #[serde(default = "default_theme_hue")]
+    pub hue: u16,
+    #[serde(default = "default_surface_light")]
+    pub surface: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TransparentThemePrefs {
+    #[serde(default = "default_surface_light")]
+    pub surface: String,
+    #[serde(default = "default_glass_tint")]
+    pub tint: String,
+    #[serde(default = "default_glass_hue")]
+    pub hue: u16,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct ThemePrefs {
+    #[serde(default = "default_theme_mode")]
+    pub mode: String,
+    #[serde(default)]
+    pub opaque: OpaqueThemePrefs,
+    #[serde(default)]
+    pub transparent: TransparentThemePrefs,
+}
+
+fn default_theme_palette() -> String {
+    "ocean".into()
+}
+
+fn default_theme_hue() -> u16 {
+    212
+}
+
+fn default_surface_light() -> String {
+    "light".into()
+}
+
+fn default_theme_mode() -> String {
+    "opaque".into()
+}
+
+fn default_glass_tint() -> String {
+    "ink".into()
+}
+
+fn default_glass_hue() -> u16 {
+    222
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UiPrefs {
@@ -297,6 +354,8 @@ pub struct UiPrefs {
     pub local_tab: String,
     #[serde(default)]
     pub active_conversation_id: Option<String>,
+    #[serde(default)]
+    pub theme_prefs: ThemePrefs,
     #[serde(default = "default_block_opacity")]
     pub block_opacity: u8,
     #[serde(default = "default_top_grid")]
@@ -335,6 +394,7 @@ impl Default for UiPrefs {
             engine_id: default_engine_id(),
             local_tab: default_local_tab(),
             active_conversation_id: None,
+            theme_prefs: ThemePrefs::default(),
             block_opacity: default_block_opacity(),
             top_grid: default_top_grid(),
             life_rings: default_life_rings(),

@@ -4,6 +4,7 @@ mod garmin_tool;
 mod journal;
 mod ticktick;
 
+use std::sync::OnceLock;
 use serde_json::Value;
 use tauri::AppHandle;
 
@@ -18,29 +19,32 @@ pub trait AgentTool: Send + Sync {
     fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String>;
 }
 
-fn tool_defs() -> Vec<Box<dyn AgentTool>> {
-    vec![
-        Box::new(ticktick::TicktickListTasks),
-        Box::new(ticktick::TicktickCreateTask),
-        Box::new(ticktick::TicktickUpdateTask),
-        Box::new(ticktick::TicktickDeleteTask),
-        Box::new(journal::JournalList),
-        Box::new(journal::JournalSnapshot),
-        Box::new(journal::JournalAddEvent),
-        Box::new(journal::JournalAddMood),
-        Box::new(journal::JournalSetSleep),
-        Box::new(journal::JournalAddNap),
-        Box::new(journal::JournalDeleteEntry),
-        Box::new(journal::JournalAddMeal),
-        Box::new(journal::JournalUpdateMeal),
-        Box::new(journal::JournalDeleteMeal),
-        Box::new(garmin_tool::GarminSyncTool),
-        Box::new(garmin_tool::GarminLoginTool),
-        Box::new(bkeasy::BkeasySummaryTool),
-        Box::new(bkeasy::BeancountAddTransaction),
-        Box::new(fs::OpenPath),
-        Box::new(fs::RevealPath),
-    ]
+fn tool_defs() -> &'static Vec<Box<dyn AgentTool>> {
+    static TOOLS: OnceLock<Vec<Box<dyn AgentTool>>> = OnceLock::new();
+    TOOLS.get_or_init(|| {
+        vec![
+            Box::new(ticktick::TicktickListTasks),
+            Box::new(ticktick::TicktickCreateTask),
+            Box::new(ticktick::TicktickUpdateTask),
+            Box::new(ticktick::TicktickDeleteTask),
+            Box::new(journal::JournalList),
+            Box::new(journal::JournalSnapshot),
+            Box::new(journal::JournalAddEvent),
+            Box::new(journal::JournalAddMood),
+            Box::new(journal::JournalSetSleep),
+            Box::new(journal::JournalAddNap),
+            Box::new(journal::JournalDeleteEntry),
+            Box::new(journal::JournalAddMeal),
+            Box::new(journal::JournalUpdateMeal),
+            Box::new(journal::JournalDeleteMeal),
+            Box::new(garmin_tool::GarminSyncTool),
+            Box::new(garmin_tool::GarminLoginTool),
+            Box::new(bkeasy::BkeasySummaryTool),
+            Box::new(bkeasy::BeancountAddTransaction),
+            Box::new(fs::OpenPath),
+            Box::new(fs::RevealPath),
+        ]
+    })
 }
 
 pub fn local_now_line() -> String {

@@ -1,6 +1,7 @@
 import type { FontPrefs } from "./fonts";
 import type { LifeRingGoals } from "./life-ring-goals";
 import type { LifeRingSlots } from "./life-ring-metrics";
+import type { ThemePrefs } from "./theme-prefs";
 
 export type GridPrefs = {
   cols: number;
@@ -20,6 +21,7 @@ export type UiPrefs = {
   engineId: string;
   localTab: "file" | "literature" | "note";
   activeConversationId: string | null;
+  themePrefs: ThemePrefs;
   blockOpacity: number;
   topGrid: GridPrefs;
   lifeRings: LifeRingColors;
@@ -93,6 +95,8 @@ export type AppTheme = "light" | "dark" | "transparent-light" | "transparent-dar
 export function isTransparentTheme(theme: AppTheme): boolean {
   return theme === "transparent-light" || theme === "transparent-dark";
 }
+
+export type { ThemePrefs, OpaqueThemePrefs, TransparentThemePrefs, ThemeMode, SurfaceMode } from "./theme-prefs";
 
 export type AppSettings = {
   version: number;

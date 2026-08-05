@@ -42,7 +42,6 @@ export async function openCaptureOverlay(initialMode: CaptureMode) {
   let paletteDrag: { ox: number; oy: number } | null = null;
 
   const canvas = layer.querySelector<HTMLCanvasElement>("#captureCanvas")!;
-  const stage = layer.querySelector<HTMLElement>("#captureStage")!;
   const rectEl = layer.querySelector<HTMLElement>("#captureRect")!;
   const hint = layer.querySelector<HTMLElement>("#captureHint")!;
   const palette = layer.querySelector<HTMLElement>("#capturePalette")!;
@@ -61,7 +60,7 @@ export async function openCaptureOverlay(initialMode: CaptureMode) {
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(img, 0, 0);
 
-  function canvasPoint(e: PointerEvent): { x: number; y: number } {
+  function canvasPoint(e: { clientX: number; clientY: number }): { x: number; y: number } {
     const r = canvas.getBoundingClientRect();
     const x = Math.floor(((e.clientX - r.left) / r.width) * canvas.width);
     const y = Math.floor(((e.clientY - r.top) / r.height) * canvas.height);

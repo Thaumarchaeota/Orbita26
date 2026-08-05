@@ -67,6 +67,7 @@ async function updateAt(x: number, y: number) {
 }
 
 function onPointerMove(e: PointerEvent) {
+  idleSince = performance.now();
   void updateAt(e.clientX, e.clientY);
 }
 
@@ -96,16 +97,20 @@ async function pollCursor() {
   }
 }
 
+let idleSince = 0;
+
 function loop() {
   if (!enabled) {
     loopId = 0;
     return;
   }
   if (ignoring) void pollCursor();
+  const idleMs = idleSince > 0 ? performance.now() - idleSince : 0;
+  const delay = ignoring ? (idleMs > 500 ? 120 : 16) : 120;
   loopId = window.setTimeout(() => {
     loopId = 0;
     loop();
-  }, ignoring ? 16 : 120);
+  }, delay);
 }
 
 function startLoop() {

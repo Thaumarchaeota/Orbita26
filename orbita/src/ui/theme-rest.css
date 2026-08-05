@@ -1,4 +1,5 @@
 .search-band {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr minmax(0, 860px) 1fr;
   grid-template-rows: auto auto;
@@ -111,9 +112,13 @@
 .search-btn:hover { background: var(--btn-hover); color: #fff; transform: scale(1.06); }
 .search-btn svg { width: 18px; height: 18px; }
 .top-toolkit {
+  position: absolute;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  width: max-content;
   height: 40px;
   padding: 0 4px 0 8px;
   gap: 2px;
@@ -124,10 +129,6 @@
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   box-shadow: 0 4px 20px var(--shadow);
   transition: background .5s var(--ease), border-color .5s var(--ease), box-shadow .5s var(--ease);
-  grid-column: 3;
-  grid-row: 2;
-  justify-self: end;
-  align-self: center;
   pointer-events: none;
 }
 .top-toolkit .sys-stats {
@@ -283,6 +284,54 @@
 }
 @keyframes ticktick-success-check-draw {
   to { stroke-dashoffset: 0; }
+}
+.ticktick-undo-toast {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  z-index: 45;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.28s var(--ease), transform 0.32s var(--spring);
+}
+.ticktick-undo-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.ticktick-undo-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--surface-active);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 20px var(--shadow);
+}
+.ticktick-undo-btn {
+  border: none;
+  background: var(--btn-bg);
+  color: var(--btn-hover);
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), transform 0.2s var(--spring);
+}
+.ticktick-undo-btn:hover {
+  background: var(--btn-hover);
+  color: #fff;
+  transform: scale(1.04);
 }
 .ticktick-body {
   flex: 1;
@@ -974,13 +1023,13 @@
 [data-theme="transparent-dark"] .ticktick-picker-menu,
 [data-theme="transparent-dark"] .ai-conv-menu,
 [data-theme="transparent-dark"] .primary-mood-menu {
-  background: rgba(10, 12, 18, calc(var(--block-opacity, 0.12) * 0.55 + 0.4));
+  background: hsl(var(--glass-tint-h) var(--glass-tint-s) var(--glass-tint-l) / calc(var(--block-opacity, 0.12) * 0.55 + 0.4));
 }
 [data-theme="transparent-light"] .ticktick-project-menu,
 [data-theme="transparent-light"] .ticktick-picker-menu,
 [data-theme="transparent-light"] .ai-conv-menu,
 [data-theme="transparent-light"] .primary-mood-menu {
-  background: rgba(255, 255, 255, calc(var(--block-opacity, 0.12) * 0.35 + 0.62));
+  background: hsl(var(--glass-tint-h) var(--glass-tint-s) var(--glass-tint-l) / calc(var(--block-opacity, 0.12) * 0.35 + 0.62));
 }
 .settings-ticktick-status {
   font-size: 11px;

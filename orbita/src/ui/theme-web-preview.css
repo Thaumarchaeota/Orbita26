@@ -1,0 +1,5 @@
+.is-web-preview .ai-section,
+.is-web-preview .ticktick-section {
+  pointer-events: none;
+  opacity: 0.45;
+}

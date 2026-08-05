@@ -3,6 +3,7 @@ import { normalizeFontPrefs } from "./fonts";
 import { migrateLifeRingGoalsFromSlots, normalizeLifeRingGoals } from "./life-ring-goals";
 import { normalizeLifeRingSlots } from "./life-ring-metrics";
 import { defaultAiConfig, defaultIntegrations, defaultUiPrefs, DEFAULT_LIFE_RINGS, DEFAULT_TOP_GRID } from "./defaults";
+import { normalizeThemePrefs, themeFromPrefs } from "./theme-prefs";
 import type {
   AppEntry,
   AppItem,
@@ -247,6 +248,9 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
   const legacyScale = clampLauncherTileScale(uiRaw?.launcherTileScale);
   const topFallback: GridPrefs = { ...DEFAULT_TOP_GRID, tileScale: legacyScale };
   const topGrid = normalizeGridLayoutPrefs(uiRaw?.topGrid, topFallback, 3, 12, 1, 8);
+  const legacyTheme = normalizeTheme(migrated.theme ?? raw.theme);
+  const themePrefs = normalizeThemePrefs(uiRaw?.themePrefs, legacyTheme);
+  const theme = themeFromPrefs(themePrefs);
   const ui: UiPrefs = {
     ...base.ui,
     engineId: typeof uiRaw?.engineId === "string" ? uiRaw.engineId : base.ui.engineId,
@@ -255,6 +259,7 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
         ? uiRaw.localTab
         : base.ui.localTab,
     activeConversationId: uiRaw?.activeConversationId ?? null,
+    themePrefs,
     blockOpacity: clampBlockOpacity(uiRaw?.blockOpacity),
     topGrid,
     lifeRings: normalizeLifeRings(uiRaw?.lifeRings),
@@ -267,8 +272,8 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
   const intRaw = (migrated.integrations ?? raw.integrations ?? {}) as Partial<AppSettings["integrations"]>;
   const credRaw = intRaw.credentials ?? base.integrations.credentials;
   const settings: AppSettings = {
-    version: Math.max(typeof migrated.version === "number" ? migrated.version : 0, 6),
-    theme: normalizeTheme(migrated.theme ?? raw.theme),
+    version: Math.max(typeof migrated.version === "number" ? migrated.version : 0, 7),
+    theme,
     dataDir: migrated.dataDir ?? raw.dataDir,
     ui,
     integrations: {
@@ -315,7 +320,7 @@ export async function readSettings(): Promise<AppSettings> {
   if (isTauri()) {
     const raw = await invoke<AppSettings>("read_settings");
     const next = normalizeSettings(raw);
-    if ((raw.version ?? 0) < 6) await writeSettings(next);
+    if ((raw.version ?? 0) < 7) await writeSettings(next);
     return next;
   }
   const bootstrap = readWebJson<{ dataDir: string }>("bootstrap", { dataDir: "orbita-data" });
@@ -331,13 +336,13 @@ export async function readSettings(): Promise<AppSettings> {
     dataDir: raw.dataDir ?? bootstrap.dataDir,
     theme: raw.theme ?? "light",
   });
-  if ((raw.version ?? 0) < 6) writeWebJson("settings.json", next);
+  if ((raw.version ?? 0) < 7) writeWebJson("settings.json", next);
   return next;
 }
 
 export async function writeSettings(settings: AppSettings): Promise<void> {
   const next = normalizeSettings(settings);
-  next.version = Math.max(next.version, 6);
+  next.version = Math.max(next.version, 7);
   if (isTauri()) {
     await invoke("write_settings", { settings: next });
     return;

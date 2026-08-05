@@ -1,6 +1,7 @@
 import { defaultFontPrefs } from "./fonts";
 import { DEFAULT_LIFE_RING_GOALS } from "./life-ring-goals";
 import { defaultLifeRingSlots } from "./life-ring-metrics";
+import { defaultThemePrefs } from "./theme-prefs";
 import type { AiConfig, GridPrefs, Integrations, IntegrationsCredentials, LifeRingColors, UiPrefs } from "./types";
 
 export const DEFAULT_GRID_GAP = 8;
@@ -64,6 +65,7 @@ export function defaultUiPrefs(): UiPrefs {
     engineId: "google",
     localTab: "file",
     activeConversationId: null,
+    themePrefs: defaultThemePrefs(),
     blockOpacity: 12,
     topGrid: { ...DEFAULT_TOP_GRID },
     lifeRings: { ...DEFAULT_LIFE_RINGS },

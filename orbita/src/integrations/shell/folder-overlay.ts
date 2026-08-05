@@ -1,4 +1,5 @@
-import { bindTileGrid, type TileGridOptions } from "./tile-grid";
+import { bindTileGrid, type TileGridDragHandoff, type TileGridOptions } from "./tile-grid";
+import { setDialogFly } from "../../ui/motion";
 
 type LeafItem = { id: string; name: string; kind?: string };
 
@@ -15,10 +16,12 @@ export type FolderOverlayConfig<T extends LeafItem> = {
   confirmDelete: (id: string, name: string, trigger: HTMLElement) => Promise<boolean>;
   onReorder: (folderId: string, items: T[]) => void;
   onMoveOut: (folderId: string, itemId: string) => void;
+  onDragOutLeave?: (folderId: string, itemId: string, handoff: TileGridDragHandoff) => boolean;
 };
 
 const OPEN_MS = 340;
 const CLOSE_MS = 260;
+const DRAG_DISMISS_MS = 460;
 
 function gridCols(gridClass: string): number {
   const root = document.documentElement;
@@ -124,7 +127,7 @@ export function mountFolderOverlay(root: HTMLElement) {
   layer.className = "folder-overlay-layer";
   layer.innerHTML = `
     <div class="folder-overlay-scrim"></div>
-    <div class="folder-overlay-panel">
+    <div class="folder-overlay-panel motion-dialog-panel">
       <h3 class="folder-overlay-title" id="folderOverlayTitle"></h3>
       <div class="launcher-grid-scroll folder-overlay-scroll">
         <div class="launcher-grid" id="folderOverlayGrid"></div>
@@ -155,15 +158,42 @@ export function mountFolderOverlay(root: HTMLElement) {
   const close = async () => {
     if (!open || closing) return;
     closing = true;
+    setDialogFly(panel, activeTrigger ?? undefined, "close");
+    void panel.offsetHeight;
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
     layer.classList.remove("is-open");
     clearTrigger();
-    activeFolderId = null;
-    onRenameTitle = null;
     await waitPanelTransition(panel, CLOSE_MS);
     repaint = null;
     gridEl.innerHTML = "";
     open = false;
     closing = false;
+    activeFolderId = null;
+    onRenameTitle = null;
+    activeGridClass = "";
+  };
+
+  const dismissForDrag = () => {
+    if (!open || closing) return;
+    closing = true;
+    layer.classList.add("is-dismissing-for-drag");
+    setDialogFly(panel, activeTrigger ?? undefined, "close");
+    layer.classList.remove("is-dragging-out");
+    void panel.offsetHeight;
+    requestAnimationFrame(() => {
+      layer.classList.remove("is-open");
+      clearTrigger();
+    });
+    void waitPanelTransition(panel, DRAG_DISMISS_MS).then(() => {
+      layer.classList.remove("is-dismissing-for-drag");
+      repaint = null;
+      gridEl.innerHTML = "";
+      open = false;
+      closing = false;
+      activeFolderId = null;
+      onRenameTitle = null;
+      activeGridClass = "";
+    });
   };
 
   const onResize = () => {
@@ -202,6 +232,9 @@ export function mountFolderOverlay(root: HTMLElement) {
         const opts: TileGridOptions<LeafItem> = {
           dragOutPanel: panel,
           onDragOutHover: (active) => layer.classList.toggle("is-dragging-out", active),
+          onDragOutLeave: next.onDragOutLeave
+            ? (sourceId, handoff) => next.onDragOutLeave!(next.folderId, sourceId, handoff)
+            : undefined,
           onMoveOut: (sourceId) => {
             next.onMoveOut(next.folderId, sourceId);
             void close();
@@ -222,6 +255,7 @@ export function mountFolderOverlay(root: HTMLElement) {
         repaint();
         positionPanel(trigger, panel, next.gridClass);
 
+        setDialogFly(panel, trigger, "open");
         layer.classList.remove("is-open");
         void panel.offsetHeight;
         requestAnimationFrame(() => layer.classList.add("is-open"));
@@ -230,6 +264,7 @@ export function mountFolderOverlay(root: HTMLElement) {
       })();
     },
     close: () => void close(),
+    dismissForDrag: () => dismissForDrag(),
     isOpen: () => open,
     getOpenFolderId: () => activeFolderId,
     repaint: () => repaint?.(),

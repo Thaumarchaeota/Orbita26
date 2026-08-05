@@ -12,54 +12,63 @@ import {
 } from "../../journal/client";
 
 export const lifeTabHtml = `
-  <div class="settings-tab-panel" data-tab-panel="life" hidden>
-    <div class="dialog-section-title">三环目标</div>
-    <div class="dialog-field">
-      <label for="goalIntake">摄入目标 kcal</label>
-      <input id="goalIntake" type="number" min="1" step="1">
-    </div>
-    <div class="dialog-field">
-      <label for="goalExp">消耗目标 kcal</label>
-      <input id="goalExp" type="number" min="1" step="1">
-    </div>
-    <div class="dialog-field">
-      <label for="goalHydration">喝水目标 ml</label>
-      <input id="goalHydration" type="number" min="1" step="1">
-    </div>
-    <div class="dialog-field">
-      <label for="journalDataRoot">今日记录（JSON）目录</label>
-      <div class="settings-path-row">
-        <input id="journalDataRoot" type="text" placeholder="默认：数据目录" readonly>
-        <button type="button" class="dialog-btn" data-action="browse-journal">浏览</button>
+  <div class="settings-tab-panel" data-tab-panel="life">
+    <div class="settings-section">
+      <div class="settings-section-title">三环目标</div>
+      <div class="settings-field-inline">
+        <div class="dialog-field dialog-field-compact">
+          <label for="goalIntake">摄入 kcal</label>
+          <input id="goalIntake" type="number" min="1" step="1">
+        </div>
+        <div class="dialog-field dialog-field-compact">
+          <label for="goalExp">消耗 kcal</label>
+          <input id="goalExp" type="number" min="1" step="1">
+        </div>
+        <div class="dialog-field dialog-field-compact">
+          <label for="goalHydration">喝水 ml</label>
+          <input id="goalHydration" type="number" min="1" step="1">
+        </div>
       </div>
     </div>
-    <div class="dialog-field">
-      <label for="bkeasyDataRoot">账本（bean）目录</label>
-      <div class="settings-path-row">
-        <input id="bkeasyDataRoot" type="text" placeholder="默认：数据目录" readonly>
-        <button type="button" class="dialog-btn" data-action="browse-bkeasy">浏览</button>
+    <div class="settings-section">
+      <div class="settings-section-title">今日数据</div>
+      <div class="dialog-field">
+        <label for="journalDataRoot">今日记录（JSON）目录</label>
+        <div class="settings-path-row">
+          <input id="journalDataRoot" type="text" placeholder="默认：数据目录" readonly>
+          <button type="button" class="dialog-btn" data-action="browse-journal">浏览</button>
+        </div>
+      </div>
+      <div class="dialog-field">
+        <label for="bkeasyDataRoot">账本（bean）目录</label>
+        <div class="settings-path-row">
+          <input id="bkeasyDataRoot" type="text" placeholder="默认：数据目录" readonly>
+          <button type="button" class="dialog-btn" data-action="browse-bkeasy">浏览</button>
+        </div>
       </div>
     </div>
-    <div class="dialog-section-title">佳明</div>
-    <div class="dialog-field">
-      <label for="garminEmail">邮箱</label>
-      <input id="garminEmail" type="email" autocomplete="off">
-    </div>
-    <div class="dialog-field">
-      <label for="garminPassword">密码</label>
-      <input id="garminPassword" type="password" autocomplete="off">
-    </div>
-    <div class="dialog-field">
-      <label for="garminTokenDir">Token 目录</label>
-      <div class="settings-path-row">
-        <input id="garminTokenDir" type="text" placeholder="默认：数据目录/garmin">
-        <button type="button" class="dialog-btn" data-action="browse-garmin-token">浏览</button>
+    <div class="settings-section">
+      <div class="settings-section-title">佳明</div>
+      <div class="dialog-field">
+        <label for="garminEmail">邮箱</label>
+        <input id="garminEmail" type="email" autocomplete="off">
       </div>
-    </div>
-    <p class="settings-hint" id="garminLoginStatus">佳明状态：--</p>
-    <div class="dialog-field">
-      <button type="button" class="dialog-btn" id="garminLoginBtn">重新登录佳明</button>
-      <button type="button" class="dialog-btn dialog-btn-primary" id="garminSyncBtn">同步佳明（最近 7 天）</button>
+      <div class="dialog-field">
+        <label for="garminPassword">密码</label>
+        <input id="garminPassword" type="password" autocomplete="off">
+      </div>
+      <div class="dialog-field">
+        <label for="garminTokenDir">Token 目录</label>
+        <div class="settings-path-row">
+          <input id="garminTokenDir" type="text" placeholder="默认：数据目录/garmin">
+          <button type="button" class="dialog-btn" data-action="browse-garmin-token">浏览</button>
+        </div>
+      </div>
+      <p class="settings-hint" id="garminLoginStatus">佳明状态：--</p>
+      <div class="settings-row">
+        <button type="button" class="dialog-btn" id="garminLoginBtn">重新登录</button>
+        <button type="button" class="dialog-btn dialog-btn-primary" id="garminSyncBtn">同步最近 7 天</button>
+      </div>
       <p class="settings-hint" id="garminSyncStatus"></p>
     </div>
   </div>`;

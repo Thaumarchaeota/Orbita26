@@ -5,25 +5,31 @@ import { closeAllPickers, createPickerGroup, mountListPicker } from "../../tickt
 import type { DidaProject } from "../../ticktick/types";
 
 export const tasksTabHtml = `
-  <div class="settings-tab-panel" data-tab-panel="tasks" hidden>
-    <div class="dialog-field">
-      <label for="settingsTicktickClientId">Client ID</label>
-      <input id="settingsTicktickClientId" type="text" autocomplete="off">
+  <div class="settings-tab-panel" data-tab-panel="tasks">
+    <div class="settings-section">
+      <div class="settings-section-title">OAuth</div>
+      <div class="dialog-field">
+        <label for="settingsTicktickClientId">Client ID</label>
+        <input id="settingsTicktickClientId" type="text" autocomplete="off">
+      </div>
+      <div class="dialog-field">
+        <label for="settingsTicktickClientSecret">Client Secret</label>
+        <input id="settingsTicktickClientSecret" type="password" autocomplete="off">
+      </div>
+      <div class="dialog-field">
+        <label for="settingsTicktickRedirect">Redirect URI</label>
+        <input id="settingsTicktickRedirect" type="text" autocomplete="off">
+      </div>
+      <div class="settings-row">
+        <button type="button" class="dialog-btn dialog-btn-primary" data-action="ticktick-connect">连接</button>
+        <button type="button" class="dialog-btn" data-action="ticktick-disconnect">断开</button>
+        <span id="settingsTicktickStatus" class="settings-ticktick-status"></span>
+      </div>
     </div>
-    <div class="dialog-field">
-      <label for="settingsTicktickClientSecret">Client Secret</label>
-      <input id="settingsTicktickClientSecret" type="password" autocomplete="off">
+    <div class="settings-section">
+      <div class="settings-section-title">默认清单</div>
+      <div id="settingsTasksPickers" class="settings-picker-host"></div>
     </div>
-    <div class="dialog-field">
-      <label for="settingsTicktickRedirect">Redirect URI</label>
-      <input id="settingsTicktickRedirect" type="text" autocomplete="off">
-    </div>
-    <div class="settings-path-row">
-      <button type="button" class="dialog-btn" data-action="ticktick-connect">连接</button>
-      <button type="button" class="dialog-btn" data-action="ticktick-disconnect">断开</button>
-      <span id="settingsTicktickStatus" class="settings-ticktick-status"></span>
-    </div>
-    <div id="settingsTasksPickers"></div>
   </div>`;
 
 export type TasksDraft = {

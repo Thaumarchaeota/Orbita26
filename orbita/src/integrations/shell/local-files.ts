@@ -13,8 +13,7 @@ export async function initLocalFiles(): Promise<LocalEntry[]> {
 }
 
 export function guessLocalName(path: string): string {
-  const base = path.split(/[/\\]/).pop() ?? "";
-  return base;
+  return path.split(/[/\\]/).pop() ?? "";
 }
 
 export function loadLocalFiles(): LocalEntry[] {
@@ -33,21 +32,19 @@ export function addLocalFile(
   kind: LocalEntryKind,
   parentId?: string | null,
 ): LocalEntry[] {
-  const items = loadLocalFiles();
   const leaf: LocalFileLeaf = {
     kind,
     id: crypto.randomUUID(),
     name: name.trim(),
     path: path.trim(),
   };
-  const next = addLocalLeaf(items, leaf, parentId ?? null);
+  const next = addLocalLeaf(loadLocalFiles(), leaf, parentId ?? null);
   saveLocalFiles(next);
   return next;
 }
 
 export function addLocalGroupEntry(name: string, parentId?: string | null): LocalEntry[] {
-  const items = loadLocalFiles();
-  const next = addLocalGroup(items, name, parentId ?? null);
+  const next = addLocalGroup(loadLocalFiles(), name, parentId ?? null);
   saveLocalFiles(next);
   return next;
 }

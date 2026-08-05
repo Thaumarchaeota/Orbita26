@@ -5,6 +5,7 @@ import {
   getSettings,
   patchSettings,
 } from "../../core/settings";
+import { applyThemePrefs, themeFromPrefs } from "../../core/data/theme-prefs";
 import { loadAiConfig } from "../ai/config";
 import { SETTINGS_GEAR_SVG } from "../ai/icons";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
@@ -15,6 +16,7 @@ import { lifeTabHtml, bindLifeTab } from "./tabs/life";
 import { workTabHtml, bindWorkTab } from "./tabs/work";
 import { aiTabHtml, bindAiTab } from "./tabs/ai";
 import { tasksTabHtml, bindTasksTab } from "./tabs/tasks";
+import { enhanceSettingsFormControls } from "./form-controls";
 
 export type SettingsTabId = "appearance" | "navigation" | "life" | "work" | "ai" | "tasks";
 
@@ -54,42 +56,59 @@ export function mountSettingsButton(root: HTMLElement, iconSvg = SETTINGS_GEAR_S
   btn.innerHTML = iconSvg;
   mount.appendChild(btn);
 
-  openDialogFn = mountSettingsDialog(root);
+  openDialogFn = mountSettingsDialog();
   btn.addEventListener("click", (e) => void openDialogFn!("appearance", e));
 }
 
-function mountSettingsDialog(root: HTMLElement) {
+function mountSettingsDialog() {
   const backdrop = document.createElement("div");
   backdrop.className = "dialog-backdrop";
   backdrop.innerHTML = `
     <form class="dialog-panel dialog-panel-settings" id="settingsDialogForm">
-      <div class="dialog-title">设置</div>
-      <div class="settings-tabs" role="tablist">
-        ${TAB_LABELS.map(
-          ({ id, label }) =>
-            `<button type="button" class="settings-tab" data-tab="${id}" role="tab">${label}</button>`,
-        ).join("")}
+      <div class="settings-header">
+        <div class="dialog-title">设置</div>
+        <div class="settings-tabs" role="tablist">
+          ${TAB_LABELS.map(
+            ({ id, label }) =>
+              `<button type="button" class="settings-tab" data-tab="${id}" role="tab">${label}</button>`,
+          ).join("")}
+          <div class="settings-tab-indicator"></div>
+        </div>
       </div>
-      <div class="dialog-scroll">
-        ${appearanceTabHtml}
-        ${navigationTabHtml}
-        ${lifeTabHtml}
-        ${workTabHtml}
-        ${aiTabHtml}
-        ${tasksTabHtml}
+      <div class="settings-body">
+        <div class="settings-tab-panels">
+          ${appearanceTabHtml}
+          ${navigationTabHtml}
+          ${lifeTabHtml}
+          ${workTabHtml}
+          ${aiTabHtml}
+          ${tasksTabHtml}
+        </div>
       </div>
-      <div class="dialog-actions">
+      <div class="dialog-actions settings-footer">
         <button type="button" class="dialog-btn" data-action="cancel">取消</button>
         <button type="submit" class="dialog-btn dialog-btn-primary">保存</button>
       </div>
     </form>
   `;
-  root.appendChild(backdrop);
+  document.body.appendChild(backdrop);
 
   const motion = bindDialog(backdrop);
   const form = backdrop.querySelector<HTMLFormElement>("#settingsDialogForm")!;
   const tabBtns = backdrop.querySelectorAll<HTMLButtonElement>(".settings-tab");
   const tabPanels = backdrop.querySelectorAll<HTMLElement>(".settings-tab-panel");
+  const tabsEl = backdrop.querySelector<HTMLElement>(".settings-tabs")!;
+  const tabIndicator = backdrop.querySelector<HTMLElement>(".settings-tab-indicator")!;
+
+  const moveTabIndicator = (btn: HTMLButtonElement) => {
+    const tabsRect = tabsEl.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+    tabIndicator.style.width = `${btnRect.width}px`;
+    tabIndicator.style.transform = `translateX(${btnRect.left - tabsRect.left}px)`;
+    tabIndicator.style.opacity = "1";
+  };
+
+  enhanceSettingsFormControls(form);
 
   let appearanceState = createAppearanceState(getSettings());
   let savedSettings = getSettings();
@@ -100,10 +119,12 @@ function mountSettingsDialog(root: HTMLElement) {
   };
 
   const previewUi = () => {
+    applyThemePrefs(appearanceState.themePrefs);
     applyUiPrefs({
       ...savedSettings.ui,
       blockOpacity: appearanceState.blockOpacity,
       fonts: appearanceState.fonts,
+      themePrefs: appearanceState.themePrefs,
     });
   };
 
@@ -119,9 +140,10 @@ function mountSettingsDialog(root: HTMLElement) {
       const isActive = btn.dataset.tab === tab;
       btn.classList.toggle("is-active", isActive);
       btn.setAttribute("aria-selected", isActive ? "true" : "false");
+      if (isActive) moveTabIndicator(btn);
     });
     tabPanels.forEach((panel) => {
-      panel.hidden = panel.dataset.tabPanel !== tab;
+      panel.classList.toggle("is-active", panel.dataset.tabPanel === tab);
     });
     if (tab === "tasks") tasksTab.refreshProjects();
   };
@@ -130,6 +152,10 @@ function mountSettingsDialog(root: HTMLElement) {
     btn.addEventListener("click", () => {
       switchTab(btn.dataset.tab as SettingsTabId);
     });
+  });
+  window.addEventListener("resize", () => {
+    const active = backdrop.querySelector<HTMLButtonElement>(".settings-tab.is-active");
+    if (active) moveTabIndicator(active);
   });
 
   const fillForm = (settings: AppSettings) => {
@@ -140,6 +166,7 @@ function mountSettingsDialog(root: HTMLElement) {
     lifeTab.fill(settings);
     aiTab.fill(settings.ai);
     tasksTab.fill(settings);
+    enhanceSettingsFormControls(form);
   };
 
   const close = async (saved: boolean) => {
@@ -167,10 +194,11 @@ function mountSettingsDialog(root: HTMLElement) {
     const tasks = tasksTab.read(savedSettings);
     const cred = savedSettings.integrations.credentials;
     const next = await patchSettings({
-      theme: appearance.theme,
+      theme: themeFromPrefs(appearance.themePrefs),
       dataDir: navigation.dataDir,
       ui: {
         ...savedSettings.ui,
+        themePrefs: appearance.themePrefs,
         blockOpacity: appearance.blockOpacity,
         fonts: appearance.fonts,
         lifeRingGoals: life.lifeRingGoals,
@@ -220,6 +248,9 @@ function mountSettingsDialog(root: HTMLElement) {
       resolvePending = resolve;
       fillForm(getSettings());
       switchTab(tab ?? "appearance");
-      void motion.open(trigger);
+      void motion.open(trigger).then(() => {
+        const active = backdrop.querySelector<HTMLButtonElement>(".settings-tab.is-active");
+        if (active) moveTabIndicator(active);
+      });
     });
 }

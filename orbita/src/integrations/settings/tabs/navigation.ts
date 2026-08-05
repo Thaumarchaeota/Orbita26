@@ -2,54 +2,63 @@ import type { AppSettings } from "../../../core/settings";
 import { pickAppFile, pickLocalFolder } from "../../shell/adapter";
 
 export const navigationTabHtml = `
-  <div class="settings-tab-panel" data-tab-panel="navigation" hidden>
-    <div class="dialog-field">
-      <label for="settingsDataDir">数据存储位置</label>
-      <div class="settings-path-row">
-        <input id="settingsDataDir" type="text" readonly>
-        <button type="button" class="dialog-btn" data-action="browse-data">浏览</button>
+  <div class="settings-tab-panel" data-tab-panel="navigation">
+    <div class="settings-section">
+      <div class="settings-section-title">数据</div>
+      <div class="dialog-field">
+        <label for="settingsDataDir">数据存储位置</label>
+        <div class="settings-path-row">
+          <input id="settingsDataDir" type="text" readonly>
+          <button type="button" class="dialog-btn" data-action="browse-data">浏览</button>
+        </div>
       </div>
     </div>
-    <div class="dialog-field">
-      <label for="settingsV2rayPath">v2rayN 路径</label>
-      <div class="settings-path-row">
-        <input id="settingsV2rayPath" type="text">
-        <button type="button" class="dialog-btn" data-action="browse-v2ray">浏览</button>
+    <div class="settings-section">
+      <div class="settings-section-title">工具路径</div>
+      <div class="dialog-field">
+        <label for="settingsV2rayPath">v2rayN</label>
+        <div class="settings-path-row">
+          <input id="settingsV2rayPath" type="text">
+          <button type="button" class="dialog-btn" data-action="browse-v2ray">浏览</button>
+        </div>
+      </div>
+      <div class="dialog-field">
+        <label for="settingsEverythingPath">Everything es.exe</label>
+        <div class="settings-path-row">
+          <input id="settingsEverythingPath" type="text">
+          <button type="button" class="dialog-btn" data-action="browse-everything">浏览</button>
+        </div>
+      </div>
+      <div class="dialog-field">
+        <label for="settingsCursorPath">Cursor</label>
+        <div class="settings-path-row">
+          <input id="settingsCursorPath" type="text" placeholder="Cursor.exe">
+          <button type="button" class="dialog-btn" data-action="browse-cursor">浏览</button>
+        </div>
       </div>
     </div>
-    <div class="dialog-field">
-      <label for="settingsZoteroDir">Zotero 数据目录</label>
-      <div class="settings-path-row">
-        <input id="settingsZoteroDir" type="text" readonly>
-        <button type="button" class="dialog-btn" data-action="browse-zotero">浏览</button>
+    <div class="settings-section">
+      <div class="settings-section-title">资料库</div>
+      <div class="dialog-field">
+        <label for="settingsZoteroDir">Zotero 数据目录</label>
+        <div class="settings-path-row">
+          <input id="settingsZoteroDir" type="text" readonly>
+          <button type="button" class="dialog-btn" data-action="browse-zotero">浏览</button>
+        </div>
       </div>
-    </div>
-    <div class="dialog-field">
-      <label for="settingsNoteDir">文献笔记目录</label>
-      <div class="settings-path-row">
-        <input id="settingsNoteDir" type="text" readonly>
-        <button type="button" class="dialog-btn" data-action="browse-note">浏览</button>
+      <div class="dialog-field">
+        <label for="settingsNoteDir">文献笔记目录</label>
+        <div class="settings-path-row">
+          <input id="settingsNoteDir" type="text" readonly>
+          <button type="button" class="dialog-btn" data-action="browse-note">浏览</button>
+        </div>
       </div>
-    </div>
-    <div class="dialog-field">
-      <label for="settingsVaultDir">Obsidian 库目录</label>
-      <div class="settings-path-row">
-        <input id="settingsVaultDir" type="text" readonly>
-        <button type="button" class="dialog-btn" data-action="browse-vault">浏览</button>
-      </div>
-    </div>
-    <div class="dialog-field">
-      <label for="settingsEverythingPath">Everything es.exe</label>
-      <div class="settings-path-row">
-        <input id="settingsEverythingPath" type="text">
-        <button type="button" class="dialog-btn" data-action="browse-everything">浏览</button>
-      </div>
-    </div>
-    <div class="dialog-field">
-      <label for="settingsCursorPath">Cursor 路径</label>
-      <div class="settings-path-row">
-        <input id="settingsCursorPath" type="text" placeholder="Cursor.exe">
-        <button type="button" class="dialog-btn" data-action="browse-cursor">浏览</button>
+      <div class="dialog-field">
+        <label for="settingsVaultDir">Obsidian 库目录</label>
+        <div class="settings-path-row">
+          <input id="settingsVaultDir" type="text" readonly>
+          <button type="button" class="dialog-btn" data-action="browse-vault">浏览</button>
+        </div>
       </div>
     </div>
   </div>`;

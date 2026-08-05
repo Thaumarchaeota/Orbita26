@@ -1,10 +1,12 @@
 import type { LocalDropPosition } from "./local-tree";
+import { hideHoverTip } from "../../ui/hover-tip";
 import { DRAG_THRESHOLD, createPointerGhost, movePointerGhost } from "../../ui/pointer-drag";
 
 const INTO_DWELL_MS = 320;
 const ZONE_BEFORE = 0.28;
 const ZONE_AFTER = 0.72;
 const LEAF_SPLIT = 0.5;
+const POS_HYSTERESIS = 0.12;
 
 function rowEl(target: EventTarget | null): HTMLElement | null {
   return (target as HTMLElement).closest<HTMLElement>(".local-tree-row[data-id]");
@@ -52,7 +54,7 @@ export function bindListTreeDrag(
   let ghostOY = 0;
   let hoverId: string | null = null;
   let hoverSince = 0;
-  let dropPos: LocalDropPosition = "after";
+  let pendingDrop: { targetId: string; pos: LocalDropPosition } | null = null;
   let capturePointerId: number | null = null;
 
   const clearMarks = () => {
@@ -91,16 +93,31 @@ export function bindListTreeDrag(
       hoverId = id;
       hoverSince = now;
     }
+    const sticky = pendingDrop?.targetId === id ? pendingDrop.pos : null;
     if (isContainer) {
+      if (sticky === "into" && rel >= ZONE_BEFORE && rel <= ZONE_AFTER) {
+        return "into";
+      }
       if (rel < ZONE_BEFORE) return "before";
       if (rel > ZONE_AFTER) return "after";
       if (now - hoverSince >= INTO_DWELL_MS) return "into";
-      return rel < LEAF_SPLIT ? "before" : "after";
+      const mid = rel < LEAF_SPLIT ? "before" : "after";
+      if (sticky && sticky !== "into") {
+        if (sticky === "before" && rel < LEAF_SPLIT + POS_HYSTERESIS) return "before";
+        if (sticky === "after" && rel > LEAF_SPLIT - POS_HYSTERESIS) return "after";
+      }
+      return mid;
+    }
+    if (sticky) {
+      if (sticky === "before" && rel < LEAF_SPLIT + POS_HYSTERESIS) return "before";
+      if (sticky === "after" && rel > LEAF_SPLIT - POS_HYSTERESIS) return "after";
     }
     return rel < LEAF_SPLIT ? "before" : "after";
   };
 
   const markDrop = (row: HTMLElement, pos: LocalDropPosition) => {
+    const id = row.dataset.id!;
+    pendingDrop = { targetId: id, pos };
     if (pos === "into") {
       groupEl(row)?.classList.add("is-drop-into");
       return;
@@ -119,9 +136,11 @@ export function bindListTreeDrag(
     document.removeEventListener("pointermove", onDocMove);
     document.removeEventListener("pointerup", onDocUp);
     document.removeEventListener("pointercancel", onDocCancel);
+    container.removeEventListener("pointerup", onDocUp);
+    container.removeEventListener("pointercancel", onDocCancel);
   };
 
-  const finish = (e: PointerEvent | undefined, commit: boolean) => {
+  const finish = (_e: PointerEvent | undefined, commit: boolean) => {
     detachDoc();
     if (capturePointerId !== null && pointerRow?.hasPointerCapture(capturePointerId)) {
       pointerRow.releasePointerCapture(capturePointerId);
@@ -129,17 +148,7 @@ export function bindListTreeDrag(
 
     const sourceId = pointerId;
     const wasDragging = dragging;
-    let targetId = hoverId;
-    let pos = dropPos;
-
-    if (wasDragging && commit && e) {
-      const hover = rowAtPoint(e.clientX, e.clientY, container, pointerRow);
-      if (hover?.dataset.id && hover.dataset.id !== sourceId) {
-        targetId = hover.dataset.id;
-        const isContainer = isContainerKind(hover.dataset.kind);
-        pos = resolvePosition(hover, e.clientX, e.clientY, isContainer);
-      }
-    }
+    const drop = pendingDrop;
 
     pointerRow?.classList.remove("is-drag-source");
     container.classList.remove("is-dragging");
@@ -150,8 +159,8 @@ export function bindListTreeDrag(
       container.dataset.suppressRowClick = "1";
     }
 
-    if (wasDragging && commit && sourceId && targetId && targetId !== sourceId) {
-      onMove(sourceId, targetId, pos);
+    if (wasDragging && commit && sourceId && drop && drop.targetId !== sourceId) {
+      onMove(sourceId, drop.targetId, drop.pos);
     }
 
     pointerId = null;
@@ -159,6 +168,7 @@ export function bindListTreeDrag(
     dragging = false;
     hoverId = null;
     hoverSince = 0;
+    pendingDrop = null;
     capturePointerId = null;
   };
 
@@ -168,7 +178,9 @@ export function bindListTreeDrag(
 
   const startDrag = (e: PointerEvent) => {
     if (!pointerRow) return;
+    hideHoverTip();
     dragging = true;
+    pendingDrop = null;
     const rect = pointerRow.getBoundingClientRect();
     const { ghost: g } = createPointerGhost(pointerRow, "local-tree-row-ghost");
     ghost = g;
@@ -191,15 +203,28 @@ export function bindListTreeDrag(
     }
 
     const hover = rowAtPoint(e.clientX, e.clientY, container, pointerRow);
-    clearMarks();
-    if (!hover) {
+    if (!hover?.dataset.id || hover.dataset.id === pointerId) {
+      clearMarks();
       hoverId = null;
+      pendingDrop = null;
       return;
     }
 
     const isContainer = isContainerKind(hover.dataset.kind);
-    dropPos = resolvePosition(hover, e.clientX, e.clientY, isContainer);
-    markDrop(hover, dropPos);
+    const nextPos = resolvePosition(hover, e.clientX, e.clientY, isContainer);
+    if (pendingDrop?.targetId === hover.dataset.id && pendingDrop.pos === nextPos) {
+      return;
+    }
+    clearMarks();
+    markDrop(hover, nextPos);
+  };
+
+  const attachDoc = () => {
+    document.addEventListener("pointermove", onDocMove);
+    document.addEventListener("pointerup", onDocUp);
+    document.addEventListener("pointercancel", onDocCancel);
+    container.addEventListener("pointerup", onDocUp);
+    container.addEventListener("pointercancel", onDocCancel);
   };
 
   container.addEventListener("pointerdown", (e) => {
@@ -208,16 +233,16 @@ export function bindListTreeDrag(
     if (!row) return;
     pointerId = row.dataset.id ?? null;
     pointerRow = row;
+    hideHoverTip();
     startX = e.clientX;
     startY = e.clientY;
     dragging = false;
     hoverId = null;
     hoverSince = 0;
+    pendingDrop = null;
     capturePointerId = e.pointerId;
     row.setPointerCapture(e.pointerId);
-    document.addEventListener("pointermove", onDocMove);
-    document.addEventListener("pointerup", onDocUp);
-    document.addEventListener("pointercancel", onDocCancel);
+    attachDoc();
   });
 }
 

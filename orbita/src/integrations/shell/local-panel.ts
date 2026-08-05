@@ -32,6 +32,13 @@ import { bindListTreeDrag, consumeRowClickSuppress } from "./list-tree-drag";
 import { locateLocalEntry, moveLocalNode } from "./local-tree";
 import { setLocalTab, shellStore, type LocalTab } from "./store";
 import { FOLDER_OPEN_SVG, FOLDER_SVG, TOOLBAR_ADD_FILE_SVG, TOOLBAR_ADD_FOLDER_SVG, TOOLBAR_ADD_GROUP_SVG, TOOLBAR_RECYCLE_SVG, applyShellIcon, localItemIcon } from "./local-icons";
+import {
+  renderTreeList,
+  renderTreeLeafRow,
+  renderTreeContainerRow,
+  TREE_CHEVRON_SVG,
+  toggleTreeContainerRow,
+} from "./tree-list-render";
 
 const LOCAL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v12a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1h-7l-2-2H4a1 1 0 0 0-1 1z"/></svg>`;
 const ARTICLE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
@@ -51,8 +58,6 @@ const LOCAL_TABS: { id: LocalTab; label: string }[] = [
   { id: "note", label: "笔记" },
 ];
 
-const CHEVRON_SVG = `<svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 4l4 4-4 4V4z"/></svg>`;
-
 const ADD_ACTIONS_HTML = `
   <button type="button" class="local-explorer-add" data-add-kind="file" data-tip="添加文件" aria-label="添加文件">${TOOLBAR_ADD_FILE_SVG}</button>
   <button type="button" class="local-explorer-add" data-add-kind="folder" data-tip="添加文件夹" aria-label="添加文件夹">${TOOLBAR_ADD_FOLDER_SVG}</button>
@@ -70,42 +75,46 @@ function iconStyle(color?: string): string {
   return color ? ` style="--icon-color:${escAttr(color)}"` : "";
 }
 
-function renderFileRow(item: LocalEntry, depth: number, expanded: Set<string>): string {
-  if (item.kind === "group") {
-    const open = expanded.has(item.id);
-    const iconAttr = iconStyle(item.color);
-    const childrenHtml = item.children
-      .map((c) => renderFileRow(c, depth + 1, expanded))
-      .join("");
-    return `
-      <div class="local-tree-group" data-group-id="${escAttr(item.id)}">
-        <button type="button" class="local-tree-row local-tree-folder${open ? " is-expanded" : ""}" data-id="${escAttr(item.id)}" data-kind="group" style="--depth:${depth}" data-tip="${escAttr(item.name)}">
-          <span class="local-tree-twistie${open ? " is-open" : ""}">${CHEVRON_SVG}</span>
-          <span class="local-tree-icon local-item-icon is-folder"${iconAttr}>${open ? FOLDER_OPEN_SVG : FOLDER_SVG}</span>
-          <span class="local-tree-label">${escHtml(item.name)}</span>
-        </button>
-        <div class="local-tree-children-wrap${open ? " is-open" : ""}">
-          <div class="local-tree-children">${childrenHtml}</div>
-        </div>
-        <div class="local-tree-after-slot" data-target-id="${escAttr(item.id)}" aria-hidden="true"></div>
-      </div>
-    `;
-  }
-  const iconKind = item.kind === "folder" ? "folder" : "file";
-  const iconAttr = iconStyle(item.color);
-  return `
-    <button type="button" class="local-tree-row local-tree-leaf" data-id="${escAttr(item.id)}" data-kind="${escAttr(item.kind)}" data-path="${escAttr(item.path)}" style="--depth:${depth}">
-      <span class="local-tree-twistie is-leaf"></span>
-      ${localItemIcon(iconKind, "local-tree-icon", iconAttr)}
-      <span class="local-tree-label">${escHtml(item.name)}</span>
-    </button>
-    <div class="local-tree-after-slot" data-target-id="${escAttr(item.id)}" aria-hidden="true"></div>
-  `;
+function renderTree(items: LocalEntry[], expanded: Set<string>): string {
+  return renderTreeList({
+    containerKind: "group",
+    emptyLabel: "暂无文件",
+    expanded,
+    items,
+    isContainer: (item) => item.kind === "group",
+    renderLeaf: (item, depth) => {
+      if (item.kind === "group") return "";
+      const iconKind = item.kind === "folder" ? "folder" : "file";
+      const iconAttr = iconStyle(item.color);
+      return renderTreeLeafRow({
+        id: item.id,
+        kind: item.kind,
+        depth,
+        label: item.name,
+        path: item.path,
+        iconHtml: localItemIcon(iconKind, "local-tree-icon", iconAttr),
+      });
+    },
+    renderContainer: (item, depth, childrenHtml, open) => {
+      if (item.kind !== "group") return "";
+      const iconAttr = iconStyle(item.color);
+      return renderTreeContainerRow({
+        id: item.id,
+        containerKind: "group",
+        depth,
+        label: item.name,
+        tip: item.name,
+        open,
+        childrenHtml,
+        twistieHtml: TREE_CHEVRON_SVG,
+        iconHtml: `<span class="local-tree-icon local-item-icon is-folder"${iconAttr}>${open ? FOLDER_OPEN_SVG : FOLDER_SVG}</span>`,
+      });
+    },
+  });
 }
 
-function renderTree(items: LocalEntry[], expanded: Set<string>): string {
-  if (!items.length) return `<div class="local-tree-empty">暂无文件</div>`;
-  return items.map((item) => renderFileRow(item, 0, expanded)).join("");
+function toggleGroupRow(row: HTMLElement, id: string, open: boolean, expanded: Set<string>) {
+  toggleTreeContainerRow(row, id, open, expanded, FOLDER_OPEN_SVG, FOLDER_SVG);
 }
 
 function buildIdPathMap(items: LocalEntry[]): Map<string, string> {
@@ -143,19 +152,6 @@ function collectIconItems(items: LocalEntry[]): Pick<EverythingHit, "path" | "is
   };
   walk(items);
   return out;
-}
-
-function toggleGroupRow(row: HTMLElement, id: string, open: boolean, expanded: Set<string>) {
-  const group = row.closest<HTMLElement>(".local-tree-group");
-  const wrap = group?.querySelector<HTMLElement>(".local-tree-children-wrap");
-  const twistie = row.querySelector<HTMLElement>(".local-tree-twistie");
-  const icon = row.querySelector<HTMLElement>(".local-tree-icon");
-  if (open) expanded.add(id);
-  else expanded.delete(id);
-  row.classList.toggle("is-expanded", open);
-  twistie?.classList.toggle("is-open", open);
-  wrap?.classList.toggle("is-open", open);
-  if (icon) icon.innerHTML = open ? FOLDER_OPEN_SVG : FOLDER_SVG;
 }
 
 function mountFileList(
@@ -359,9 +355,14 @@ function mountFileList(
       if (recycleBtn) {
         e.stopPropagation();
         void openRecycleBin();
-        return;
       }
+    },
+    { signal },
+  );
 
+  listEl.addEventListener(
+    "click",
+    async (e) => {
       const row = (e.target as HTMLElement).closest<HTMLButtonElement>(".local-tree-row[data-id]");
       if (!row || !listEl.contains(row)) return;
       if (searchQuery) return;

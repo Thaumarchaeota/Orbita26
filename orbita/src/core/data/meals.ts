@@ -30,7 +30,7 @@ export function parseMeals(data: unknown): MealEntry[] {
   const meals = (data as Record<string, unknown>).meals;
   if (!Array.isArray(meals)) return [];
   return meals
-    .map((m) => {
+    .map((m): MealEntry | null => {
       if (!m || typeof m !== "object") return null;
       const o = m as Record<string, unknown>;
       const id = typeof o.id === "string" ? o.id : "";
@@ -50,7 +50,7 @@ export function parseMeals(data: unknown): MealEntry[] {
         confidence: typeof o.confidence === "string" ? o.confidence : undefined,
       };
     })
-    .filter((m): m is MealEntry => !!m);
+    .filter((m): m is MealEntry => m !== null);
 }
 
 export function inferMealSlotFromTime(time?: string): MealSlot {

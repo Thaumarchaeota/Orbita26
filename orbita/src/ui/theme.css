@@ -1,4 +1,6 @@
-﻿@import "./theme-base.css";
+﻿@import "./theme-fonts.css";
+@import "./theme-base.css";
 @import "./theme-shell-ai.css";
 @import "./theme-launcher-local.css";
 @import "./theme-rest.css";
+@import "./theme-web-preview.css";

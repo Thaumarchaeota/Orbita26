@@ -92,7 +92,7 @@ function dialogPanel(backdrop: HTMLElement, panel?: HTMLElement) {
   return panel ?? backdrop.querySelector<HTMLElement>(".dialog-panel, form.dialog-panel")!;
 }
 
-function setDialogFly(panel: HTMLElement, trigger?: MotionTrigger, phase: "open" | "close" = "open") {
+export function setDialogFly(panel: HTMLElement, trigger?: MotionTrigger, phase: "open" | "close" = "open") {
   const point = motionPoint(trigger);
   const bias = phase === "open" ? DIALOG_BIAS_OPEN : DIALOG_BIAS_CLOSE;
   const scale = phase === "open" ? DIALOG_SCALE_OPEN : DIALOG_SCALE_CLOSE;

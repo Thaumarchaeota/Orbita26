@@ -64,6 +64,10 @@
   --font-ai: var(--font-base);
   --font-clock: Ubuntu, sans-serif;
   --font-life-ring-weight: 400;
+  --glass-tint-h: 222;
+  --glass-tint-s: 35%;
+  --glass-tint-l: 12%;
+  --glass-alpha-panel: 0.76;
 }
 [data-theme="dark"] {
   --text: rgba(255,255,255,.92);
@@ -92,8 +96,6 @@
   --text: rgba(255, 255, 255, 0.96);
   --time: rgba(255, 255, 255, 0.98);
   --muted: rgba(255, 255, 255, 0.68);
-  --surface: rgba(255, 255, 255, 0.1);
-  --surface-active: rgba(255, 255, 255, 0.15);
   --border: rgba(255, 255, 255, 0.16);
   --border-active: rgba(255, 255, 255, 0.3);
   --shadow: rgba(0, 0, 0, 0.22);
@@ -115,8 +117,6 @@
   --text: rgba(255, 255, 255, 0.92);
   --time: #e0e0e8;
   --muted: rgba(255, 255, 255, 0.5);
-  --surface: rgba(12, 18, 32, 0.42);
-  --surface-active: rgba(12, 18, 32, 0.56);
   --border: rgba(255, 255, 255, 0.1);
   --border-active: rgba(255, 255, 255, 0.22);
   --shadow: rgba(0, 0, 0, 0.32);
