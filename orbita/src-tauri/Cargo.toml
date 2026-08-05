@@ -23,9 +23,14 @@ base64 = "0.22"
 image = "0.25"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "stream"] }
 futures-util = "0.3"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "macros", "time"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+uuid = { version = "1", features = ["v4"] }
+regex = "1"
 url = "2"
 sysinfo = "0.33"
+screenshots = "0.8"
+arboard = "3"
 windows = { version = "0.60", features = [
   "Win32_Foundation",
   "Win32_Globalization",

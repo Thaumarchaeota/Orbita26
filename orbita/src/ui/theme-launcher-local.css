@@ -1,5 +1,8 @@
+.launcher-section {
+  flex: 0 0 auto;
+}
 .launcher-section + .launcher-dock {
-  margin-top: 18px;
+  margin-top: var(--shell-row-gap);
 }
 .launcher-head {
   display: flex;
@@ -31,6 +34,43 @@
 .launcher-head-add:disabled {
   opacity: .2;
   cursor: default;
+}
+.launcher-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.garmin-last-sync {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-right: 6px;
+}
+.launcher-head-actions .launcher-head-add svg {
+  width: 14px;
+  height: 14px;
+}
+.launcher-dock-apps {
+  grid-column: 1 / calc(var(--dock-left-span) + 1);
+  grid-row: 1 / calc(var(--apps-rows) + 1);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.bookmarks-tree-scroll {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.bookmarks-tree-scroll .local-file-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .launcher-title {
   display: flex;
@@ -102,16 +142,12 @@
   grid-auto-rows: var(--top-tile-h);
 }
 .launcher-dock {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(var(--launcher-dock-cols), 1fr);
-  grid-template-rows: repeat(var(--apps-rows), auto);
+  grid-template-rows: repeat(var(--apps-rows), minmax(0, 1fr));
   gap: 8px;
-}
-.launcher-dock-apps {
-  grid-column: 1 / calc(var(--dock-left-span) + 1);
-  grid-row: 1 / calc(var(--apps-rows) + 1);
-  display: flex;
-  flex-direction: column;
 }
 .apps-grid {
   grid-template-columns: repeat(var(--apps-cols), 1fr);
@@ -128,8 +164,9 @@
   overflow: hidden;
 }
 .local-content {
-  height: calc(var(--launcher-apps-scroll-h) - var(--local-segment-block-h) - 8px);
-  flex-shrink: 0;
+  flex: 1;
+  min-height: 0;
+  height: auto;
   margin-top: 8px;
   display: flex;
   flex-direction: column;
@@ -324,6 +361,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.hover-tip__text--multiline {
+  white-space: pre-line;
+  overflow: visible;
+  text-overflow: unset;
 }
 @media (prefers-reduced-motion: reduce) {
   .local-path-tip,
@@ -1159,6 +1201,7 @@
   border-radius: 12px;
   background: var(--surface);
   color: var(--text);
+  font-family: var(--font-base);
   font-size: 14px;
   outline: none;
   transition: border-color .25s var(--ease), background .5s var(--ease);
@@ -1340,30 +1383,15 @@
   align-items: center;
   height: 40px;
   padding: 0 4px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: var(--surface-active);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  box-shadow: 0 2px 10px var(--shadow);
   pointer-events: none;
   transition: background .5s var(--ease), border-color .5s var(--ease), box-shadow .5s var(--ease);
-}
-.top-tray {
-  position: fixed;
-  top: calc(24px + 40px + 14px + (50px - 40px) / 2);
-  right: 20px;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .sys-stat-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   height: 100%;
-  padding: 0 10px;
+  padding: 0 7px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1393,11 +1421,15 @@
 [data-theme="transparent-light"] .launcher-section,
 [data-theme="transparent-light"] .launcher-dock-apps,
 [data-theme="transparent-light"] .launcher-dock-local,
+[data-theme="transparent-light"] .today-section,
+[data-theme="transparent-light"] .work-section,
 [data-theme="transparent-light"] .ai-section,
 [data-theme="transparent-light"] .ticktick-section,
 [data-theme="transparent-dark"] .launcher-section,
 [data-theme="transparent-dark"] .launcher-dock-apps,
 [data-theme="transparent-dark"] .launcher-dock-local,
+[data-theme="transparent-dark"] .today-section,
+[data-theme="transparent-dark"] .work-section,
 [data-theme="transparent-dark"] .ai-section,
 [data-theme="transparent-dark"] .ticktick-section {
   border-radius: 16px;
@@ -1406,47 +1438,51 @@
 [data-theme="transparent-light"] .launcher-section,
 [data-theme="transparent-light"] .launcher-dock-apps,
 [data-theme="transparent-light"] .launcher-dock-local,
+[data-theme="transparent-light"] .today-section,
+[data-theme="transparent-light"] .work-section,
 [data-theme="transparent-light"] .ai-section,
 [data-theme="transparent-light"] .ticktick-section,
-[data-theme="transparent-light"] .sys-stats,
-[data-theme="transparent-light"] .settings-btn {
+[data-theme="transparent-light"] .primary-mood-btn {
+  background: rgba(255, 255, 255, var(--block-opacity, 0.12));
+  border: 1px solid rgba(255, 255, 255, calc(var(--block-opacity, 0.12) + 0.03));
+}
+[data-theme="transparent-light"] .top-toolkit {
   background: rgba(255, 255, 255, var(--block-opacity, 0.12));
   border: 1px solid rgba(255, 255, 255, calc(var(--block-opacity, 0.12) + 0.03));
 }
 [data-theme="transparent-dark"] .launcher-section,
 [data-theme="transparent-dark"] .launcher-dock-apps,
 [data-theme="transparent-dark"] .launcher-dock-local,
+[data-theme="transparent-dark"] .today-section,
+[data-theme="transparent-dark"] .work-section,
 [data-theme="transparent-dark"] .ai-section,
 [data-theme="transparent-dark"] .ticktick-section,
-[data-theme="transparent-dark"] .sys-stats,
-[data-theme="transparent-dark"] .settings-btn {
+[data-theme="transparent-dark"] .primary-mood-btn {
   background: rgba(8, 12, 22, var(--block-opacity, 0.12));
   border: 1px solid rgba(255, 255, 255, calc(var(--block-opacity, 0.12) * 0.75));
 }
-[data-theme="transparent-light"] .sys-stats,
-[data-theme="transparent-dark"] .sys-stats {
-  border-radius: 20px;
-  padding: 0 4px;
-}
-[data-theme="transparent-light"] .settings-btn,
-[data-theme="transparent-dark"] .settings-btn {
-  border-radius: 50%;
-  padding: 0;
+[data-theme="transparent-dark"] .top-toolkit {
+  background: rgba(8, 12, 22, var(--block-opacity, 0.12));
+  border: 1px solid rgba(255, 255, 255, calc(var(--block-opacity, 0.12) * 0.75));
 }
 [data-theme="transparent-light"] .launcher-section,
 [data-theme="transparent-light"] .launcher-dock-apps,
 [data-theme="transparent-light"] .launcher-dock-local,
+[data-theme="transparent-light"] .today-section,
+[data-theme="transparent-light"] .work-section,
 [data-theme="transparent-light"] .ai-section,
 [data-theme="transparent-light"] .ticktick-section,
-[data-theme="transparent-light"] .sys-stats,
-[data-theme="transparent-light"] .settings-btn,
+[data-theme="transparent-light"] .top-toolkit,
+[data-theme="transparent-light"] .primary-mood-btn,
 [data-theme="transparent-dark"] .launcher-section,
 [data-theme="transparent-dark"] .launcher-dock-apps,
 [data-theme="transparent-dark"] .launcher-dock-local,
+[data-theme="transparent-dark"] .today-section,
+[data-theme="transparent-dark"] .work-section,
 [data-theme="transparent-dark"] .ai-section,
 [data-theme="transparent-dark"] .ticktick-section,
-[data-theme="transparent-dark"] .sys-stats,
-[data-theme="transparent-dark"] .settings-btn {
+[data-theme="transparent-dark"] .top-toolkit,
+[data-theme="transparent-dark"] .primary-mood-btn {
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
@@ -1470,8 +1506,8 @@
 }
 [data-theme="transparent-light"] .search-bar,
 [data-theme="transparent-dark"] .search-bar,
-[data-theme="transparent-light"] .v2ray-btn,
-[data-theme="transparent-dark"] .v2ray-btn,
+[data-theme="transparent-light"] .top-toolkit,
+[data-theme="transparent-dark"] .top-toolkit,
 [data-theme="transparent-light"] .ai-composer-box,
 [data-theme="transparent-dark"] .ai-composer-box,
 [data-theme="transparent-light"] .ai-conv-picker.is-expanded .ai-conv-select,
@@ -1479,7 +1515,9 @@
 [data-theme="transparent-light"] .ai-conv-menu,
 [data-theme="transparent-dark"] .ai-conv-menu,
 [data-theme="transparent-light"] .ai-model-menu,
-[data-theme="transparent-dark"] .ai-model-menu {
+[data-theme="transparent-dark"] .ai-model-menu,
+[data-theme="transparent-light"] .primary-mood-menu,
+[data-theme="transparent-dark"] .primary-mood-menu {
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }

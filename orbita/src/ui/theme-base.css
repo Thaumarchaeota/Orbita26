@@ -41,7 +41,7 @@
   --dock-avatar-icon-size: calc(18px * var(--dock-tile-scale));
   --dock-grid-col-gap: 8px;
   --dock-grid-row-gap: 8px;
-  --bookmarks-cols: 6;
+  --bookmarks-cols: 5;
   --bookmarks-rows: 3;
   --apps-cols: 2;
   --apps-rows: 5;
@@ -50,6 +50,11 @@
   --launcher-dock-cols: 7;
   --bookmarks-scroll-h: calc(var(--top-tile-h) * var(--bookmarks-rows) + var(--top-grid-row-gap) * (var(--bookmarks-rows) - 1));
   --launcher-apps-scroll-h: calc(var(--dock-tile-h) * var(--apps-rows) + var(--dock-grid-row-gap) * (var(--apps-rows) - 1));
+  --shell-row1-h: calc(var(--bookmarks-scroll-h) + 38px);
+  --shell-row-gap: 18px;
+  --shell-row2-top: calc(var(--shell-row1-h) + var(--shell-row-gap));
+  --shell-zone-gap: 12px;
+  --shell-body-bottom: 8px;
   --local-segment-block-h: 30px;
   --font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   --font-launcher: var(--font-base);
@@ -58,6 +63,7 @@
   --font-note: var(--font-base);
   --font-ai: var(--font-base);
   --font-clock: Ubuntu, sans-serif;
+  --font-life-ring-weight: 400;
 }
 [data-theme="dark"] {
   --text: rgba(255,255,255,.92);

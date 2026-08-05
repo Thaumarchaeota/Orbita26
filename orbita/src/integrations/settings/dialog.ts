@@ -10,17 +10,19 @@ import { SETTINGS_GEAR_SVG } from "../ai/icons";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
 import type { DidaProject } from "../ticktick/types";
 import { appearanceTabHtml, bindAppearanceTab, createAppearanceState, type AppearanceState } from "./tabs/appearance";
-import { layoutTabHtml, bindLayoutTab, createLayoutState, type LayoutState } from "./tabs/layout";
-import { localTabHtml, bindLocalTab } from "./tabs/local";
+import { navigationTabHtml, bindNavigationTab } from "./tabs/navigation";
+import { lifeTabHtml, bindLifeTab } from "./tabs/life";
+import { workTabHtml, bindWorkTab } from "./tabs/work";
 import { aiTabHtml, bindAiTab } from "./tabs/ai";
 import { tasksTabHtml, bindTasksTab } from "./tabs/tasks";
 
-export type SettingsTabId = "appearance" | "layout" | "local" | "ai" | "tasks";
+export type SettingsTabId = "appearance" | "navigation" | "life" | "work" | "ai" | "tasks";
 
 const TAB_LABELS: { id: SettingsTabId; label: string }[] = [
   { id: "appearance", label: "外观" },
-  { id: "layout", label: "布局" },
-  { id: "local", label: "本地" },
+  { id: "navigation", label: "导航" },
+  { id: "life", label: "今日" },
+  { id: "work", label: "工作区" },
   { id: "ai", label: "智能体" },
   { id: "tasks", label: "任务" },
 ];
@@ -42,14 +44,14 @@ export function openSettings(tab?: SettingsTabId, trigger?: MotionTrigger) {
   return openDialogFn(tab, trigger);
 }
 
-export function mountSettingsButton(root: HTMLElement) {
+export function mountSettingsButton(root: HTMLElement, iconSvg = SETTINGS_GEAR_SVG) {
   const mount = root.querySelector<HTMLElement>("#settingsMount") ?? root;
   const btn = document.createElement("button");
   btn.type = "button";
-  btn.className = "settings-btn";
+  btn.className = "top-toolkit-icon-btn";
   btn.removeAttribute("title");
   btn.dataset.tip = "设置";
-  btn.innerHTML = SETTINGS_GEAR_SVG;
+  btn.innerHTML = iconSvg;
   mount.appendChild(btn);
 
   openDialogFn = mountSettingsDialog(root);
@@ -70,8 +72,9 @@ function mountSettingsDialog(root: HTMLElement) {
       </div>
       <div class="dialog-scroll">
         ${appearanceTabHtml}
-        ${layoutTabHtml}
-        ${localTabHtml}
+        ${navigationTabHtml}
+        ${lifeTabHtml}
+        ${workTabHtml}
         ${aiTabHtml}
         ${tasksTabHtml}
       </div>
@@ -89,30 +92,25 @@ function mountSettingsDialog(root: HTMLElement) {
   const tabPanels = backdrop.querySelectorAll<HTMLElement>(".settings-tab-panel");
 
   let appearanceState = createAppearanceState(getSettings());
-  let layoutState = createLayoutState(getSettings());
   let savedSettings = getSettings();
   let resolvePending: ((value: boolean) => void) | null = null;
 
   const setAppearanceState = (patch: Partial<AppearanceState>) => {
     appearanceState = { ...appearanceState, ...patch };
   };
-  const setLayoutState = (patch: Partial<LayoutState>) => {
-    layoutState = { ...layoutState, ...patch };
-  };
 
   const previewUi = () => {
     applyUiPrefs({
       ...savedSettings.ui,
       blockOpacity: appearanceState.blockOpacity,
-      topGrid: layoutState.topGrid,
-      dockLeftGrid: layoutState.dockLeftGrid,
       fonts: appearanceState.fonts,
     });
   };
 
   const appearanceTab = bindAppearanceTab(backdrop, () => appearanceState, setAppearanceState, previewUi);
-  const layoutTab = bindLayoutTab(backdrop, () => layoutState, setLayoutState, previewUi);
-  const localTab = bindLocalTab(backdrop);
+  const navigationTab = bindNavigationTab(backdrop);
+  const lifeTab = bindLifeTab(backdrop);
+  bindWorkTab(backdrop);
   const aiTab = bindAiTab(backdrop);
   const tasksTab = bindTasksTab(backdrop, getProjects);
 
@@ -137,10 +135,9 @@ function mountSettingsDialog(root: HTMLElement) {
   const fillForm = (settings: AppSettings) => {
     savedSettings = settings;
     appearanceState = createAppearanceState(settings);
-    layoutState = createLayoutState(settings);
     appearanceTab.fill(settings);
-    layoutTab.fill(settings);
-    localTab.fill(settings);
+    navigationTab.fill(settings);
+    lifeTab.fill(settings);
     aiTab.fill(settings.ai);
     tasksTab.fill(settings);
   };
@@ -164,35 +161,49 @@ function mountSettingsDialog(root: HTMLElement) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const appearance = appearanceTab.read();
-    const layout = layoutTab.read();
-    const local = localTab.read();
+    const navigation = navigationTab.read();
+    const life = lifeTab.read();
     const ai = aiTab.read(savedSettings.ai);
     const tasks = tasksTab.read(savedSettings);
+    const cred = savedSettings.integrations.credentials;
     const next = await patchSettings({
       theme: appearance.theme,
-      dataDir: local.dataDir,
+      dataDir: navigation.dataDir,
       ui: {
         ...savedSettings.ui,
         blockOpacity: appearance.blockOpacity,
-        topGrid: layout.topGrid,
-        dockLeftGrid: layout.dockLeftGrid,
         fonts: appearance.fonts,
+        lifeRingGoals: life.lifeRingGoals,
       },
       integrations: {
-        v2ray: { exePath: local.v2rayExePath },
+        v2ray: { exePath: navigation.v2rayExePath },
         zotero: {
-          dataDir: local.zoteroDataDir,
-          articleNoteDir: local.zoteroNoteDir,
+          dataDir: navigation.zoteroDataDir,
+          articleNoteDir: navigation.zoteroNoteDir,
         },
-        obsidian: { vaultDir: local.obsidianVaultDir },
-        everything: { exePath: local.everythingExePath },
-        cursor: { exePath: local.cursorExePath },
+        obsidian: { vaultDir: navigation.obsidianVaultDir },
+        everything: { exePath: navigation.everythingExePath },
+        cursor: { exePath: navigation.cursorExePath },
+        journal: { dataRoot: life.journalDataRoot },
+        bkeasy: { dataRoot: life.bkeasyDataRoot },
+        garmin: { tokenDir: life.garminTokenDir },
         ticktick: {
           clientId: tasks.clientId,
           clientSecret: tasks.clientSecret,
           redirectUri: tasks.redirectUri,
-          accessToken: savedSettings.integrations.ticktick.accessToken,
+          accessToken: cred.ticktick.accessToken || savedSettings.integrations.ticktick.accessToken,
           defaultProjectId: tasks.defaultProjectId,
+        },
+        credentials: {
+          garmin: { email: life.garminEmail, password: life.garminPassword },
+          ticktick: {
+            clientId: tasks.clientId,
+            clientSecret: tasks.clientSecret,
+            accessToken: cred.ticktick.accessToken || savedSettings.integrations.ticktick.accessToken,
+          },
+          ai: {
+            entries: Object.fromEntries(ai.entries.map((en) => [en.id, en.apiKey])),
+          },
         },
       },
       ai,

@@ -1,9 +1,24 @@
 import { defaultFontPrefs } from "./fonts";
-import type { AiConfig, GridPrefs, Integrations, UiPrefs } from "./types";
+import { DEFAULT_LIFE_RING_GOALS } from "./life-ring-goals";
+import { defaultLifeRingSlots } from "./life-ring-metrics";
+import type { AiConfig, GridPrefs, Integrations, IntegrationsCredentials, LifeRingColors, UiPrefs } from "./types";
 
 export const DEFAULT_GRID_GAP = 8;
-export const DEFAULT_TOP_GRID: GridPrefs = { cols: 6, rows: 3, tileScale: 100, colGap: 8, rowGap: 8 };
-export const DEFAULT_DOCK_LEFT_GRID: GridPrefs = { cols: 2, rows: 5, tileScale: 100, colGap: 8, rowGap: 8 };
+export const DEFAULT_TOP_GRID: GridPrefs = { cols: 5, rows: 3, tileScale: 100, colGap: 8, rowGap: 8 };
+
+export const DEFAULT_LIFE_RINGS: LifeRingColors = {
+  sleep: "#5ac8fa",
+  ring2: "#34c759",
+  ring3: "#ff9500",
+};
+
+export function defaultCredentials(): IntegrationsCredentials {
+  return {
+    garmin: { email: "", password: "" },
+    ticktick: { clientId: "", clientSecret: "", accessToken: "" },
+    ai: { entries: {} },
+  };
+}
 
 export function defaultAiConfig(): AiConfig {
   const id = "deepseek-default";
@@ -26,10 +41,7 @@ export function defaultAiConfig(): AiConfig {
 export function defaultIntegrations(): Integrations {
   return {
     v2ray: { exePath: "" },
-    zotero: {
-      dataDir: "",
-      articleNoteDir: "",
-    },
+    zotero: { dataDir: "", articleNoteDir: "" },
     obsidian: { vaultDir: "" },
     everything: { exePath: "" },
     cursor: { exePath: "" },
@@ -40,6 +52,10 @@ export function defaultIntegrations(): Integrations {
       accessToken: "",
       defaultProjectId: "inbox",
     },
+    journal: { dataRoot: "" },
+    bkeasy: { dataRoot: "" },
+    garmin: { tokenDir: "" },
+    credentials: defaultCredentials(),
   };
 }
 
@@ -50,7 +66,9 @@ export function defaultUiPrefs(): UiPrefs {
     activeConversationId: null,
     blockOpacity: 12,
     topGrid: { ...DEFAULT_TOP_GRID },
-    dockLeftGrid: { ...DEFAULT_DOCK_LEFT_GRID },
+    lifeRings: { ...DEFAULT_LIFE_RINGS },
+    lifeRingSlots: defaultLifeRingSlots(),
+    lifeRingGoals: { ...DEFAULT_LIFE_RING_GOALS },
     fonts: defaultFontPrefs(),
   };
 }

@@ -1,4 +1,6 @@
 import type { FontPrefs } from "./fonts";
+import type { LifeRingGoals } from "./life-ring-goals";
+import type { LifeRingSlots } from "./life-ring-metrics";
 
 export type GridPrefs = {
   cols: number;
@@ -8,36 +10,29 @@ export type GridPrefs = {
   rowGap: number;
 };
 
+export type LifeRingColors = {
+  sleep: string;
+  ring2: string;
+  ring3: string;
+};
+
 export type UiPrefs = {
   engineId: string;
   localTab: "file" | "literature" | "note";
   activeConversationId: string | null;
   blockOpacity: number;
   topGrid: GridPrefs;
-  dockLeftGrid: GridPrefs;
+  lifeRings: LifeRingColors;
+  lifeRingSlots: LifeRingSlots;
+  lifeRingGoals: LifeRingGoals;
   fonts: FontPrefs;
 };
 
-export type V2rayIntegration = {
-  exePath: string;
-};
-
-export type ZoteroIntegration = {
-  dataDir: string;
-  articleNoteDir: string;
-};
-
-export type ObsidianIntegration = {
-  vaultDir: string;
-};
-
-export type EverythingIntegration = {
-  exePath: string;
-};
-
-export type CursorIntegration = {
-  exePath: string;
-};
+export type V2rayIntegration = { exePath: string };
+export type ZoteroIntegration = { dataDir: string; articleNoteDir: string };
+export type ObsidianIntegration = { vaultDir: string };
+export type EverythingIntegration = { exePath: string };
+export type CursorIntegration = { exePath: string };
 
 export type TicktickIntegration = {
   clientId: string;
@@ -47,6 +42,24 @@ export type TicktickIntegration = {
   defaultProjectId: string;
 };
 
+export type JournalIntegration = { dataRoot: string };
+export type BKeasyIntegration = { dataRoot: string };
+export type GarminIntegration = { tokenDir: string };
+
+export type GarminCredentials = { email: string; password: string };
+export type TicktickCredentials = {
+  clientId: string;
+  clientSecret: string;
+  accessToken: string;
+};
+export type AiCredentials = { entries: Record<string, string> };
+
+export type IntegrationsCredentials = {
+  garmin: GarminCredentials;
+  ticktick: TicktickCredentials;
+  ai: AiCredentials;
+};
+
 export type Integrations = {
   v2ray: V2rayIntegration;
   zotero: ZoteroIntegration;
@@ -54,6 +67,10 @@ export type Integrations = {
   everything: EverythingIntegration;
   cursor: CursorIntegration;
   ticktick: TicktickIntegration;
+  journal: JournalIntegration;
+  bkeasy: BKeasyIntegration;
+  garmin: GarminIntegration;
+  credentials: IntegrationsCredentials;
 };
 
 export type ApiEntry = {
@@ -86,6 +103,12 @@ export type AppSettings = {
   ai: AiConfig;
 };
 
+export type JournalEntry = Record<string, unknown> & {
+  id: string;
+  kind: string;
+  date: string;
+};
+
 export type BookmarkLink = {
   kind: "link";
   id: string;
@@ -104,7 +127,6 @@ export type BookmarkFolder = {
 };
 
 export type BookmarkEntry = BookmarkLink | BookmarkFolder;
-
 export type Bookmark = BookmarkLink;
 
 export type AppLink = {
@@ -125,7 +147,6 @@ export type AppFolder = {
 };
 
 export type AppEntry = AppLink | AppFolder;
-
 export type AppItem = AppLink;
 
 export type LauncherLeafBase = {
@@ -146,8 +167,6 @@ export type LauncherFolder<L extends LauncherLeafBase = LauncherLeafBase> = {
 
 export type LauncherEntryOf<L extends LauncherLeafBase = LauncherLeafBase> = L | LauncherFolder<L>;
 
-export type LocalEntryKind = "file" | "folder";
-
 export type LocalFileLeaf = {
   kind: "file" | "folder";
   id: string;
@@ -155,6 +174,8 @@ export type LocalFileLeaf = {
   path: string;
   color?: string;
 };
+
+export type LocalEntryKind = LocalFileLeaf["kind"];
 
 export type LocalGroup = {
   kind: "group";
@@ -165,6 +186,4 @@ export type LocalGroup = {
 };
 
 export type LocalEntry = LocalFileLeaf | LocalGroup;
-
 export type LocalFileItem = LocalFileLeaf;
-

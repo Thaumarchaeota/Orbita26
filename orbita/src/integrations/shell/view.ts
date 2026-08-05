@@ -1,41 +1,28 @@
 import { ENGINES } from "./engines";
 import { getCurrentEngine, setEngine, shellStore } from "./store";
-import { launchV2ray, openUrl } from "./adapter";
-import {
-  loadBookmarks,
-  saveBookmarks,
-  updateBookmark,
-  updateBookmarkInFolder,
-} from "./bookmarks";
+import { openUrl } from "./adapter";
 import {
   loadApps,
   saveApps,
   updateApp,
   updateAppInFolder,
 } from "./apps";
-import { dockLeftGridCapacity, topGridCapacity } from "./grid-slots";
-import { mountAppDialog, mountBookmarkDialog, mountConfirmDialog } from "./dialog";
+import { topGridCapacity } from "./grid-slots";
+import { mountAppDialog, mountConfirmDialog } from "./dialog";
+import { mountBookmarksPanel } from "./bookmarks-panel";
 import { mountLocalPanel } from "./local-panel";
-import { mountSettingsButton } from "../settings";
 import { mountFolderOverlay } from "./folder-overlay";
-import { mountAppLauncherGrid, mountBookmarkLauncherGrid } from "./launcher-grid";
-import { mountStatsBar } from "./stats-bar";
+import { mountAppLauncherGrid } from "./launcher-grid";
+import { mountTopToolkit, topToolkitHtml } from "./top-toolkit";
 
-const BOOKMARK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
 const APP_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
-
+const WORK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`;
 const SEARCH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>`;
-const V2RAY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-
-const LBL_BOOKMARKS = "\u4e66\u7b7e";
 const LBL_APPS = "\u5e94\u7528";
 const LBL_ADD = "\u6dfb\u52a0";
 const LBL_SEARCH_IN = (name: string) => `\u5728 ${name} \u4e2d\u641c\u7d22`;
 const LBL_DELETE_TITLE = "\u5220\u9664\u786e\u8ba4";
 const LBL_DELETE_MSG = (name: string) => `\u786e\u5b9a\u5220\u9664\u300c${name}\u300d\uff1f`;
-const LBL_V2RAY_TITLE = "\u542f\u52a8 v2rayN";
-const LBL_V2RAY_FAIL = "\u542f\u52a8 v2rayN \u5931\u8d25";
-
 function buildSearchUrl(value: string): string {
   const v = value.trim();
   if (!v) return "";
@@ -93,31 +80,22 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
       </div>
     </section>
     <section class="launcher-dock">
-      <div class="launcher-dock-apps">
-        <div class="launcher-head">
-          <span class="launcher-title">${BOOKMARK_SVG}${LBL_BOOKMARKS}</span>
-          <button type="button" class="launcher-head-add" id="bookmarksAddBtn" data-tip="${LBL_ADD}" aria-label="${LBL_ADD}">+</button>
-        </div>
-        <div class="launcher-grid-scroll apps-scroll">
-          <div class="launcher-grid apps-grid" id="bookmarksGrid"></div>
-        </div>
-      </div>
+      <div class="launcher-dock-apps" id="bookmarksPanel"></div>
       <div class="launcher-dock-local" id="localPanel"></div>
     </section>
   `;
 
   container.appendChild(sidebar);
 
-  const promptBookmark = mountBookmarkDialog(root);
   const promptApp = mountAppDialog(root);
   const confirmDelete = mountConfirmDialog(root);
   const folderOverlay = mountFolderOverlay(root);
   const askDelete = (name: string, trigger: HTMLElement) =>
     confirmDelete(LBL_DELETE_TITLE, LBL_DELETE_MSG(name), trigger);
 
+  mountBookmarksPanel(sidebar.querySelector("#bookmarksPanel")!, root);
   mountLocalPanel(sidebar.querySelector("#localPanel")!, root);
 
-  const bookmarksRef = { current: loadBookmarks() };
   const appsRef = { current: loadApps() };
 
   const appsGrid = mountAppLauncherGrid({
@@ -135,28 +113,11 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
     prompt: promptApp,
   });
 
-  const bookmarksGrid = mountBookmarkLauncherGrid({
-    gridEl: sidebar.querySelector("#bookmarksGrid")!,
-    addBtn: sidebar.querySelector<HTMLButtonElement>("#bookmarksAddBtn")!,
-    gridClass: "apps-grid",
-    capacity: dockLeftGridCapacity,
-    ref: bookmarksRef,
-    save: saveBookmarks,
-    updateLeaf: updateBookmark,
-    updateLeafInFolder: updateBookmarkInFolder,
-    folderOverlay,
-    dialogRoot: root,
-    confirmDelete: askDelete,
-    prompt: promptBookmark,
-  });
-
   window.addEventListener("orbita:ui-prefs", () => {
     appsGrid.normalizeOnPrefsChange();
-    bookmarksGrid.normalizeOnPrefsChange();
   });
 
   appsGrid.syncMissingIcons(appsGrid.repaint);
-  bookmarksGrid.syncMissingIcons(bookmarksGrid.repaint);
 }
 
 export function mountShell(root: HTMLElement) {
@@ -165,42 +126,28 @@ export function mountShell(root: HTMLElement) {
     <div class="bg bg-dark"></div>
     <div class="shell">
       <header class="shell-top">
-        <div class="shell-top-inner">
-          <div class="engines-wrap">
-            <div class="engine-indicator" id="indicator"></div>
-            <div class="engines" id="engines"></div>
-          </div>
-          <div class="search-row">
-            <div class="clock-block">
-              <div class="time" id="time"></div>
-              <div class="date" id="date"></div>
+        <div class="primary-mood-mount" id="primaryMoodMount"></div>
+        <div class="search-band">
+          <div class="search-band-center">
+            <div class="engines-wrap">
+              <div class="engine-indicator" id="indicator"></div>
+              <div class="engines" id="engines"></div>
             </div>
-            <form class="search-bar" id="searchForm">
-              <input type="text" id="searchInput" autofocus>
-              <button type="submit" class="search-btn">${SEARCH_SVG}</button>
-            </form>
-            <button type="button" class="v2ray-btn" id="v2rayBtn" data-tip="${LBL_V2RAY_TITLE}">${V2RAY_SVG}</button>
+            <div class="search-bar-line">
+              <div class="clock-block">
+                <div class="time" id="time"></div>
+                <div class="date" id="date"></div>
+              </div>
+              <form class="search-bar" id="searchForm">
+                <input type="text" id="searchInput" autofocus>
+                <button type="submit" class="search-btn">${SEARCH_SVG}</button>
+              </form>
+            </div>
           </div>
+          ${topToolkitHtml()}
         </div>
       </header>
       <main class="shell-body" id="shellBody"></main>
-    </div>
-    <div class="top-tray">
-      <div class="sys-stats" id="sysStats">
-        <div class="sys-stat-item sys-stat-fps">
-          <span class="sys-stat-label">FPS</span>
-          <span class="sys-stat-val" id="statFps">--</span>
-        </div>
-        <div class="sys-stat-item">
-          <span class="sys-stat-label">CPU</span>
-          <span class="sys-stat-val" id="statCpu">--</span>
-        </div>
-        <div class="sys-stat-item">
-          <span class="sys-stat-label">MEM</span>
-          <span class="sys-stat-val" id="statMem">--</span>
-        </div>
-      </div>
-      <div id="settingsMount"></div>
     </div>
   `;
 
@@ -211,7 +158,7 @@ export function mountShell(root: HTMLElement) {
   const input = root.querySelector<HTMLInputElement>("#searchInput")!;
 
   startClock(timeEl, dateEl);
-  mountStatsBar(root);
+  mountTopToolkit(root);
   renderEngines(enginesEl, indicator);
   input.placeholder = LBL_SEARCH_IN(getCurrentEngine().name);
 
@@ -241,10 +188,25 @@ export function mountShell(root: HTMLElement) {
     if (url) await openUrl(url);
   });
 
-  root.querySelector("#v2rayBtn")!.addEventListener("click", () => {
-    launchV2ray().catch(() => alert(LBL_V2RAY_FAIL));
-  });
+  const body = root.querySelector<HTMLElement>("#shellBody")!;
 
-  mountSettingsButton(root);
-  mountSidebar(root.querySelector<HTMLElement>("#shellBody")!, root);
+  mountSidebar(body, root);
+
+  const today = document.createElement("section");
+  today.className = "today-section";
+  today.id = "todayZone";
+  body.appendChild(today);
+
+  const work = document.createElement("section");
+  work.className = "work-section";
+  work.id = "workZone";
+  work.innerHTML = `
+    <div class="launcher-head">
+      <span class="launcher-title">${WORK_SVG}??</span>
+    </div>
+    <div class="work-panel">
+      <p class="work-placeholder">???</p>
+    </div>
+  `;
+  body.appendChild(work);
 }

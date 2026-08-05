@@ -1,3 +1,4 @@
+use serde::Deserialize;
 use std::process::Command;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -6,15 +7,23 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Manager, WindowEvent};
 use tauri_plugin_dialog::DialogExt;
 
+mod agent;
 mod ai;
 mod app_icon;
+mod bkeasy;
+mod beancount;
+mod capture;
 mod data;
 mod dida;
 mod everything;
 mod favicon;
 mod file_type_icon;
+mod garmin;
 mod hwmon;
+mod journal;
 mod obsidian;
+mod paths;
+mod v2ray;
 mod window_shell;
 mod zotero;
 
@@ -32,6 +41,26 @@ fn programs_menu_path() -> Result<String, String> {
     {
         std::env::var("HOME").map_err(|e| e.to_string())
     }
+}
+
+#[tauri::command]
+fn capture_screen() -> Result<capture::CaptureScreenResult, String> {
+    capture::capture_primary_screen()
+}
+
+#[tauri::command]
+fn capture_copy_clipboard(b64: String) -> Result<(), String> {
+    capture::copy_png_to_clipboard(&b64)
+}
+
+#[tauri::command]
+fn capture_save_file(app: tauri::AppHandle, b64: String) -> Result<String, String> {
+    capture::save_png_file(&app, &b64)
+}
+
+#[tauri::command]
+fn capture_crop(b64: String, x: u32, y: u32, w: u32, h: u32) -> Result<String, String> {
+    capture::crop_png_base64(&b64, x, y, w, h)
 }
 
 #[tauri::command]
@@ -81,10 +110,7 @@ async fn pick_local_folder(app: tauri::AppHandle) -> Result<Option<String>, Stri
 
 #[tauri::command]
 fn open_local_path(app: tauri::AppHandle, path: String) -> Result<(), String> {
-    use tauri_plugin_opener::OpenerExt;
-    app.opener()
-        .open_path(path, None::<&str>)
-        .map_err(|e| format!("打开失败: {e}"))
+    paths::open_local_path(&app, &path)
 }
 
 #[tauri::command]
@@ -145,26 +171,7 @@ fn open_recycle_bin() -> Result<(), String> {
 
 #[tauri::command]
 fn reveal_path_in_explorer(path: String) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::path::Path;
-        let p = Path::new(&path);
-        if !p.exists() {
-            return Err(format!("路径不存在: {path}"));
-        }
-        let status = if p.is_dir() {
-            Command::new("explorer").arg(&path).status()
-        } else {
-            Command::new("explorer").args(["/select,", &path]).status()
-        };
-        status.map_err(|e| format!("打开资源管理器失败: {e}"))?;
-        Ok(())
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = path;
-        Err("仅支持 Windows".into())
-    }
+    paths::reveal_path_in_explorer(&path)
 }
 
 #[tauri::command]
@@ -230,12 +237,17 @@ fn launch_app(path: String) -> Result<(), String> {
 
 #[tauri::command]
 fn launch_v2ray(app: tauri::AppHandle) -> Result<(), String> {
-    let settings = data::read_settings(&app)?;
-    let path = settings.integrations.v2ray.exe_path;
-    Command::new(&path)
-        .spawn()
-        .map_err(|e| format!("启动失败: {e}"))?;
-    Ok(())
+    v2ray::launch(&app)
+}
+
+#[tauri::command]
+fn is_v2ray_running(app: tauri::AppHandle) -> Result<bool, String> {
+    v2ray::is_running(&app)
+}
+
+#[tauri::command]
+fn stop_v2ray(app: tauri::AppHandle) -> Result<(), String> {
+    v2ray::stop(&app)
 }
 
 #[tauri::command]
@@ -420,15 +432,43 @@ fn migrate_legacy_caches(app: tauri::AppHandle) -> Result<u32, String> {
 
 #[tauri::command]
 async fn ai_chat_stream(
+    app: tauri::AppHandle,
     request: ai::AiChatRequest,
     on_event: tauri::ipc::Channel<ai::AiStreamEvent>,
 ) -> Result<(), String> {
-    ai::chat_stream(request, on_event).await
+    ai::chat_stream(app, request, on_event).await
 }
 
 #[tauri::command]
 fn ai_chat_abort(request_id: String) {
     ai::abort(request_id);
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AgentToolConfirmRequest {
+    confirm_id: String,
+    args: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AgentToolRejectRequest {
+    confirm_id: String,
+    reason: Option<String>,
+}
+
+#[tauri::command]
+fn agent_tool_confirm(req: AgentToolConfirmRequest) -> Result<(), String> {
+    agent::resolve_tool_confirm(&req.confirm_id, Ok(req.args))
+}
+
+#[tauri::command]
+fn agent_tool_reject(req: AgentToolRejectRequest) -> Result<(), String> {
+    agent::resolve_tool_confirm(
+        &req.confirm_id,
+        Err(req.reason.unwrap_or_else(|| "用户已取消".into())),
+    )
 }
 
 #[tauri::command]
@@ -526,6 +566,57 @@ async fn dida_delete_task(
 #[tauri::command]
 fn repair_window(window: tauri::WebviewWindow, reload: bool) -> Result<(), String> {
     window_shell::repair_window(&window, reload)
+}
+
+#[tauri::command]
+fn journal_list(
+    app: tauri::AppHandle,
+    req: journal::JournalListRequest,
+) -> Result<journal::JournalListResponse, String> {
+    journal::journal_list(&app, req)
+}
+
+#[tauri::command]
+fn journal_upsert(
+    app: tauri::AppHandle,
+    req: journal::JournalUpsertRequest,
+) -> Result<journal::JournalUpsertResponse, String> {
+    journal::journal_upsert(&app, req)
+}
+
+#[tauri::command]
+fn journal_delete(app: tauri::AppHandle, req: journal::JournalDeleteRequest) -> Result<(), String> {
+    journal::journal_delete(&app, req)
+}
+
+#[tauri::command]
+fn bkeasy_summary(app: tauri::AppHandle) -> Result<bkeasy::BkeasySummary, String> {
+    bkeasy::bkeasy_summary(&app)
+}
+
+#[tauri::command]
+fn garmin_status(app: tauri::AppHandle) -> Result<garmin::GarminStatus, String> {
+    garmin::garmin_status(&app)
+}
+
+#[tauri::command]
+async fn garmin_sync(
+    app: tauri::AppHandle,
+    req: garmin::GarminSyncRequest,
+) -> Result<garmin::GarminSyncResponse, String> {
+    tauri::async_runtime::spawn_blocking(move || garmin::garmin_sync(&app, req))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn garmin_login(
+    app: tauri::AppHandle,
+    req: garmin::GarminLoginRequest,
+) -> Result<garmin::GarminLoginResponse, String> {
+    tauri::async_runtime::spawn_blocking(move || garmin::garmin_login(&app, req))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 fn show_main_window(app: &tauri::AppHandle) {
@@ -636,6 +727,8 @@ pub fn run() {
             cache_favicon,
             delete_favicon,
             launch_v2ray,
+            is_v2ray_running,
+            stop_v2ray,
             launch_app,
             list_zotero_items,
             list_obsidian_notes,
@@ -657,6 +750,8 @@ pub fn run() {
             migrate_legacy_caches,
             ai_chat_stream,
             ai_chat_abort,
+            agent_tool_confirm,
+            agent_tool_reject,
             get_system_stats,
             dida_auth_status,
             dida_begin_oauth,
@@ -669,7 +764,18 @@ pub fn run() {
             dida_update_task,
             dida_complete_task,
             dida_delete_task,
-            repair_window
+            repair_window,
+            journal_list,
+            journal_upsert,
+            journal_delete,
+            bkeasy_summary,
+            garmin_status,
+            garmin_sync,
+            garmin_login,
+            capture_screen,
+            capture_copy_clipboard,
+            capture_save_file,
+            capture_crop
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")

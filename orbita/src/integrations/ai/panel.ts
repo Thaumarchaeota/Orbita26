@@ -1,3 +1,4 @@
+import { mountContextMenu } from "../../ui/context-menu";
 import { closePopover, isPopoverOpen, openPopover, type MotionTrigger } from "../../ui/motion";
 import { escAttr, escHtml } from "../../core/html";
 import { getAiConfig, saveAiConfig } from "./config";
@@ -16,8 +17,10 @@ import {
 } from "./conversations";
 import { AI_SVG, BRAIN_SVG, CHEVRON_SVG, WEB_SVG } from "./icons";
 import { mountTextDialog } from "./prompt-dialog";
+import { confirmAgentTool } from "./tool-confirm";
 import { mountConfirmDialog } from "../shell/dialog";
 import { EDIT_SVG } from "../shell/tiles";
+import { renderMarkdown } from "./render-markdown";
 
 const PROMPT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>`;
 const DELETE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
@@ -27,6 +30,21 @@ const CONV_ANIM_MS = 300;
 const CONV_CLOSE_MS = 180;
 
 const MODEL_INLINE_MAX = 24;
+
+const THINKING_HTML = `<div class="ai-msg-thinking"><span class="ai-thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="ai-thinking-label">思考中</span></div>`;
+
+function formatPlainText(text: string) {
+  return escHtml(text).replace(/\n/g, "<br>");
+}
+
+function formatAssistantHtml(content: string) {
+  return `<div class="ai-md">${renderMarkdown(content)}</div>`;
+}
+
+function messageBubbleHtml(m: ChatMessage, index: number) {
+  const body = m.role === "user" ? formatPlainText(m.content) : formatAssistantHtml(m.content);
+  return `<div class="ai-msg ai-msg-${m.role}" data-index="${index}"><div class="ai-msg-bubble">${body}</div></div>`;
+}
 
 function modelBaseName(model: string): string {
   return model.includes("/") ? model.split("/").pop()! : model;
@@ -92,40 +110,168 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
 
   const promptDialog = mountTextDialog(dialogRoot);
   const confirmDelete = mountConfirmDialog(dialogRoot);
+  const msgCtxMenu = mountContextMenu(new AbortController().signal);
   let conversation: Conversation | null = null;
   let requestId: string | null = null;
   let streaming = false;
+  let activeStreamGen = 0;
   let modelMenuEntryId: string | null = null;
 
   function escapeHtml(text: string) {
-    return escHtml(text).replace(/\n/g, "<br>");
+    return formatPlainText(text);
   }
 
   let streamingBubble: HTMLElement | null = null;
+  let streamingTextEl: HTMLElement | null = null;
+  let streamingToolsEl: HTMLElement | null = null;
+  let toolStepCounter = 0;
+  let lastPendingStepId = 0;
+  let streamHasText = false;
+  let messagesScrollHeight = 0;
 
-  function renderMessages() {
-    if (!conversation) return;
-    streamingBubble = null;
-    messagesEl.innerHTML = conversation.messages
-      .map(
-        (m) =>
-          `<div class="ai-msg ai-msg-${m.role}"><div class="ai-msg-bubble">${escapeHtml(m.content)}</div></div>`,
-      )
-      .join("");
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+  function isMessagesPinned() {
+    return messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 96;
   }
 
-  function updateStreamingBubble(content: string) {
+  function scrollMessagesIfPinned() {
+    if (!isMessagesPinned()) return;
+    const next = messagesEl.scrollHeight;
+    const growth = next - messagesScrollHeight;
+    if (growth > 0) messagesEl.scrollTop += growth;
+    messagesScrollHeight = next;
+  }
+
+  function syncMessagesScrollHeight() {
+    messagesScrollHeight = messagesEl.scrollHeight;
+  }
+
+  function prepStreamingBubble(thinking = true) {
+    ensureStreamingBubble();
+    if (!streamingBubble) return;
+    if (!streamingBubble.querySelector(".ai-msg-text")) {
+      streamingBubble.innerHTML = `<div class="ai-msg-text${thinking ? " is-thinking" : " is-stream-plain"}">${thinking ? THINKING_HTML : ""}</div>`;
+      streamingToolsEl = null;
+      streamingTextEl = streamingBubble.querySelector<HTMLElement>(".ai-msg-text")!;
+      streamHasText = false;
+    }
+  }
+
+  function ensureToolStepsEl() {
+    ensureStreamingBubble();
+    if (!streamingBubble) return null;
+    if (streamingToolsEl) return streamingToolsEl;
+    streamingToolsEl = streamingBubble.querySelector<HTMLElement>(".ai-tool-steps");
+    if (!streamingToolsEl) {
+      streamingToolsEl = document.createElement("div");
+      streamingToolsEl.className = "ai-tool-steps";
+      const textEl = streamingBubble.querySelector(".ai-msg-text");
+      if (textEl) streamingBubble.insertBefore(streamingToolsEl, textEl);
+      else streamingBubble.appendChild(streamingToolsEl);
+    }
+    return streamingToolsEl;
+  }
+
+  function paintStreamingPlainText(content: string) {
+    prepStreamingBubble(false);
+    if (!streamingTextEl) return;
+    if (!streamHasText) {
+      streamingTextEl.classList.remove("is-thinking");
+      streamingTextEl.classList.add("is-stream-plain");
+      streamHasText = true;
+    }
+    streamingTextEl.textContent = content;
+    scrollMessagesIfPinned();
+  }
+
+  function pushStreamingChunk(_delta: string, content: string) {
+    paintStreamingPlainText(content);
+  }
+
+  function resetStreamingRefs() {
+    streamingBubble = null;
+    streamingTextEl = null;
+    streamingToolsEl = null;
+    streamHasText = false;
+  }
+
+  function ensureStreamingBubble() {
     if (!streamingBubble) {
       const bubbles = messagesEl.querySelectorAll<HTMLElement>(".ai-msg-bubble");
       streamingBubble = bubbles[bubbles.length - 1] ?? null;
     }
-    if (!streamingBubble) {
-      renderMessages();
+    if (!streamingBubble) return;
+    streamingToolsEl = streamingBubble.querySelector<HTMLElement>(".ai-tool-steps") ?? null;
+    streamingTextEl = streamingBubble.querySelector<HTMLElement>(".ai-msg-text");
+  }
+
+  function renderMessages() {
+    if (!conversation) return;
+    resetStreamingRefs();
+    messagesEl.innerHTML = conversation.messages.map((m, i) => messageBubbleHtml(m, i)).join("");
+    syncMessagesScrollHeight();
+    if (isMessagesPinned()) messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function appendToolStep(name: string, label: string, pending = false) {
+    if (!streamHasText) prepStreamingBubble(true);
+    const toolsEl = ensureToolStepsEl();
+    if (!toolsEl) return;
+    const id = ++toolStepCounter;
+    lastPendingStepId = id;
+    const row = document.createElement("div");
+    row.className = "ai-tool-step is-pending";
+    row.dataset.stepId = String(id);
+    row.dataset.toolName = name;
+    const badge = pending ? "待确认" : "执行中";
+    row.innerHTML = `<span class="ai-tool-step-badge">${badge}</span><span class="ai-tool-step-text">${escapeHtml(label)}</span>`;
+    toolsEl.appendChild(row);
+    scrollMessagesIfPinned();
+  }
+
+  function promotePendingToolStep(name: string, label: string) {
+    ensureStreamingBubble();
+    if (!streamingToolsEl) return;
+    const row = streamingToolsEl.querySelector<HTMLElement>(`[data-tool-name="${name}"].is-pending`);
+    if (!row) return;
+    const badge = row.querySelector(".ai-tool-step-badge");
+    if (badge) badge.textContent = "执行中";
+    const text = row.querySelector(".ai-tool-step-text");
+    if (text) text.textContent = label;
+    lastPendingStepId = Number(row.dataset.stepId);
+    scrollMessagesIfPinned();
+  }
+
+  function appendOrStartToolStep(name: string, label: string) {
+    ensureStreamingBubble();
+    if (!streamingToolsEl) return;
+    const row = streamingToolsEl.querySelector<HTMLElement>(`[data-tool-name="${name}"].is-pending`);
+    if (row) {
+      promotePendingToolStep(name, label);
       return;
     }
-    streamingBubble.innerHTML = escapeHtml(content);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    appendToolStep(name, label);
+  }
+
+  function finishToolStep(name: string, ok: boolean, summary: string) {
+    ensureStreamingBubble();
+    if (!streamingToolsEl) return;
+    const row =
+      streamingToolsEl.querySelector<HTMLElement>(`[data-step-id="${lastPendingStepId}"]`) ??
+      streamingToolsEl.querySelector<HTMLElement>(".ai-tool-step.is-pending:last-child");
+    if (row) {
+      row.classList.remove("is-pending");
+      row.classList.toggle("is-done", ok);
+      row.classList.toggle("is-error", !ok);
+      const badge = ok ? "完成" : "失败";
+      row.innerHTML = `<span class="ai-tool-step-badge">${badge}</span><span class="ai-tool-step-text">${escapeHtml(summary)}</span>`;
+    }
+    if (ok && name.startsWith("ticktick_")) {
+      window.dispatchEvent(new CustomEvent("orbita:ticktick-refresh"));
+    }
+    if (ok && (name.startsWith("journal_") || name === "garmin_sync")) {
+      window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+    }
+    scrollMessagesIfPinned();
   }
 
   let convAnimating = false;
@@ -363,6 +509,26 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     sendBtn.classList.toggle("is-stop", active);
   }
 
+  async function stopStreaming() {
+    if (!streaming || !requestId) return;
+    activeStreamGen++;
+    const id = requestId;
+    requestId = null;
+    setStreaming(false);
+    void abortChat(id);
+    resetStreamingRefs();
+    if (conversation) {
+      const last = conversation.messages[conversation.messages.length - 1];
+      if (last?.role === "assistant" && !last.content.trim()) {
+        conversation.messages.pop();
+      } else {
+        await persistConversation();
+      }
+    }
+    renderMessages();
+    input.focus();
+  }
+
   function buildApiMessages(conv: Conversation): ChatMessage[] {
     const config = getAiConfig();
     const system = conv.conversationPrompt.trim() || config.defaultPrompt.trim();
@@ -390,6 +556,28 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     await paintConvMenu();
   }
 
+  async function copyMessageAt(index: number) {
+    if (!conversation) return;
+    const text = conversation.messages[index]?.content;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function deleteMessageAt(index: number) {
+    if (!conversation || streaming) return;
+    if (index < 0 || index >= conversation.messages.length) return;
+    conversation.messages.splice(index, 1);
+    if (conversation.messages.length === 0) {
+      conversation.title = await uniqueConversationTitle("新对话");
+    }
+    await persistConversation();
+    renderMessages();
+  }
+
   async function sendMessage(text: string) {
     if (!conversation) return;
     const trimmed = text.trim();
@@ -407,6 +595,8 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     const assistant: ChatMessage = { role: "assistant", content: "" };
     conversation.messages.push(assistant);
     renderMessages();
+    prepStreamingBubble();
+    syncMessagesScrollHeight();
 
     const config = getAiConfig();
     const entry = config.entries.find((e) => e.id === conversation!.activeEntryId) ?? config.entries[0];
@@ -418,6 +608,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     }
 
     requestId = crypto.randomUUID();
+    const gen = ++activeStreamGen;
     setStreaming(true);
 
     await chatStream(
@@ -430,20 +621,48 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
       conversation.activeModel,
       (event) => {
         if (event.type === "chunk") {
-          assistant.content += event.content;
-          updateStreamingBubble(assistant.content);
+          const delta = event.content;
+          assistant.content += delta;
+          pushStreamingChunk(delta, assistant.content);
+        } else if (event.type === "toolConfirm") {
+          appendToolStep(event.name, event.label, true);
+          void (async () => {
+            try {
+              const ok = await confirmAgentTool(dialogRoot, {
+                confirmId: event.confirmId,
+                confirm_id: event.confirm_id,
+                name: event.name,
+                label: event.label,
+                args: event.args,
+              });
+              if (!ok) {
+                finishToolStep(event.name, false, "已取消");
+              } else {
+                promotePendingToolStep(event.name, event.label);
+              }
+            } catch (e) {
+              finishToolStep(event.name, false, String(e));
+            }
+          })();
+        } else if (event.type === "toolStart") {
+          appendOrStartToolStep(event.name, event.label);
+        } else if (event.type === "toolDone") {
+          finishToolStep(event.name, event.ok, event.summary);
         } else if (event.type === "error") {
           assistant.content = event.message;
-          updateStreamingBubble(assistant.content);
+          paintStreamingPlainText(assistant.content);
         }
       },
     );
+
+    if (gen !== activeStreamGen) return;
 
     setStreaming(false);
     requestId = null;
     if (!assistant.content) {
       conversation.messages.pop();
     }
+    resetStreamingRefs();
     await persistConversation();
     renderMessages();
     input.focus();
@@ -553,10 +772,31 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     }
   });
 
+  messagesEl.addEventListener("contextmenu", (e) => {
+    const msgEl = (e.target as HTMLElement).closest<HTMLElement>(".ai-msg");
+    if (!msgEl || !messagesEl.contains(msgEl)) return;
+    const index = Number(msgEl.dataset.index);
+    if (!conversation || Number.isNaN(index) || index < 0 || index >= conversation.messages.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    msgCtxMenu.show(
+      e.clientX,
+      e.clientY,
+      [
+        { action: "copy", label: "复制" },
+        { action: "delete", label: "删除", danger: true, confirm: true },
+      ],
+      (action) => {
+        if (action === "copy") void copyMessageAt(index);
+        if (action === "delete") void deleteMessageAt(index);
+      },
+    );
+  });
+
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     if (streaming && requestId) {
-      void abortChat(requestId);
+      void stopStreaming();
       return;
     }
     void sendMessage(input.value);

@@ -5,11 +5,6 @@ export function topGridCapacity(): number {
   return g.cols * g.rows;
 }
 
-export function dockLeftGridCapacity(): number {
-  const g = getSettings().ui.dockLeftGrid;
-  return g.cols * g.rows;
-}
-
 export function buildGridSlots<T extends { id: string; slot?: number }>(
   items: T[],
   capacity: number,

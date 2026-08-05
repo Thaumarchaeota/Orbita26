@@ -9,6 +9,16 @@ export type ChatMessage = {
 
 export type AiStreamEvent =
   | { type: "chunk"; content: string }
+  | { type: "toolStart"; name: string; label: string }
+  | {
+      type: "toolConfirm";
+      confirmId?: string;
+      confirm_id?: string;
+      name: string;
+      label: string;
+      args: Record<string, unknown>;
+    }
+  | { type: "toolDone"; name: string; ok: boolean; summary: string }
   | { type: "done" }
   | { type: "error"; message: string };
 

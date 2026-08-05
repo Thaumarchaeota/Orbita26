@@ -18,6 +18,20 @@ export async function launchV2ray(): Promise<void> {
   window.location.href = "v2rayn://open";
 }
 
+export async function isV2rayRunning(): Promise<boolean> {
+  if (isTauri()) {
+    return await invoke<boolean>("is_v2ray_running");
+  }
+  return false;
+}
+
+export async function stopV2ray(): Promise<void> {
+  if (isTauri()) {
+    await invoke("stop_v2ray");
+    return;
+  }
+}
+
 export async function pickAppFile(): Promise<string | null> {
   if (isTauri()) {
     return await invoke<string | null>("pick_app_file");

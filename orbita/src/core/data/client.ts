@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { normalizeFontPrefs } from "./fonts";
-import { defaultAiConfig, defaultIntegrations, defaultUiPrefs, DEFAULT_DOCK_LEFT_GRID, DEFAULT_TOP_GRID } from "./defaults";
+import { migrateLifeRingGoalsFromSlots, normalizeLifeRingGoals } from "./life-ring-goals";
+import { normalizeLifeRingSlots } from "./life-ring-metrics";
+import { defaultAiConfig, defaultIntegrations, defaultUiPrefs, DEFAULT_LIFE_RINGS, DEFAULT_TOP_GRID } from "./defaults";
 import type {
   AppEntry,
   AppItem,
@@ -13,7 +15,7 @@ import type {
   UiPrefs,
 } from "./types";
 
-export { DEFAULT_GRID_GAP, DEFAULT_TOP_GRID, DEFAULT_DOCK_LEFT_GRID, defaultAiConfig, defaultIntegrations, defaultUiPrefs } from "./defaults";
+export { DEFAULT_GRID_GAP, DEFAULT_TOP_GRID, DEFAULT_LIFE_RINGS, defaultAiConfig, defaultIntegrations, defaultUiPrefs } from "./defaults";
 
 export function isTauri() {
   return "__TAURI_INTERNALS__" in window;
@@ -134,6 +136,30 @@ function clampLauncherTileScale(value: unknown): number {
   return Math.max(70, Math.min(130, n));
 }
 
+function syncCredentials(settings: AppSettings): AppSettings {
+  const cred = settings.integrations.credentials;
+  const tick = settings.integrations.ticktick;
+  if (!cred.ticktick.clientId && tick.clientId) cred.ticktick.clientId = tick.clientId;
+  if (!cred.ticktick.clientSecret && tick.clientSecret) cred.ticktick.clientSecret = tick.clientSecret;
+  if (!cred.ticktick.accessToken && tick.accessToken) cred.ticktick.accessToken = tick.accessToken;
+  for (const entry of settings.ai.entries) {
+    if (!cred.ai.entries[entry.id] && entry.apiKey) cred.ai.entries[entry.id] = entry.apiKey;
+    if (cred.ai.entries[entry.id]) entry.apiKey = cred.ai.entries[entry.id];
+  }
+  tick.clientId = cred.ticktick.clientId || tick.clientId;
+  tick.clientSecret = cred.ticktick.clientSecret || tick.clientSecret;
+  tick.accessToken = cred.ticktick.accessToken || tick.accessToken;
+  return settings;
+}
+
+function normalizeLifeRings(raw: Partial<AppSettings["ui"]["lifeRings"]> | undefined) {
+  return {
+    sleep: typeof raw?.sleep === "string" && raw.sleep ? raw.sleep : DEFAULT_LIFE_RINGS.sleep,
+    ring2: typeof raw?.ring2 === "string" && raw.ring2 ? raw.ring2 : DEFAULT_LIFE_RINGS.ring2,
+    ring3: typeof raw?.ring3 === "string" && raw.ring3 ? raw.ring3 : DEFAULT_LIFE_RINGS.ring3,
+  };
+}
+
 function clampBlockOpacity(value: unknown): number {
   const n = typeof value === "number" && Number.isFinite(value) ? value : 12;
   return Math.max(0, Math.min(100, Math.round(n)));
@@ -161,6 +187,7 @@ type LegacyUiPrefs = UiPrefs & {
   bookmarksGrid?: Partial<GridPrefs>;
   appsGrid?: Partial<GridPrefs>;
   launcherTileScale?: number;
+  dockLeftGrid?: Partial<GridPrefs>;
 };
 
 function ensureTopDockSemantics(top: GridPrefs, dock: GridPrefs): { top: GridPrefs; dock: GridPrefs } {
@@ -173,7 +200,7 @@ function fixCorruptedGridPrefs(top: GridPrefs, dock: GridPrefs): { top: GridPref
   let d = dock;
   if (t.cols <= 4 && d.cols >= 3 && t.cols >= d.cols) {
     if (t.cols < DEFAULT_TOP_GRID.cols) t = { ...t, cols: DEFAULT_TOP_GRID.cols };
-    if (d.cols > DEFAULT_DOCK_LEFT_GRID.cols) d = { ...d, cols: DEFAULT_DOCK_LEFT_GRID.cols };
+    if (d.cols > 2) d = { ...d, cols: 2 };
   }
   return ensureTopDockSemantics(t, d);
 }
@@ -187,26 +214,28 @@ function migrateLauncherGridPrefs(raw: Partial<AppSettings>): Partial<AppSetting
   const ag = legacy.appsGrid;
   if (!top || !dock) {
     const bgCols = typeof bg?.cols === "number" ? bg.cols : DEFAULT_TOP_GRID.cols;
-    const agCols = typeof ag?.cols === "number" ? ag.cols : DEFAULT_DOCK_LEFT_GRID.cols;
+    const agCols = typeof ag?.cols === "number" ? ag.cols : 2;
     if ((raw.version ?? 0) >= 4) {
       top = top ?? ag ?? DEFAULT_TOP_GRID;
-      dock = dock ?? bg ?? DEFAULT_DOCK_LEFT_GRID;
+      dock = dock ?? bg ?? { cols: 2, rows: 5, tileScale: 100, colGap: 8, rowGap: 8 };
     } else if (bgCols > agCols) {
       top = top ?? bg ?? DEFAULT_TOP_GRID;
-      dock = dock ?? ag ?? DEFAULT_DOCK_LEFT_GRID;
+      dock = dock ?? ag ?? { cols: 2, rows: 5, tileScale: 100, colGap: 8, rowGap: 8 };
     } else {
       top = top ?? ag ?? DEFAULT_TOP_GRID;
-      dock = dock ?? bg ?? DEFAULT_DOCK_LEFT_GRID;
+      dock = dock ?? bg ?? { cols: 2, rows: 5, tileScale: 100, colGap: 8, rowGap: 8 };
     }
   }
-  const fixed = fixCorruptedGridPrefs(top, dock);
+  const dockFallback: GridPrefs = { cols: 2, rows: 5, tileScale: 100, colGap: 8, rowGap: 8 };
+  const topNorm = normalizeGridLayoutPrefs(top, DEFAULT_TOP_GRID, 3, 12, 1, 8);
+  const dockNorm = normalizeGridLayoutPrefs(dock, dockFallback, 1, 8, 1, 8);
+  const fixed = fixCorruptedGridPrefs(topNorm, dockNorm);
   return {
     ...raw,
     version: 5,
     ui: {
       ...legacy,
       topGrid: fixed.top,
-      dockLeftGrid: fixed.dock,
     },
   };
 }
@@ -214,50 +243,63 @@ function migrateLauncherGridPrefs(raw: Partial<AppSettings>): Partial<AppSetting
 function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?: string }): AppSettings {
   const migrated = migrateLauncherGridPrefs(raw);
   const base = defaultSettings(migrated.dataDir ?? raw.dataDir);
-  const uiRaw = (migrated.ui ?? raw.ui) as LegacyUiPrefs | undefined;
+  const uiRaw = (migrated.ui ?? raw.ui) as LegacyUiPrefs & { dockLeftGrid?: GridPrefs } | undefined;
   const legacyScale = clampLauncherTileScale(uiRaw?.launcherTileScale);
   const topFallback: GridPrefs = { ...DEFAULT_TOP_GRID, tileScale: legacyScale };
-  const dockFallback: GridPrefs = { ...DEFAULT_DOCK_LEFT_GRID, tileScale: legacyScale };
-  const topDock = fixCorruptedGridPrefs(
-    normalizeGridLayoutPrefs(uiRaw?.topGrid, topFallback, 3, 12, 1, 8),
-    normalizeGridLayoutPrefs(uiRaw?.dockLeftGrid, dockFallback, 1, 4, 1, 10),
-  );
+  const topGrid = normalizeGridLayoutPrefs(uiRaw?.topGrid, topFallback, 3, 12, 1, 8);
   const ui: UiPrefs = {
     ...base.ui,
-    ...uiRaw,
+    engineId: typeof uiRaw?.engineId === "string" ? uiRaw.engineId : base.ui.engineId,
     localTab:
       uiRaw?.localTab === "literature" || uiRaw?.localTab === "note" || uiRaw?.localTab === "file"
         ? uiRaw.localTab
         : base.ui.localTab,
     activeConversationId: uiRaw?.activeConversationId ?? null,
     blockOpacity: clampBlockOpacity(uiRaw?.blockOpacity),
-    topGrid: topDock.top,
-    dockLeftGrid: topDock.dock,
+    topGrid,
+    lifeRings: normalizeLifeRings(uiRaw?.lifeRings),
+    lifeRingSlots: normalizeLifeRingSlots(uiRaw?.lifeRingSlots),
+    lifeRingGoals: uiRaw?.lifeRingGoals
+      ? normalizeLifeRingGoals(uiRaw.lifeRingGoals)
+      : migrateLifeRingGoalsFromSlots(uiRaw?.lifeRingSlots),
     fonts: normalizeFontPrefs(uiRaw?.fonts),
   };
-  return {
-    version: Math.max(typeof migrated.version === "number" ? migrated.version : 0, 5),
+  const intRaw = (migrated.integrations ?? raw.integrations ?? {}) as Partial<AppSettings["integrations"]>;
+  const credRaw = intRaw.credentials ?? base.integrations.credentials;
+  const settings: AppSettings = {
+    version: Math.max(typeof migrated.version === "number" ? migrated.version : 0, 6),
     theme: normalizeTheme(migrated.theme ?? raw.theme),
     dataDir: migrated.dataDir ?? raw.dataDir,
     ui,
     integrations: {
-      v2ray: { ...base.integrations.v2ray, ...(raw.integrations?.v2ray ?? {}) },
-      zotero: { ...base.integrations.zotero, ...(raw.integrations?.zotero ?? {}) },
-      obsidian: { ...base.integrations.obsidian, ...(raw.integrations?.obsidian ?? {}) },
-      everything: { ...base.integrations.everything, ...(raw.integrations?.everything ?? {}) },
-      cursor: { ...base.integrations.cursor, ...(raw.integrations?.cursor ?? {}) },
+      v2ray: { ...base.integrations.v2ray, ...(intRaw.v2ray ?? {}) },
+      zotero: { ...base.integrations.zotero, ...(intRaw.zotero ?? {}) },
+      obsidian: { ...base.integrations.obsidian, ...(intRaw.obsidian ?? {}) },
+      everything: { ...base.integrations.everything, ...(intRaw.everything ?? {}) },
+      cursor: { ...base.integrations.cursor, ...(intRaw.cursor ?? {}) },
+      journal: { ...base.integrations.journal, ...(intRaw.journal ?? {}) },
+      bkeasy: { ...base.integrations.bkeasy, ...(intRaw.bkeasy ?? {}) },
+      garmin: { ...base.integrations.garmin, ...(intRaw.garmin ?? {}) },
       ticktick: {
         ...base.integrations.ticktick,
-        ...(raw.integrations?.ticktick ?? {}),
-        clientId: raw.integrations?.ticktick?.clientId?.trim() ?? "",
-        clientSecret: raw.integrations?.ticktick?.clientSecret?.trim() ?? "",
-        redirectUri:
-          raw.integrations?.ticktick?.redirectUri?.trim() ||
-          base.integrations.ticktick.redirectUri,
-        accessToken: raw.integrations?.ticktick?.accessToken ?? "",
-        defaultProjectId:
-          raw.integrations?.ticktick?.defaultProjectId?.trim() ||
-          base.integrations.ticktick.defaultProjectId,
+        ...(intRaw.ticktick ?? {}),
+        clientId: intRaw.ticktick?.clientId?.trim() ?? "",
+        clientSecret: intRaw.ticktick?.clientSecret?.trim() ?? "",
+        redirectUri: intRaw.ticktick?.redirectUri?.trim() || base.integrations.ticktick.redirectUri,
+        accessToken: intRaw.ticktick?.accessToken ?? "",
+        defaultProjectId: intRaw.ticktick?.defaultProjectId?.trim() || base.integrations.ticktick.defaultProjectId,
+      },
+      credentials: {
+        garmin: {
+          email: credRaw.garmin?.email?.trim() ?? "",
+          password: credRaw.garmin?.password ?? "",
+        },
+        ticktick: {
+          clientId: credRaw.ticktick?.clientId?.trim() ?? intRaw.ticktick?.clientId?.trim() ?? "",
+          clientSecret: credRaw.ticktick?.clientSecret?.trim() ?? intRaw.ticktick?.clientSecret?.trim() ?? "",
+          accessToken: credRaw.ticktick?.accessToken ?? intRaw.ticktick?.accessToken ?? "",
+        },
+        ai: { entries: { ...credRaw.ai?.entries } },
       },
     },
     ai: {
@@ -266,13 +308,14 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
       entries: raw.ai?.entries?.length ? raw.ai.entries : base.ai.entries,
     },
   };
+  return syncCredentials(settings);
 }
 
 export async function readSettings(): Promise<AppSettings> {
   if (isTauri()) {
     const raw = await invoke<AppSettings>("read_settings");
     const next = normalizeSettings(raw);
-    if ((raw.version ?? 0) < 5) await writeSettings(next);
+    if ((raw.version ?? 0) < 6) await writeSettings(next);
     return next;
   }
   const bootstrap = readWebJson<{ dataDir: string }>("bootstrap", { dataDir: "orbita-data" });
@@ -288,13 +331,13 @@ export async function readSettings(): Promise<AppSettings> {
     dataDir: raw.dataDir ?? bootstrap.dataDir,
     theme: raw.theme ?? "light",
   });
-  if ((raw.version ?? 0) < 5) writeWebJson("settings.json", next);
+  if ((raw.version ?? 0) < 6) writeWebJson("settings.json", next);
   return next;
 }
 
 export async function writeSettings(settings: AppSettings): Promise<void> {
   const next = normalizeSettings(settings);
-  next.version = Math.max(next.version, 5);
+  next.version = Math.max(next.version, 6);
   if (isTauri()) {
     await invoke("write_settings", { settings: next });
     return;

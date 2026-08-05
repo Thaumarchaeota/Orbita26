@@ -119,6 +119,10 @@ pub struct FontPrefs {
     pub ai: String,
     #[serde(default = "default_font_clock")]
     pub clock: String,
+    #[serde(default = "default_font_life_ring")]
+    pub life_ring: String,
+    #[serde(default = "default_font_life_ring_sub")]
+    pub life_ring_sub: String,
 }
 
 fn default_font_base() -> String {
@@ -137,6 +141,14 @@ fn default_font_clock() -> String {
     "ubuntu".into()
 }
 
+fn default_font_life_ring() -> String {
+    "ubuntu".into()
+}
+
+fn default_font_life_ring_sub() -> String {
+    "helvetica".into()
+}
+
 impl Default for FontPrefs {
     fn default() -> Self {
         Self {
@@ -147,6 +159,131 @@ impl Default for FontPrefs {
             note: default_font_inherit(),
             ai: default_font_inherit(),
             clock: default_font_clock(),
+            life_ring: default_font_life_ring(),
+            life_ring_sub: default_font_life_ring_sub(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LifeRingColors {
+    #[serde(default = "default_ring_sleep")]
+    pub sleep: String,
+    #[serde(default = "default_ring2")]
+    pub ring2: String,
+    #[serde(default = "default_ring3")]
+    pub ring3: String,
+}
+
+fn default_ring_sleep() -> String {
+    "#5ac8fa".into()
+}
+fn default_ring2() -> String {
+    "#34c759".into()
+}
+fn default_ring3() -> String {
+    "#ff9500".into()
+}
+
+fn default_life_rings() -> LifeRingColors {
+    LifeRingColors {
+        sleep: default_ring_sleep(),
+        ring2: default_ring2(),
+        ring3: default_ring3(),
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LifeRingSlot {
+    #[serde(default = "default_ring_slot_metric_water")]
+    pub metric: String,
+    #[serde(default = "default_goal_water")]
+    pub goal: u32,
+}
+
+fn default_ring_slot_metric_water() -> String {
+    "water".into()
+}
+fn default_ring_slot_metric_steps() -> String {
+    "steps".into()
+}
+fn default_goal_water() -> u32 {
+    2000
+}
+fn default_goal_steps() -> u32 {
+    10000
+}
+
+impl Default for LifeRingSlot {
+    fn default() -> Self {
+        Self {
+            metric: default_ring_slot_metric_water(),
+            goal: default_goal_water(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LifeRingSlots {
+    #[serde(default = "default_ring2_slot")]
+    pub ring2: LifeRingSlot,
+    #[serde(default = "default_ring3_slot")]
+    pub ring3: LifeRingSlot,
+}
+
+fn default_ring2_slot() -> LifeRingSlot {
+    LifeRingSlot {
+        metric: default_ring_slot_metric_water(),
+        goal: default_goal_water(),
+    }
+}
+
+fn default_ring3_slot() -> LifeRingSlot {
+    LifeRingSlot {
+        metric: default_ring_slot_metric_steps(),
+        goal: default_goal_steps(),
+    }
+}
+
+impl Default for LifeRingSlots {
+    fn default() -> Self {
+        Self {
+            ring2: default_ring2_slot(),
+            ring3: default_ring3_slot(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct LifeRingGoals {
+    #[serde(default = "default_goal_intake")]
+    pub goal_intake: u32,
+    #[serde(default = "default_goal_exp")]
+    pub goal_exp: u32,
+    #[serde(default = "default_goal_hydration")]
+    pub goal_hydration: u32,
+}
+
+fn default_goal_intake() -> u32 {
+    2000
+}
+fn default_goal_exp() -> u32 {
+    2000
+}
+fn default_goal_hydration() -> u32 {
+    2000
+}
+
+impl Default for LifeRingGoals {
+    fn default() -> Self {
+        Self {
+            goal_intake: default_goal_intake(),
+            goal_exp: default_goal_exp(),
+            goal_hydration: default_goal_hydration(),
         }
     }
 }
@@ -164,14 +301,20 @@ pub struct UiPrefs {
     pub block_opacity: u8,
     #[serde(default = "default_top_grid")]
     pub top_grid: GridPrefs,
-    #[serde(default = "default_dock_left_grid")]
+    #[serde(default = "default_life_rings")]
+    pub life_rings: LifeRingColors,
+    #[serde(default)]
+    pub life_ring_slots: LifeRingSlots,
+    #[serde(default)]
+    pub life_ring_goals: LifeRingGoals,
+    #[serde(default)]
+    pub fonts: FontPrefs,
+    #[serde(default = "default_dock_left_grid", skip_serializing)]
     pub dock_left_grid: GridPrefs,
     #[serde(default = "default_bookmarks_grid", skip_serializing)]
     pub bookmarks_grid: GridPrefs,
     #[serde(default = "default_apps_grid", skip_serializing)]
     pub apps_grid: GridPrefs,
-    #[serde(default)]
-    pub fonts: FontPrefs,
 }
 
 fn default_block_opacity() -> u8 {
@@ -194,10 +337,13 @@ impl Default for UiPrefs {
             active_conversation_id: None,
             block_opacity: default_block_opacity(),
             top_grid: default_top_grid(),
+            life_rings: default_life_rings(),
+            life_ring_slots: LifeRingSlots::default(),
+            life_ring_goals: LifeRingGoals::default(),
+            fonts: FontPrefs::default(),
             dock_left_grid: default_dock_left_grid(),
             bookmarks_grid: default_bookmarks_grid(),
             apps_grid: default_apps_grid(),
-            fonts: FontPrefs::default(),
         }
     }
 }
@@ -331,6 +477,65 @@ impl Default for TicktickIntegration {
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
+pub struct JournalIntegration {
+    #[serde(default)]
+    pub data_root: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BkeasyIntegration {
+    #[serde(default)]
+    pub data_root: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GarminIntegration {
+    #[serde(default)]
+    pub token_dir: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GarminCredentials {
+    #[serde(default)]
+    pub email: String,
+    #[serde(default)]
+    pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TicktickCredentials {
+    #[serde(default)]
+    pub client_id: String,
+    #[serde(default)]
+    pub client_secret: String,
+    #[serde(default)]
+    pub access_token: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AiCredentials {
+    #[serde(default)]
+    pub entries: std::collections::HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct IntegrationsCredentials {
+    #[serde(default)]
+    pub garmin: GarminCredentials,
+    #[serde(default)]
+    pub ticktick: TicktickCredentials,
+    #[serde(default)]
+    pub ai: AiCredentials,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct Integrations {
     #[serde(default)]
     pub v2ray: V2rayIntegration,
@@ -344,6 +549,14 @@ pub struct Integrations {
     pub cursor: CursorIntegration,
     #[serde(default)]
     pub ticktick: TicktickIntegration,
+    #[serde(default)]
+    pub journal: JournalIntegration,
+    #[serde(default)]
+    pub bkeasy: BkeasyIntegration,
+    #[serde(default)]
+    pub garmin: GarminIntegration,
+    #[serde(default)]
+    pub credentials: IntegrationsCredentials,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

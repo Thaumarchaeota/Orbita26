@@ -576,6 +576,7 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   });
 
   window.addEventListener("orbita:ticktick-auth", () => void syncAuth());
+  window.addEventListener("orbita:ticktick-refresh", () => void refresh());
 
   paintCalendar();
   void syncAuth();

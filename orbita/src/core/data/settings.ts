@@ -47,7 +47,20 @@ export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSet
       obsidian: { ...current.integrations.obsidian, ...(patch.integrations?.obsidian ?? {}) },
       everything: { ...current.integrations.everything, ...(patch.integrations?.everything ?? {}) },
       cursor: { ...current.integrations.cursor, ...(patch.integrations?.cursor ?? {}) },
+      journal: { ...current.integrations.journal, ...(patch.integrations?.journal ?? {}) },
+      bkeasy: { ...current.integrations.bkeasy, ...(patch.integrations?.bkeasy ?? {}) },
+      garmin: { ...current.integrations.garmin, ...(patch.integrations?.garmin ?? {}) },
       ticktick: { ...current.integrations.ticktick, ...(patch.integrations?.ticktick ?? {}) },
+      credentials: {
+        garmin: { ...current.integrations.credentials.garmin, ...(patch.integrations?.credentials?.garmin ?? {}) },
+        ticktick: { ...current.integrations.credentials.ticktick, ...(patch.integrations?.credentials?.ticktick ?? {}) },
+        ai: {
+          entries: {
+            ...current.integrations.credentials.ai.entries,
+            ...(patch.integrations?.credentials?.ai?.entries ?? {}),
+          },
+        },
+      },
     },
     ai: {
       ...current.ai,
@@ -63,25 +76,26 @@ export function applyUiPrefs(ui: UiPrefs) {
   const root = document.documentElement;
   const n = Math.max(0, Math.min(100, Math.round(ui.blockOpacity))) / 100;
   const top = ui.topGrid;
-  const dock = ui.dockLeftGrid;
   const topScale = Math.max(0.7, Math.min(1.3, top.tileScale / 100));
-  const dockScale = Math.max(0.7, Math.min(1.3, dock.tileScale / 100));
   root.style.setProperty("--block-opacity", String(n));
   root.style.setProperty("--top-tile-scale", String(topScale));
   root.style.setProperty("--top-grid-col-gap", `${top.colGap}px`);
   root.style.setProperty("--top-grid-row-gap", `${top.rowGap}px`);
-  root.style.setProperty("--dock-tile-scale", String(dockScale));
-  root.style.setProperty("--dock-grid-col-gap", `${dock.colGap}px`);
-  root.style.setProperty("--dock-grid-row-gap", `${dock.rowGap}px`);
+  root.style.setProperty("--dock-tile-scale", String(topScale));
+  root.style.setProperty("--dock-grid-col-gap", `${top.colGap}px`);
+  root.style.setProperty("--dock-grid-row-gap", `${top.rowGap}px`);
   root.style.setProperty("--bookmarks-cols", String(top.cols));
   root.style.setProperty("--bookmarks-rows", String(top.rows));
-  root.style.setProperty("--apps-cols", String(dock.cols));
-  root.style.setProperty("--apps-rows", String(dock.rows));
-  const dockSpan = dock.cols + 1;
+  root.style.setProperty("--apps-cols", String(top.cols));
+  root.style.setProperty("--apps-rows", String(top.rows));
+  const dockSpan = 2 + 1;
   const localCols = 4;
   root.style.setProperty("--dock-left-span", String(dockSpan));
   root.style.setProperty("--local-dock-cols", String(localCols));
   root.style.setProperty("--launcher-dock-cols", String(dockSpan + localCols));
+  root.style.setProperty("--life-ring-sleep", ui.lifeRings.sleep);
+  root.style.setProperty("--life-ring-2", ui.lifeRings.ring2);
+  root.style.setProperty("--life-ring-3", ui.lifeRings.ring3);
   applyFontPrefs(ui.fonts, root);
 }
 

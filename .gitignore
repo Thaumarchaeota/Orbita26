@@ -1,6 +1,7 @@
 HANDOFF.md
 roadmap.md
 调试指南.md
+reference/
 
 scripts/env.ps1
 scripts/test_dida365.py
@@ -9,6 +10,12 @@ scripts/fix-logo.py
 .env
 .env.*
 !.env.example
+
+**/garmin_tokens.json
+**/garmin_rate_limit.json
+**/settings.json
+**/credentials.json
+**/*_tokens.json
 
 node_modules/
 dist/
@@ -20,6 +27,10 @@ orbita/src-tauri/binaries/
 tools/LibreHardwareMonitor/
 orbita/src-tauri/gen/
 orbita/app-icon.png
+orbita/python/.venv/
+__pycache__/
+*.pyc
+*.pyo
 
 .DS_Store
 Thumbs.db

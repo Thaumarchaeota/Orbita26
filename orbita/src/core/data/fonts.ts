@@ -1,6 +1,7 @@
 export const FONT_PRESET_IDS = [
   "system",
   "ubuntu",
+  "ubuntuBold",
   "inter",
   "serif",
   "harding",
@@ -16,6 +17,7 @@ export type FontPresetId = FontBasePreset | "inherit";
 export const FONT_STACKS: Record<FontBasePreset, string> = {
   system: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
   ubuntu: 'Ubuntu, "PingFang SC", "Microsoft YaHei", sans-serif',
+  ubuntuBold: 'Ubuntu, "PingFang SC", "Microsoft YaHei", sans-serif',
   inter: 'Inter, "PingFang SC", "Microsoft YaHei", sans-serif',
   serif: 'Georgia, "Noto Serif SC", "Songti SC", serif',
   harding: '"Harding Text Web", "PingFang SC", "Microsoft YaHei", serif',
@@ -28,6 +30,7 @@ export const FONT_STACKS: Record<FontBasePreset, string> = {
 export const FONT_PRESET_LABELS: Record<FontBasePreset, string> = {
   system: "系统默认",
   ubuntu: "Ubuntu",
+  ubuntuBold: "Ubuntu Bold",
   inter: "Inter",
   serif: "衬线",
   harding: "Harding",
@@ -45,6 +48,8 @@ export type FontPrefs = {
   note: FontPresetId;
   ai: FontPresetId;
   clock: FontBasePreset;
+  lifeRing: FontBasePreset;
+  lifeRingSub: FontBasePreset;
 };
 
 export function defaultFontPrefs(): FontPrefs {
@@ -56,6 +61,8 @@ export function defaultFontPrefs(): FontPrefs {
     note: "inherit",
     ai: "inherit",
     clock: "ubuntu",
+    lifeRing: "ubuntuBold",
+    lifeRingSub: "helvetica",
   };
 }
 
@@ -85,6 +92,8 @@ export function normalizeFontPrefs(raw: Partial<FontPrefs> | undefined): FontPre
     note: normalizeFontPreset(raw.note, base.note),
     ai: normalizeFontPreset(raw.ai, base.ai),
     clock: normalizeFontBasePreset(raw.clock, base.clock),
+    lifeRing: normalizeFontBasePreset(raw.lifeRing, base.lifeRing),
+    lifeRingSub: normalizeFontBasePreset(raw.lifeRingSub, base.lifeRingSub),
   };
 }
 
@@ -95,6 +104,7 @@ export function resolveFontStack(preset: FontPresetId, baseStack: string): strin
 
 export function applyFontPrefs(fonts: FontPrefs, root: HTMLElement = document.documentElement) {
   const baseStack = FONT_STACKS[fonts.base];
+  const lifeRingWeight = fonts.lifeRing === "ubuntu" || fonts.lifeRing === "ubuntuBold" ? "700" : "400";
   root.style.setProperty("--font-base", baseStack);
   root.style.setProperty("--font-launcher", resolveFontStack(fonts.launcher, baseStack));
   root.style.setProperty("--font-file-tree", resolveFontStack(fonts.fileTree, baseStack));
@@ -102,4 +112,7 @@ export function applyFontPrefs(fonts: FontPrefs, root: HTMLElement = document.do
   root.style.setProperty("--font-note", resolveFontStack(fonts.note, baseStack));
   root.style.setProperty("--font-ai", resolveFontStack(fonts.ai, baseStack));
   root.style.setProperty("--font-clock", FONT_STACKS[fonts.clock]);
+  root.style.setProperty("--font-life-ring", FONT_STACKS[fonts.lifeRing]);
+  root.style.setProperty("--font-life-ring-sub", FONT_STACKS[fonts.lifeRingSub]);
+  root.style.setProperty("--font-life-ring-weight", lifeRingWeight);
 }

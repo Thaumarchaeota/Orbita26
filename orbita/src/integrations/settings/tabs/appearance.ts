@@ -21,6 +21,8 @@ const FONT_SLOT_FIELDS: {
   { key: "note", label: "笔记条目", inherit: true },
   { key: "ai", label: "AI 消息", inherit: true },
   { key: "clock", label: "时钟/日期", inherit: false },
+  { key: "lifeRing", label: "今日环主字", inherit: false },
+  { key: "lifeRingSub", label: "今日环副字", inherit: false },
 ];
 
 function fontSelectHtml(slot: (typeof FONT_SLOT_FIELDS)[number]): string {

@@ -1,8 +1,8 @@
 import type { AppSettings } from "../../../core/settings";
 import { pickAppFile, pickLocalFolder } from "../../shell/adapter";
 
-export const localTabHtml = `
-  <div class="settings-tab-panel" data-tab-panel="local" hidden>
+export const navigationTabHtml = `
+  <div class="settings-tab-panel" data-tab-panel="navigation" hidden>
     <div class="dialog-field">
       <label for="settingsDataDir">数据存储位置</label>
       <div class="settings-path-row">
@@ -54,7 +54,7 @@ export const localTabHtml = `
     </div>
   </div>`;
 
-export type LocalDraft = {
+export type NavigationDraft = {
   dataDir: string;
   v2rayExePath: string;
   zoteroDataDir: string;
@@ -64,7 +64,7 @@ export type LocalDraft = {
   cursorExePath: string;
 };
 
-export function bindLocalTab(root: HTMLElement) {
+export function bindNavigationTab(root: HTMLElement) {
   const dataDirInput = root.querySelector<HTMLInputElement>("#settingsDataDir")!;
   const v2rayInput = root.querySelector<HTMLInputElement>("#settingsV2rayPath")!;
   const zoteroInput = root.querySelector<HTMLInputElement>("#settingsZoteroDir")!;
@@ -112,7 +112,7 @@ export function bindLocalTab(root: HTMLElement) {
       everythingInput.value = settings.integrations.everything.exePath;
       cursorInput.value = settings.integrations.cursor.exePath;
     },
-    read(): LocalDraft {
+    read(): NavigationDraft {
       return {
         dataDir: dataDirInput.value.trim(),
         v2rayExePath: v2rayInput.value.trim(),

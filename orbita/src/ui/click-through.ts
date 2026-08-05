@@ -3,11 +3,12 @@ import { isTauri } from "../core/data/client";
 import { getSettings, isTransparentTheme } from "../core/settings";
 
 const INTERACTIVE =
-  ".shell-top-inner,.shell-sidebar,.ai-section,.ticktick-section,.top-tray,.dialog-backdrop,.folder-overlay-scrim,.folder-overlay-panel,.launcher-tile,.local-tree-row,.local-ctx-menu,.launcher-tile-ghost,.local-tree-row-ghost,button,input,a,textarea,select,[contenteditable='true']";
+  ".shell-top-inner,.search-band,.search-band-center,.primary-mood-mount,.primary-mood-wrap,.primary-mood-menu,.shell-sidebar,.today-section,.work-section,.ai-section,.ticktick-section,.top-toolkit,.capture-overlay,.dialog-backdrop,.folder-overlay-scrim,.folder-overlay-panel,.launcher-tile,.local-tree-row,.local-ctx-menu,.launcher-tile-ghost,.local-tree-row-ghost,.launcher-head,.today-panel,.today-feed,.engines-wrap,.search-bar,button,input,a,textarea,select,form,[contenteditable='true']";
 
 let enabled = false;
 let ignoring = false;
 let loopId = 0;
+let pollFailures = 0;
 
 function dragging(): boolean {
   return !!document.querySelector(
@@ -28,7 +29,6 @@ function shouldPassThrough(x: number, y: number): boolean {
       el.classList.contains("bg") ||
       el.classList.contains("shell") ||
       el.classList.contains("shell-body") ||
-      el.classList.contains("shell-top") ||
       el.classList.contains("shell-aside")
     ) {
       continue;
@@ -41,6 +41,7 @@ function shouldPassThrough(x: number, y: number): boolean {
 async function forceInteractive() {
   if (!ignoring) return;
   ignoring = false;
+  pollFailures = 0;
   try {
     await getCurrentWindow().setIgnoreCursorEvents(false);
   } catch {
@@ -83,13 +84,15 @@ async function pollCursor() {
     const y = (cursor.y - inner.y) / factor;
     const w = size.width / factor;
     const h = size.height / factor;
+    pollFailures = 0;
     if (x < 0 || y < 0 || x >= w || y >= h) {
       await forceInteractive();
     } else {
       await updateAt(x, y);
     }
   } catch {
-    /* ignore */
+    pollFailures += 1;
+    if (pollFailures >= 3) await forceInteractive();
   }
 }
 
@@ -121,6 +124,7 @@ async function enable() {
   enabled = true;
   await forceInteractive();
   document.addEventListener("pointermove", onPointerMove, { passive: true });
+  document.addEventListener("keydown", onKeyDown);
   startLoop();
 }
 
@@ -128,8 +132,14 @@ async function disable() {
   if (!enabled) return;
   enabled = false;
   document.removeEventListener("pointermove", onPointerMove);
+  document.removeEventListener("keydown", onKeyDown);
   stopLoop();
   await forceInteractive();
+}
+
+function onKeyDown(e: KeyboardEvent) {
+  if (!enabled) return;
+  if (e.key === "Escape") void forceInteractive();
 }
 
 function sync() {
@@ -147,6 +157,11 @@ export function initClickThrough() {
   if (!isTauri()) return;
   void getCurrentWindow()
     .setIgnoreCursorEvents(false)
+    .catch(() => {});
+  getCurrentWindow()
+    .onFocusChanged(({ payload: focused }) => {
+      if (focused) void forceInteractive();
+    })
     .catch(() => {});
   watchTheme();
   sync();

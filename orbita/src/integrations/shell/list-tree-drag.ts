@@ -14,6 +14,10 @@ function groupEl(row: HTMLElement): HTMLElement | null {
   return row.closest<HTMLElement>(".local-tree-group");
 }
 
+function isContainerKind(kind: string | undefined): boolean {
+  return kind === "group" || kind === "folder";
+}
+
 function rowAtPoint(x: number, y: number, root: HTMLElement, skip?: HTMLElement | null): HTMLElement | null {
   const direct = rowEl(document.elementFromPoint(x, y));
   if (direct && root.contains(direct) && direct !== skip) return direct;
@@ -75,7 +79,7 @@ export function bindListTreeDrag(
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   };
 
-  const resolvePosition = (row: HTMLElement, x: number, y: number, isGroup: boolean): LocalDropPosition => {
+  const resolvePosition = (row: HTMLElement, x: number, y: number, isContainer: boolean): LocalDropPosition => {
     if (isAfterSlot(x, y, row)) {
       return "after";
     }
@@ -87,7 +91,7 @@ export function bindListTreeDrag(
       hoverId = id;
       hoverSince = now;
     }
-    if (isGroup) {
+    if (isContainer) {
       if (rel < ZONE_BEFORE) return "before";
       if (rel > ZONE_AFTER) return "after";
       if (now - hoverSince >= INTO_DWELL_MS) return "into";
@@ -132,8 +136,8 @@ export function bindListTreeDrag(
       const hover = rowAtPoint(e.clientX, e.clientY, container, pointerRow);
       if (hover?.dataset.id && hover.dataset.id !== sourceId) {
         targetId = hover.dataset.id;
-        const isGroup = hover.dataset.kind === "group";
-        pos = resolvePosition(hover, e.clientX, e.clientY, isGroup);
+        const isContainer = isContainerKind(hover.dataset.kind);
+        pos = resolvePosition(hover, e.clientX, e.clientY, isContainer);
       }
     }
 
@@ -193,8 +197,8 @@ export function bindListTreeDrag(
       return;
     }
 
-    const isGroup = hover.dataset.kind === "group";
-    dropPos = resolvePosition(hover, e.clientX, e.clientY, isGroup);
+    const isContainer = isContainerKind(hover.dataset.kind);
+    dropPos = resolvePosition(hover, e.clientX, e.clientY, isContainer);
     markDrop(hover, dropPos);
   };
 
