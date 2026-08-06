@@ -1,4 +1,16 @@
-﻿.dialog-backdrop {
+﻿.dialog-backdrop[hidden] {
+  display: none !important;
+}
+#orbita-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+#orbita-modal-root > .dialog-backdrop.is-open {
+  pointer-events: auto;
+}
+.dialog-backdrop {
   position: fixed;
   inset: 0;
   z-index: 200;
@@ -91,6 +103,21 @@
 .dialog-field input[readonly] {
   color: var(--muted);
   cursor: default;
+}
+.dialog-field select {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-base);
+  font-size: 14px;
+  outline: none;
+}
+.dialog-field select:focus {
+  border-color: var(--focus);
 }
 .local-color-picks {
   display: flex;

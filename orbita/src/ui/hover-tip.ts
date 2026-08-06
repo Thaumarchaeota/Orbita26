@@ -94,6 +94,7 @@ const PATH_TIP_SELECTOR =
 
 function tipTargetFrom(node: EventTarget | null): Element | null {
   if (!(node instanceof Element)) return null;
+  if (node.closest(".dialog-backdrop[hidden]")) return null;
   const tipEl = node.closest("[data-tip]");
   if (tipEl && (tipEl as HTMLElement).dataset?.tip) return tipEl;
   const pathEl = node.closest(PATH_TIP_SELECTOR);

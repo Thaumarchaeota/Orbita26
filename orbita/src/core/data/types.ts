@@ -48,6 +48,11 @@ export type JournalIntegration = { dataRoot: string };
 export type BKeasyIntegration = { dataRoot: string };
 export type GarminIntegration = { tokenDir: string };
 
+export type WorkIntegration = {
+  projectNotesDir: string;
+  ticktickProjectId: string;
+};
+
 export type GarminCredentials = { email: string; password: string };
 export type TicktickCredentials = {
   clientId: string;
@@ -72,6 +77,7 @@ export type Integrations = {
   journal: JournalIntegration;
   bkeasy: BKeasyIntegration;
   garmin: GarminIntegration;
+  work: WorkIntegration;
   credentials: IntegrationsCredentials;
 };
 

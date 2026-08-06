@@ -9,6 +9,7 @@ import { applyThemePrefs, themeFromPrefs } from "../../core/data/theme-prefs";
 import { loadAiConfig } from "../ai/config";
 import { SETTINGS_GEAR_SVG } from "../ai/icons";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
+import { mountModalBackdrop } from "../../ui/modal-root";
 import type { DidaProject } from "../ticktick/types";
 import { appearanceTabHtml, bindAppearanceTab, createAppearanceState, type AppearanceState } from "./tabs/appearance";
 import { navigationTabHtml, bindNavigationTab } from "./tabs/navigation";
@@ -58,6 +59,19 @@ export function mountSettingsButton(root: HTMLElement, iconSvg = SETTINGS_GEAR_S
 
   openDialogFn = mountSettingsDialog();
   btn.addEventListener("click", (e) => void openDialogFn!("appearance", e));
+
+  document.addEventListener("keydown", (e) => {
+    if (!e.ctrlKey || e.key !== ",") return;
+    if (isSettingsEditableTarget(e.target)) return;
+    e.preventDefault();
+    void openDialogFn!("appearance");
+  });
+}
+
+function isSettingsEditableTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof HTMLElement)) return false;
+  if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return true;
+  return t.isContentEditable;
 }
 
 function mountSettingsDialog() {
@@ -91,7 +105,7 @@ function mountSettingsDialog() {
       </div>
     </form>
   `;
-  document.body.appendChild(backdrop);
+  mountModalBackdrop(backdrop);
 
   const motion = bindDialog(backdrop);
   const form = backdrop.querySelector<HTMLFormElement>("#settingsDialogForm")!;
@@ -131,7 +145,7 @@ function mountSettingsDialog() {
   const appearanceTab = bindAppearanceTab(backdrop, () => appearanceState, setAppearanceState, previewUi);
   const navigationTab = bindNavigationTab(backdrop);
   const lifeTab = bindLifeTab(backdrop);
-  bindWorkTab(backdrop);
+  const workTab = bindWorkTab(backdrop, getProjects);
   const aiTab = bindAiTab(backdrop);
   const tasksTab = bindTasksTab(backdrop, getProjects);
 
@@ -146,6 +160,7 @@ function mountSettingsDialog() {
       panel.classList.toggle("is-active", panel.dataset.tabPanel === tab);
     });
     if (tab === "tasks") tasksTab.refreshProjects();
+    if (tab === "work") workTab.refreshProjects();
   };
 
   tabBtns.forEach((btn) => {
@@ -164,6 +179,7 @@ function mountSettingsDialog() {
     appearanceTab.fill(settings);
     navigationTab.fill(settings);
     lifeTab.fill(settings);
+    workTab.fill(settings);
     aiTab.fill(settings.ai);
     tasksTab.fill(settings);
     enhanceSettingsFormControls(form);
@@ -172,6 +188,7 @@ function mountSettingsDialog() {
   const close = async (saved: boolean) => {
     if (!saved) applyAppearance(savedSettings);
     await tasksTab.closePickers();
+    await workTab.closePickers();
     await motion.close();
     resolvePending?.(saved);
     resolvePending = null;
@@ -192,6 +209,7 @@ function mountSettingsDialog() {
     const life = lifeTab.read();
     const ai = aiTab.read(savedSettings.ai);
     const tasks = tasksTab.read(savedSettings);
+    const work = workTab.read();
     const cred = savedSettings.integrations.credentials;
     const next = await patchSettings({
       theme: themeFromPrefs(appearance.themePrefs),
@@ -215,6 +233,10 @@ function mountSettingsDialog() {
         journal: { dataRoot: life.journalDataRoot },
         bkeasy: { dataRoot: life.bkeasyDataRoot },
         garmin: { tokenDir: life.garminTokenDir },
+        work: {
+          projectNotesDir: work.projectNotesDir,
+          ticktickProjectId: work.ticktickProjectId,
+        },
         ticktick: {
           clientId: tasks.clientId,
           clientSecret: tasks.clientSecret,

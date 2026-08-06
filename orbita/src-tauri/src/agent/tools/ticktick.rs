@@ -1,6 +1,8 @@
 use super::AgentTool;
 use crate::data::read_settings;
-use crate::dida::{self, DidaCreateTaskRequest, DidaFilterTasksRequest, DidaUpdateTaskRequest};
+use crate::ticktick::{
+    self, TicktickCreateTaskRequest, TicktickFilterTasksRequest, TicktickUpdateTaskRequest,
+};
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveTime, Weekday};
 use serde_json::{json, Value};
 use tauri::AppHandle;
@@ -243,14 +245,14 @@ fn resolve_due_date(args: &Value, due_on_key: &str, due_time_key: &str, due_date
 }
 
 fn list_incomplete_tasks(app: &AppHandle) -> Result<Vec<Value>, String> {
-    let tasks = dida::dida_filter_tasks(
+    let tasks = tauri::async_runtime::block_on(ticktick::ticktick_filter_tasks(
         app.clone(),
-        DidaFilterTasksRequest {
+        TicktickFilterTasksRequest {
             project_ids: None,
             start_date: None,
             end_date: None,
         },
-    )?;
+    ))?;
     Ok(match tasks {
         Value::Array(items) => items,
         _ => vec![],
@@ -492,7 +494,7 @@ impl AgentTool for TicktickCreateTask {
                     .and_then(|v| v.as_str())
                     .map(str::to_string);
                 let is_all_day = task.get("isAllDay").and_then(|v| v.as_bool());
-                let req = DidaUpdateTaskRequest {
+                let req = TicktickUpdateTaskRequest {
                     title: title.clone(),
                     project_id,
                     content,
@@ -502,12 +504,16 @@ impl AgentTool for TicktickCreateTask {
                     is_all_day,
                     priority,
                 };
-                dida::dida_update_task(app.clone(), task_id, req)?;
+                tauri::async_runtime::block_on(ticktick::ticktick_update_task(
+                    app.clone(),
+                    task_id,
+                    req,
+                ))?;
                 return Ok(json!({ "ok": true, "title": title, "rescheduled": true }).to_string());
             }
         }
 
-        let req = DidaCreateTaskRequest {
+        let req = TicktickCreateTaskRequest {
             title: title.clone(),
             project_id,
             content: opt_str(&args, "content"),
@@ -518,7 +524,7 @@ impl AgentTool for TicktickCreateTask {
             priority: opt_i32(&args, "priority"),
         };
 
-        dida::dida_create_task(app.clone(), req)?;
+        tauri::async_runtime::block_on(ticktick::ticktick_create_task(app.clone(), req))?;
         Ok(json!({ "ok": true, "title": title }).to_string())
     }
 }
@@ -613,7 +619,7 @@ impl AgentTool for TicktickUpdateTask {
             .map(str::to_string);
         let is_all_day = task.get("isAllDay").and_then(|v| v.as_bool());
 
-        let req = DidaUpdateTaskRequest {
+        let req = TicktickUpdateTaskRequest {
             title: title.clone(),
             project_id,
             content,
@@ -624,7 +630,11 @@ impl AgentTool for TicktickUpdateTask {
             priority,
         };
 
-        dida::dida_update_task(app.clone(), task_id, req)?;
+        tauri::async_runtime::block_on(ticktick::ticktick_update_task(
+            app.clone(),
+            task_id,
+            req,
+        ))?;
         Ok(json!({ "ok": true, "title": title }).to_string())
     }
 }
@@ -667,7 +677,11 @@ impl AgentTool for TicktickDeleteTask {
             .unwrap_or(&task_id)
             .to_string();
 
-        dida::dida_delete_task(app.clone(), project_id, task_id)?;
+        tauri::async_runtime::block_on(ticktick::ticktick_delete_task(
+            app.clone(),
+            project_id,
+            task_id,
+        ))?;
         Ok(json!({ "ok": true, "title": title }).to_string())
     }
 }

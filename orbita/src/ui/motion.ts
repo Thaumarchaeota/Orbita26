@@ -1,3 +1,6 @@
+import { hideHoverTip } from "./hover-tip";
+import { getModalRoot, hideModalBackdrop, raiseModalBackdrop } from "./modal-root";
+
 export type MotionTrigger = HTMLElement | MouseEvent | { x: number; y: number };
 
 const POPOVER_MS = 360;
@@ -51,6 +54,17 @@ function waitTransition(el: HTMLElement, property: string, ms: number): Promise<
 
 function nextFrame() {
   return new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+}
+
+function notifyModalLayer() {
+  window.dispatchEvent(new CustomEvent("orbita:modal-layer"));
+}
+
+function prepareModalBackdrop(backdrop: HTMLElement) {
+  getModalRoot().appendChild(backdrop);
+  backdrop.removeAttribute("hidden");
+  raiseModalBackdrop(backdrop);
+  hideHoverTip();
 }
 
 export function setPopoverOrigin(el: HTMLElement, trigger: MotionTrigger) {
@@ -115,8 +129,12 @@ export function isDialogOpen(backdrop: HTMLElement) {
 }
 
 export async function openDialog(backdrop: HTMLElement, trigger?: MotionTrigger, panel?: HTMLElement) {
-  if (backdrop.classList.contains("is-open")) return;
   const p = dialogPanel(backdrop, panel);
+  if (backdrop.classList.contains("is-open")) {
+    notifyModalLayer();
+    return;
+  }
+  prepareModalBackdrop(backdrop);
   backdrop.classList.add("motion-dialog");
   p.classList.add("motion-dialog-panel");
   backdrop.classList.remove("is-open");
@@ -124,6 +142,7 @@ export async function openDialog(backdrop: HTMLElement, trigger?: MotionTrigger,
   flushLayout(p);
   await nextFrame();
   backdrop.classList.add("is-open");
+  notifyModalLayer();
   await Promise.all([
     waitTransition(backdrop, "opacity", 280),
     waitTransition(p, "transform", DIALOG_MS),
@@ -137,6 +156,7 @@ export async function closeDialog(backdrop: HTMLElement, trigger?: MotionTrigger
   flushLayout(p);
   await nextFrame();
   backdrop.classList.remove("is-open");
+  notifyModalLayer();
   await Promise.all([
     waitTransition(backdrop, "opacity", DIALOG_CLOSE_MS),
     waitTransition(p, "transform", DIALOG_CLOSE_MS),
@@ -144,6 +164,7 @@ export async function closeDialog(backdrop: HTMLElement, trigger?: MotionTrigger
   p.style.removeProperty("--motion-fly-x");
   p.style.removeProperty("--motion-fly-y");
   p.style.removeProperty("--motion-fly-scale");
+  hideModalBackdrop(backdrop);
 }
 
 const CROSSFADE_MS = 120;

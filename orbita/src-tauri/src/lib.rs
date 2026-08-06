@@ -1,3 +1,5 @@
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, WindowEvent};
@@ -10,7 +12,7 @@ mod beancount;
 mod capture;
 mod commands;
 mod data;
-mod dida;
+mod ticktick;
 mod everything;
 mod favicon;
 mod file_type_icon;
@@ -26,7 +28,7 @@ mod zotero;
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
         window_shell::attach_to_taskbar(&win);
-        let _ = window_shell::repair_window_show(&win);
+        let _ = window_shell::repair_window(&win, true);
     }
 }
 
@@ -88,15 +90,24 @@ pub fn run() {
 
             let win_for_close = win.clone();
             let win_for_focus = win.clone();
+            let blur_at = Mutex::new(None::<Instant>);
             win.on_window_event(move |event| {
                 match event {
                     WindowEvent::CloseRequested { api, .. } => {
                         api.prevent_close();
                         window_shell::detach_from_taskbar(&win_for_close);
                     }
-                    WindowEvent::Focused(false) => {}
+                    WindowEvent::Focused(false) => {
+                        *blur_at.lock().unwrap() = Some(Instant::now());
+                    }
                     WindowEvent::Focused(true) => {
-                        let _ = window_shell::repair_window_focus(&win_for_focus);
+                        let reload = blur_at
+                            .lock()
+                            .unwrap()
+                            .map(|t| t.elapsed() >= Duration::from_secs(180))
+                            .unwrap_or(false);
+                        let _ = window_shell::repair_window(&win_for_focus, reload);
+                        *blur_at.lock().unwrap() = None;
                     }
                     _ => {}
                 }
@@ -151,18 +162,18 @@ pub fn run() {
             commands::agent_tool_confirm,
             commands::agent_tool_reject,
             commands::get_system_stats,
-            commands::dida_auth_status,
-            commands::dida_begin_oauth,
-            commands::dida_finish_oauth,
-            commands::dida_connect,
-            commands::dida_disconnect,
-            commands::dida_list_projects,
-            commands::dida_filter_tasks,
-            commands::dida_create_task,
-            commands::dida_update_task,
-            commands::dida_complete_task,
-            commands::dida_reopen_task,
-            commands::dida_delete_task,
+            commands::ticktick_auth_status,
+            commands::ticktick_begin_oauth,
+            commands::ticktick_finish_oauth,
+            commands::ticktick_connect,
+            commands::ticktick_disconnect,
+            commands::ticktick_list_projects,
+            commands::ticktick_filter_tasks,
+            commands::ticktick_create_task,
+            commands::ticktick_update_task,
+            commands::ticktick_complete_task,
+            commands::ticktick_reopen_task,
+            commands::ticktick_delete_task,
             commands::repair_window,
             commands::journal_list,
             commands::journal_upsert,

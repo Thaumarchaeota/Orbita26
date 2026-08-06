@@ -7,9 +7,12 @@ export type ObsidianNote = {
   modified: number;
 };
 
-export async function listObsidianNotes(limit = 50): Promise<ObsidianNote[]> {
+export async function listObsidianNotes(limit = 50, subdir?: string): Promise<ObsidianNote[]> {
   if (isTauri()) {
-    return await invoke<ObsidianNote[]>("list_obsidian_notes", { limit });
+    return await invoke<ObsidianNote[]>("list_obsidian_notes", {
+      limit,
+      subdir: subdir?.trim() || null,
+    });
   }
   return [];
 }

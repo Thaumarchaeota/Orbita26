@@ -3,12 +3,39 @@ import { isTauri } from "../core/data/client";
 import { getSettings, isTransparentTheme } from "../core/settings";
 
 const INTERACTIVE =
-  ".primary-mood-menu,.shell-sidebar,.today-section,.work-section,.ai-section,.ticktick-section,.capture-overlay,.dialog-backdrop,.folder-overlay-scrim,.folder-overlay-panel,.launcher-tile,.local-tree-row,.local-ctx-menu,.launcher-tile-ghost,.local-tree-row-ghost,.launcher-head,.today-panel,.today-feed,.search-bar,button,input,a,textarea,select,form,[contenteditable='true']";
+  ".primary-mood-menu,.shell-sidebar,.today-section,.work-section,.ai-section,.ticktick-section,.capture-overlay,.dialog-backdrop,.folder-overlay-scrim,.folder-overlay-panel,.launcher-tile,.local-tree-row,.local-ctx-menu,.launcher-tile-ghost,.local-tree-row-ghost,.launcher-head,.today-panel,.work-panel,.today-feed,.work-task-list,.work-note-list,.search-bar,button,input,a,textarea,select,form,[contenteditable='true']";
 
 let enabled = false;
 let ignoring = false;
 let loopId = 0;
 let pollFailures = 0;
+let modalLocked = false;
+
+function hasOpenModal(): boolean {
+  return !!document.querySelector(
+    ".dialog-backdrop.is-open, .folder-overlay-layer.is-open, .capture-overlay.is-open",
+  );
+}
+
+async function ensureWindowInteractive() {
+  pollFailures = 0;
+  ignoring = false;
+  try {
+    await getCurrentWindow().setIgnoreCursorEvents(false);
+  } catch {
+    /* ignore */
+  }
+}
+
+function syncModalLock() {
+  const locked = hasOpenModal();
+  if (locked) {
+    modalLocked = true;
+    void ensureWindowInteractive();
+    return;
+  }
+  modalLocked = false;
+}
 
 function dragging(): boolean {
   return !!document.querySelector(
@@ -17,6 +44,7 @@ function dragging(): boolean {
 }
 
 function shouldPassThrough(x: number, y: number): boolean {
+  if (modalLocked || hasOpenModal()) return false;
   if (dragging()) return false;
   const stack = document.elementsFromPoint(x, y);
   for (const el of stack) {
@@ -40,17 +68,12 @@ function shouldPassThrough(x: number, y: number): boolean {
 
 async function forceInteractive() {
   if (!ignoring) return;
-  ignoring = false;
-  pollFailures = 0;
-  try {
-    await getCurrentWindow().setIgnoreCursorEvents(false);
-  } catch {
-    /* ignore */
-  }
+  await ensureWindowInteractive();
 }
 
 async function updateAt(x: number, y: number) {
   if (!enabled) return;
+  syncModalLock();
   const pass = shouldPassThrough(x, y);
   if (!pass) {
     await forceInteractive();
@@ -104,6 +127,7 @@ function loop() {
     loopId = 0;
     return;
   }
+  syncModalLock();
   if (ignoring) void pollCursor();
   const idleMs = idleSince > 0 ? performance.now() - idleSince : 0;
   const delay = ignoring ? (idleMs > 500 ? 120 : 16) : 120;
@@ -171,4 +195,5 @@ export function initClickThrough() {
   watchTheme();
   sync();
   window.addEventListener("orbita:ui-prefs", sync);
+  window.addEventListener("orbita:modal-layer", () => syncModalLock());
 }

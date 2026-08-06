@@ -229,11 +229,12 @@ pub async fn list_zotero_items(
 pub async fn list_obsidian_notes(
     app: tauri::AppHandle,
     limit: Option<u32>,
+    subdir: Option<String>,
 ) -> Result<Vec<obsidian::ObsidianNote>, String> {
     let n = limit.unwrap_or(50);
     let settings = data::read_settings(&app)?;
     let vault_dir = settings.integrations.obsidian.vault_dir;
-    tauri::async_runtime::spawn_blocking(move || obsidian::list_notes(&vault_dir, n))
+    tauri::async_runtime::spawn_blocking(move || obsidian::list_notes(&vault_dir, n, subdir.as_deref()))
         .await
         .map_err(|e| e.to_string())?
 }

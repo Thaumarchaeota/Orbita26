@@ -25,9 +25,7 @@ export function initPrivacyMode() {
 
   document.addEventListener("keydown", (e) => {
     if (!e.ctrlKey || !e.shiftKey || e.key.toLowerCase() !== "h") return;
-    const t = e.target;
-    if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
-    if (t instanceof HTMLElement && t.isContentEditable) return;
+    if (isEditableTarget(e.target)) return;
     e.preventDefault();
     togglePrivacyMode();
   });
@@ -35,5 +33,13 @@ export function initPrivacyMode() {
 
 export function isPrivacyBlockedTarget(el: Element): boolean {
   if (!isPrivacyMode()) return false;
-  return !!el.closest("#todayZone, .primary-mood-mount");
+  return !!el.closest(
+    "#todayZone, .primary-mood-mount, .ai-section, .ai-msg-bubble, .ticktick-section, .ticktick-task-title",
+  );
+}
+
+function isEditableTarget(t: EventTarget | null): boolean {
+  if (!(t instanceof HTMLElement)) return false;
+  if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return true;
+  return t.isContentEditable;
 }

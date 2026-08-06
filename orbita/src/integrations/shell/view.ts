@@ -9,7 +9,7 @@ import {
   updateAppInFolder,
 } from "./apps";
 import { topGridCapacity } from "./grid-slots";
-import { mountAppDialog, mountConfirmDialog } from "./dialog";
+import { mountAppDialog, getConfirmDialog } from "./dialog";
 import { mountBookmarksPanel } from "./bookmarks-panel";
 import { mountLocalPanel } from "./local-panel";
 import { mountFolderOverlay } from "./folder-overlay";
@@ -17,11 +17,8 @@ import { mountAppLauncherGrid } from "./launcher-grid";
 import { mountTopToolkit, topToolkitHtml } from "./top-toolkit";
 
 const APP_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
-const WORK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`;
 const SEARCH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>`;
 const LBL_APPS = "\u5e94\u7528";
-const LBL_WORK = "\u5de5\u4f5c";
-const LBL_WORK_PLACEHOLDER = "\u656c\u8bf7\u671f\u5f85";
 const LBL_ADD = "\u6dfb\u52a0";
 const LBL_SEARCH_IN = (name: string) => `\u5728 ${name} \u4e2d\u641c\u7d22`;
 const LBL_DELETE_TITLE = "\u5220\u9664\u786e\u8ba4";
@@ -91,7 +88,7 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
   container.appendChild(sidebar);
 
   const promptApp = mountAppDialog(root);
-  const confirmDelete = mountConfirmDialog(root);
+  const confirmDelete = getConfirmDialog();
   const folderOverlay = mountFolderOverlay(root);
   const askDelete = (name: string, trigger: HTMLElement) =>
     confirmDelete(LBL_DELETE_TITLE, LBL_DELETE_MSG(name), trigger);
@@ -120,7 +117,11 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
     appsGrid.normalizeOnPrefsChange();
   });
 
-  appsGrid.syncMissingIcons(appsGrid.repaint);
+  const defer =
+    typeof requestIdleCallback === "function"
+      ? requestIdleCallback
+      : (fn: () => void) => setTimeout(fn, 0);
+  defer(() => void appsGrid.syncMissingIcons(appsGrid.repaint));
 }
 
 export function mountShell(root: HTMLElement) {
@@ -202,15 +203,6 @@ export function mountShell(root: HTMLElement) {
   body.appendChild(today);
 
   const work = document.createElement("section");
-  work.className = "work-section";
   work.id = "workZone";
-  work.innerHTML = `
-    <div class="launcher-head">
-      <span class="launcher-title">${WORK_SVG}${LBL_WORK}</span>
-    </div>
-    <div class="work-panel">
-      <p class="work-placeholder">${LBL_WORK_PLACEHOLDER}</p>
-    </div>
-  `;
   body.appendChild(work);
 }

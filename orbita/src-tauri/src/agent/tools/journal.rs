@@ -552,20 +552,28 @@ impl AgentTool for JournalUpdateMeal {
         if let Some(t) = opt_str(&args, "text") {
             meal["text"] = json!(t);
         }
-        if let Some(k) = args.get("kcal").and_then(|v| v.as_i64()) {
-            meal["kcal"] = json!(k);
+        if let Some(k) = args.get("kcal") {
+            if let Some(n) = k.as_i64() {
+                meal["kcal"] = json!(n);
+            } else if let Some(n) = k.as_f64() {
+                meal["kcal"] = json!(n.round() as i64);
+            }
         }
         if let Some(a) = opt_str(&args, "at") {
             meal["at"] = json!(a);
+        } else if args.get("at").map(|v| v.is_null()).unwrap_or(false) {
+            meal.as_object_mut().and_then(|o| o.remove("at"));
         }
         if let Some(items) = args.get("items").and_then(|v| v.as_array()) {
-            meal["items"] = json!(
-                items
-                    .iter()
-                    .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
-                    .filter(|s| !s.is_empty())
-                    .collect::<Vec<_>>()
-            );
+            if !items.is_empty() {
+                meal["items"] = json!(
+                    items
+                        .iter()
+                        .filter_map(|x| x.as_str().map(|s| s.trim().to_string()))
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<_>>()
+                );
+            }
         }
         meals[idx] = meal;
         let entry = upsert_daily_meals(app, &date, meals, existing)?;

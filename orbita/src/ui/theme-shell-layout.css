@@ -76,8 +76,51 @@
 .work-panel {
   flex: 1;
   min-height: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 10px;
+  box-sizing: border-box;
+  gap: 8px;
+}
+.work-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+.work-tasks-block {
+  flex: 0 1 auto;
+  max-height: 46%;
+}
+.work-notes-block {
+  flex: 1;
+  min-height: 0;
+}
+.work-task-list,
+.work-note-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.work-empty {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 2px;
+}
+.work-note-row {
+  width: 100%;
+  text-align: left;
+  border: none;
+  cursor: pointer;
+}
+.work-note-time {
+  font-size: 10px;
+  opacity: 0.55;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 .work-placeholder { color: var(--muted); margin: 0; }
 .today-panel {
@@ -143,6 +186,32 @@
 .meal-tag-input {
   width: 100%;
   box-sizing: border-box;
+}
+.meal-slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.meal-slot-btn {
+  flex: 1 1 calc(50% - 6px);
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-active) 80%, transparent);
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.meal-slot-btn:hover {
+  background: var(--surface-active);
+  border-color: var(--border);
+}
+.meal-slot-btn.is-active {
+  background: color-mix(in srgb, var(--focus) 18%, var(--surface-active));
+  border-color: color-mix(in srgb, var(--focus) 45%, var(--border));
 }
 .life-ring-btn {
   flex: none;
@@ -405,9 +474,18 @@ html.privacy-mode .life-ring-center::after {
 }
 html.privacy-mode .primary-mood-btn.has-emoji { font-size: 0; color: transparent; }
 html.privacy-mode .primary-mood-btn.has-emoji::after {
-  content: "馃敀";
+  content: "🔒";
   font-size: 22px;
   color: inherit;
+}
+html.privacy-mode .ai-msg-bubble {
+  filter: blur(6px);
+  user-select: none;
+  pointer-events: none;
+}
+html.privacy-mode .ticktick-task-title {
+  filter: blur(5px);
+  user-select: none;
 }
 .primary-mood-mount {
   position: absolute;

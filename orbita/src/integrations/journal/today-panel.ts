@@ -23,7 +23,7 @@ import {
   SLEEP_GOAL_H,
   type SleepStages,
 } from "./life-rings";
-import { deleteMeal, openHydrationDialog, openMealDialog } from "./meals-dialog";
+import { deleteMeal, openHydrationDialog, openMealDialog, type TodayPanelRefresh } from "./meals-dialog";
 
 type NapEntry = { start?: number; end?: number; duration?: number; source?: string };
 
@@ -128,8 +128,20 @@ function feedAt(item: FeedItem): string {
   return typeof at === "string" && at ? at : "99:99";
 }
 
+type PanelEntry = {
+  kind?: string;
+  id?: string;
+  date?: string;
+  remark?: string;
+  data?: unknown;
+  primary?: boolean;
+  at?: unknown;
+  fetchedAt?: number;
+  source?: string;
+};
+
 function buildFeedItems(
-  entries: { kind?: string; id?: string; remark?: string; data?: unknown; primary?: boolean; at?: unknown }[],
+  entries: PanelEntry[],
   meals: MealEntry[],
 ): FeedItem[] {
   const items: FeedItem[] = entries
@@ -238,6 +250,215 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
   const syncBtn = container.querySelector<HTMLButtonElement>("#todayGarminSync")!;
   const privacyBtn = container.querySelector<HTMLButtonElement>("#todayPrivacyToggle")!;
   const lastSyncEl = container.querySelector<HTMLElement>("#garminLastSync")!;
+  const sleepGraphic = container.querySelector("#sleepRingGraphic")!;
+  const calorieGraphic = container.querySelector("#calorieRingGraphic")!;
+  const hydrationGraphic = container.querySelector("#hydrationRingGraphic")!;
+
+  let cachedEntries: PanelEntry[] = [];
+  let cachedMeals: MealEntry[] = [];
+  let cachedSyncEntries: PanelEntry[] = [];
+
+  function snapshotState() {
+    return { entries: [...cachedEntries], meals: [...cachedMeals] };
+  }
+
+  function restoreState(snap: { entries: PanelEntry[]; meals: MealEntry[] }) {
+    cachedEntries = snap.entries;
+    cachedMeals = snap.meals;
+    refreshRings(cachedEntries, getSettings().ui.lifeRingGoals);
+    refreshFeed(cachedEntries, cachedMeals);
+  }
+
+  function upsertDailyData(date: string, patch: (data: Record<string, unknown>) => Record<string, unknown>) {
+    const idx = cachedEntries.findIndex((e) => e.kind === "daily" && e.date === date);
+    if (idx >= 0) {
+      const e = cachedEntries[idx];
+      const prevData = e.data && typeof e.data === "object" ? { ...(e.data as Record<string, unknown>) } : {};
+      cachedEntries = cachedEntries.map((en, i) => (i === idx ? { ...en, data: patch(prevData) } : en));
+      return;
+    }
+    cachedEntries = [...cachedEntries, { kind: "daily", date, data: patch({}) }];
+  }
+
+  function refreshRings(entries: PanelEntry[], goals: ReturnType<typeof getSettings>["ui"]["lifeRingGoals"]) {
+    const date = beijingToday();
+    const routine = entries.find((e) => e.kind === "routine");
+    const routineData =
+      routine?.data && typeof routine.data === "object"
+        ? (routine.data as { night?: NightData; naps?: NapEntry[] })
+        : undefined;
+    const night = routineData?.night;
+    const naps = routineData?.naps ?? [];
+    renderSleepRing(sleepGraphic as HTMLElement, sleepRing, night, naps);
+
+    const daily = entries.find((e) => e.kind === "daily" && e.date === date);
+    const todayDaily = parseDailyData(daily?.data);
+    const meals = parseMeals(daily?.data);
+    const slotKcal = sumMealsBySlot(meals);
+    const intakeKcal = totalMealKcal(meals);
+    calorieGraphic.innerHTML = calorieRingHtml({
+      intakeKcal,
+      totalCalories: todayDaily?.totalCalories ?? 0,
+      activeCalories: todayDaily?.activeCalories ?? 0,
+      slotKcal,
+      goalIntake: goals.goalIntake,
+      goalExp: goals.goalExp,
+    });
+    hydrationGraphic.innerHTML = hydrationRingHtml({
+      hydrationMl: todayDaily?.hydrationMl ?? 0,
+      goalHydration: goals.goalHydration,
+    });
+  }
+
+  function bindFeedRows(feedItems: FeedItem[]) {
+    listEl.querySelectorAll<HTMLElement>(".today-feed-item").forEach((row) => {
+      const item = feedItems.find((e) => e.id === row.dataset.id && e.kind === row.dataset.kind);
+      if (!item) return;
+      row.querySelector('[data-action="edit"]')!.addEventListener("click", () => {
+        if (item.kind === "event") openEventDialog(dialogRoot, item.entry, panelApi);
+        else if (item.kind === "mood") openMoodDialog(dialogRoot, item.entry, panelApi);
+        else openMealDialog(dialogRoot, item.entry, panelApi, beijingToday());
+      });
+      row.querySelector('[data-action="del"]')!.addEventListener("click", () => {
+        const date = beijingToday();
+        let rollback = () => {};
+        if (item.kind === "meal") {
+          const meals = cachedMeals.filter((m) => m.id !== item.id);
+          rollback = panelApi.optimisticMeals(date, meals);
+        } else {
+          const snap = snapshotState();
+          cachedEntries = cachedEntries.filter((e) => e.id !== item.id);
+          rollback = () => restoreState(snap);
+          refreshFeed(cachedEntries, cachedMeals);
+        }
+        void (async () => {
+          try {
+            if (item.kind === "meal") await deleteMeal(date, item.id);
+            else await journalDelete(item.id);
+            window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+          } catch (err) {
+            rollback();
+            alert(String(err));
+          }
+        })();
+      });
+    });
+  }
+
+  function refreshFeed(entries: PanelEntry[], meals: MealEntry[]) {
+    cachedEntries = entries;
+    cachedMeals = meals;
+    const feedItems = buildFeedItems(entries, meals);
+    if (isPrivacyMode()) {
+      listEl.innerHTML = `<button type="button" class="today-feed-private" id="privacyUnlockBtn">🔒 已隐藏 · 点击显示</button>`;
+      listEl.querySelector("#privacyUnlockBtn")!.addEventListener("click", () => {
+        togglePrivacyMode();
+        syncPrivacyBtn();
+        refreshFeed(cachedEntries, cachedMeals);
+      });
+    } else {
+      listEl.innerHTML = feedItems.length
+        ? feedItems.map(feedItemHtml).join("")
+        : `<div class="today-feed-empty">点 📌、✨ 或 🍽 记一笔</div>`;
+      bindFeedRows(feedItems);
+    }
+  }
+
+  function refreshLastSync(entries: PanelEntry[]) {
+    setLastSync(garminLastFetchedAt(entries));
+  }
+
+  async function repaintFull() {
+    const goals = getSettings().ui.lifeRingGoals;
+
+    if (!journalConfigured(getSettings())) {
+      listEl.innerHTML = `<p class="settings-hint">请配置今日记录目录</p>`;
+      setLastSync(null);
+      cachedEntries = [];
+      cachedMeals = [];
+      cachedSyncEntries = [];
+      sleepGraphic.innerHTML = sleepStageRingHtml({
+        stages: { deep: 0, light: 0, rem: 0 },
+        goalHours: SLEEP_GOAL_H,
+        totalSeconds: 0,
+      });
+      calorieGraphic.innerHTML = calorieRingHtml({
+        intakeKcal: 0,
+        totalCalories: 0,
+        activeCalories: 0,
+        slotKcal: { breakfast: 0, lunch: 0, dinner: 0, snack: 0 },
+        goalIntake: goals.goalIntake,
+        goalExp: goals.goalExp,
+      });
+      hydrationGraphic.innerHTML = hydrationRingHtml({ hydrationMl: 0, goalHydration: goals.goalHydration });
+      return;
+    }
+
+    const date = beijingToday();
+    const { entries } = await journalList({ date });
+    const { entries: syncEntries } = await journalList({ from: syncFromDate(30), to: date });
+    cachedEntries = entries;
+    cachedSyncEntries = syncEntries as PanelEntry[];
+    const daily = entries.find((e) => e.kind === "daily" && e.date === date);
+    cachedMeals = parseMeals(daily?.data);
+    refreshLastSync(cachedSyncEntries);
+    refreshRings(cachedEntries, goals);
+    refreshFeed(cachedEntries, cachedMeals);
+  }
+
+  const panelApi: TodayPanelRefresh = {
+    cachedMealsForDate: (date) => {
+      if (date === beijingToday()) return cachedMeals;
+      const daily = cachedEntries.find((e) => e.kind === "daily" && e.date === date);
+      return parseMeals(daily?.data);
+    },
+    refreshRings: () => refreshRings(cachedEntries, getSettings().ui.lifeRingGoals),
+    refreshFeed: () => refreshFeed(cachedEntries, cachedMeals),
+    repaintFull,
+    optimisticMeals: (date, meals) => panelApi.optimisticMealPatches([{ date, meals }]),
+    optimisticMealPatches: (patches) => {
+      const snap = snapshotState();
+      for (const { date, meals } of patches) {
+        upsertDailyData(date, (data) => ({ ...data, meals }));
+      }
+      const today = beijingToday();
+      const daily = cachedEntries.find((e) => e.kind === "daily" && e.date === today);
+      cachedMeals = parseMeals(daily?.data);
+      refreshRings(cachedEntries, getSettings().ui.lifeRingGoals);
+      refreshFeed(cachedEntries, cachedMeals);
+      return () => restoreState(snap);
+    },
+    optimisticHydration: (date, ml) => {
+      const snap = snapshotState();
+      upsertDailyData(date, (data) => ({ ...data, hydrationMl: ml }));
+      refreshRings(cachedEntries, getSettings().ui.lifeRingGoals);
+      return () => restoreState(snap);
+    },
+    optimisticEvent: (next, existingId) => {
+      const snap = snapshotState();
+      if (existingId) {
+        cachedEntries = cachedEntries.map((e) => (e.id === existingId ? { ...e, ...next, id: existingId } : e));
+      } else {
+        cachedEntries = [...cachedEntries, next];
+      }
+      refreshFeed(cachedEntries, cachedMeals);
+      return () => restoreState(snap);
+    },
+    optimisticMood: (next, existingId) => {
+      const snap = snapshotState();
+      if (existingId) {
+        cachedEntries = cachedEntries.map((e) => (e.id === existingId ? { ...e, ...next, id: existingId } : e));
+      } else {
+        cachedEntries = [...cachedEntries, next];
+      }
+      refreshFeed(cachedEntries, cachedMeals);
+      return () => restoreState(snap);
+    },
+  };
+
+  function setLastSync(ts: number | null) {
+    lastSyncEl.textContent = ts ? `最后更新：${formatGarminLastSync(ts)}` : "最后更新：--";
+  }
 
   function syncPrivacyBtn() {
     privacyBtn.classList.toggle("is-active", isPrivacyMode());
@@ -247,7 +468,7 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
   privacyBtn.addEventListener("click", () => {
     togglePrivacyMode();
     syncPrivacyBtn();
-    void repaint();
+    refreshFeed(cachedEntries, cachedMeals);
   });
   syncPrivacyBtn();
 
@@ -258,7 +479,7 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     void journalList({ date }).then(({ entries }) => {
       const d = entries.find((e) => e.kind === "daily" && e.date === date);
       const parsed = parseDailyData(d?.data);
-      openHydrationDialog(dialogRoot, date, parsed?.hydrationMl ?? 0, () => void repaint());
+      openHydrationDialog(dialogRoot, date, parsed?.hydrationMl ?? 0, panelApi);
     });
   });
 
@@ -280,7 +501,7 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
         syncBtn.classList.add("is-success");
         window.setTimeout(() => syncBtn.classList.remove("is-success"), 1600);
         window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-        void repaint();
+        void repaintFull();
       } else {
         alert(formatGarminError(res.reason, res.message));
       }
@@ -293,110 +514,17 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     }
   }
 
-  container.querySelector("#addEventBtn")!.addEventListener("click", () => openEventDialog(dialogRoot, null, repaint));
-  container.querySelector("#addMoodBtn")!.addEventListener("click", () => openMoodDialog(dialogRoot, null, repaint));
-  container.querySelector("#addMealBtn")!.addEventListener("click", () => openMealDialog(dialogRoot, null, repaint));
+  container.querySelector("#addEventBtn")!.addEventListener("click", () => openEventDialog(dialogRoot, null, panelApi));
+  container.querySelector("#addMoodBtn")!.addEventListener("click", () => openMoodDialog(dialogRoot, null, panelApi));
+  container.querySelector("#addMealBtn")!.addEventListener("click", () => openMealDialog(dialogRoot, null, panelApi));
 
-  function setLastSync(ts: number | null) {
-    lastSyncEl.textContent = ts ? `最后更新：${formatGarminLastSync(ts)}` : "最后更新：--";
-  }
-
-  async function repaint() {
-    const sleepGraphic = container.querySelector("#sleepRingGraphic")!;
-    const calorieGraphic = container.querySelector("#calorieRingGraphic")!;
-    const hydrationGraphic = container.querySelector("#hydrationRingGraphic")!;
-    const goals = getSettings().ui.lifeRingGoals;
-
-    if (!journalConfigured(getSettings())) {
-      listEl.innerHTML = `<p class="settings-hint">请配置今日记录目录</p>`;
-      setLastSync(null);
-      sleepGraphic.innerHTML = sleepStageRingHtml({
-        stages: { deep: 0, light: 0, rem: 0 },
-        goalHours: SLEEP_GOAL_H,
-        totalSeconds: 0,
-      });
-      calorieGraphic.innerHTML = calorieRingHtml({
-        intakeKcal: 0,
-        totalCalories: 0,
-        activeCalories: 0,
-        slotKcal: { breakfast: 0, lunch: 0, dinner: 0, snack: 0 },
-        goalIntake: goals.goalIntake,
-        goalExp: goals.goalExp,
-      });
-      hydrationGraphic.innerHTML = hydrationRingHtml({ hydrationMl: 0, goalHydration: goals.goalHydration });
-      return;
-    }
-
-    const date = beijingToday();
-    const { entries } = await journalList({ date });
-    const { entries: syncEntries } = await journalList({ from: syncFromDate(30), to: date });
-    setLastSync(garminLastFetchedAt(syncEntries as { kind?: string; source?: string; fetchedAt?: number }[]));
-    const routine = entries.find((e) => e.kind === "routine");
-    const routineData =
-      routine?.data && typeof routine.data === "object"
-        ? (routine.data as { night?: NightData; naps?: NapEntry[] })
-        : undefined;
-    const night = routineData?.night;
-    const naps = routineData?.naps ?? [];
-    renderSleepRing(sleepGraphic as HTMLElement, sleepRing, night, naps);
-
-    const daily = entries.find((e) => e.kind === "daily" && e.date === date);
-    const todayDaily = parseDailyData(daily?.data);
-
-    const meals = parseMeals(daily?.data);
-    const slotKcal = sumMealsBySlot(meals);
-    const intakeKcal = totalMealKcal(meals);
-    calorieGraphic.innerHTML = calorieRingHtml({
-      intakeKcal,
-      totalCalories: todayDaily?.totalCalories ?? 0,
-      activeCalories: todayDaily?.activeCalories ?? 0,
-      slotKcal,
-      goalIntake: goals.goalIntake,
-      goalExp: goals.goalExp,
-    });
-    hydrationGraphic.innerHTML = hydrationRingHtml({
-      hydrationMl: todayDaily?.hydrationMl ?? 0,
-      goalHydration: goals.goalHydration,
-    });
-
-    const feedItems = buildFeedItems(entries, meals);
-    if (isPrivacyMode()) {
-      listEl.innerHTML = `<button type="button" class="today-feed-private" id="privacyUnlockBtn">🔒 已隐藏 · 点击显示</button>`;
-      listEl.querySelector("#privacyUnlockBtn")!.addEventListener("click", () => {
-        togglePrivacyMode();
-        syncPrivacyBtn();
-        void repaint();
-      });
-    } else {
-      listEl.innerHTML = feedItems.length
-        ? feedItems.map(feedItemHtml).join("")
-        : `<div class="today-feed-empty">点 📌、✨ 或 🍽 记一笔</div>`;
-
-      listEl.querySelectorAll<HTMLElement>(".today-feed-item").forEach((row) => {
-        const item = feedItems.find((e) => e.id === row.dataset.id && e.kind === row.dataset.kind);
-        if (!item) return;
-        row.querySelector('[data-action="edit"]')!.addEventListener("click", () => {
-          if (item.kind === "event") openEventDialog(dialogRoot, item.entry, repaint);
-          else if (item.kind === "mood") openMoodDialog(dialogRoot, item.entry, repaint);
-          else openMealDialog(dialogRoot, item.entry, repaint, date);
-        });
-        row.querySelector('[data-action="del"]')!.addEventListener("click", async () => {
-          if (item.kind === "meal") await deleteMeal(date, item.id);
-          else await journalDelete(item.id);
-          await repaint();
-          window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-        });
-      });
-    }
-  }
-
-  window.addEventListener("orbita:journal-changed", () => void repaint());
-  window.addEventListener("orbita:ui-prefs", () => void repaint());
+  window.addEventListener("orbita:journal-changed", () => void repaintFull());
+  window.addEventListener("orbita:ui-prefs", () => panelApi.refreshRings());
   window.addEventListener(PRIVACY_MODE_EVT, () => {
     syncPrivacyBtn();
-    void repaint();
+    refreshFeed(cachedEntries, cachedMeals);
   });
-  void repaint();
+  void repaintFull();
 }
 
 function napEntryLabel(nap: NapEntry, index: number): string {
@@ -599,7 +727,7 @@ function openSleepDialog(root: HTMLElement) {
   });
 }
 
-function openEventDialog(root: HTMLElement, entry: Record<string, unknown> | null, onSave: () => void) {
+function openEventDialog(root: HTMLElement, entry: Record<string, unknown> | null, panel: TodayPanelRefresh) {
   const backdrop = document.createElement("div");
   backdrop.className = "dialog-backdrop";
   backdrop.innerHTML = `
@@ -624,14 +752,26 @@ function openEventDialog(root: HTMLElement, entry: Record<string, unknown> | nul
     e.preventDefault();
     const date = backdrop.querySelector<HTMLInputElement>("#evDate")!.value;
     const remark = backdrop.querySelector<HTMLInputElement>("#evRemark")!.value.trim();
-    await journalUpsert({ id: entry?.id ? String(entry.id) : "", kind: "event", date, at: null, remark });
+    const existingId = entry?.id ? String(entry.id) : undefined;
+    const payload = { id: existingId ?? "", kind: "event" as const, date, at: null, remark };
+    const rollback = panel.optimisticEvent(
+      { ...payload, id: existingId ?? `tmp-${Date.now()}` },
+      existingId,
+    );
     await close();
-    onSave();
-    window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+    void (async () => {
+      try {
+        await journalUpsert(payload);
+        window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+      } catch (err) {
+        rollback();
+        alert(String(err));
+      }
+    })();
   });
 }
 
-function openMoodDialog(root: HTMLElement, entry: Record<string, unknown> | null, onSave: () => void) {
+function openMoodDialog(root: HTMLElement, entry: Record<string, unknown> | null, panel: TodayPanelRefresh) {
   const backdrop = document.createElement("div");
   backdrop.className = "dialog-backdrop";
   const data = (entry?.data ?? {}) as { emoji?: string; note?: string };
@@ -668,15 +808,28 @@ function openMoodDialog(root: HTMLElement, entry: Record<string, unknown> | null
   backdrop.querySelector("form")!.addEventListener("submit", async (e) => {
     e.preventDefault();
     const date = backdrop.querySelector<HTMLInputElement>("#mdDate")!.value;
-    await journalUpsert({
-      id: entry?.id ? String(entry.id) : "",
-      kind: "mood",
+    const existingId = entry?.id ? String(entry.id) : undefined;
+    const data = { emoji: emojiInput.value, note: backdrop.querySelector<HTMLInputElement>("#mdNote")!.value.trim() };
+    const payload = {
+      id: existingId ?? "",
+      kind: "mood" as const,
       date,
       primary: false,
-      data: { emoji: emojiInput.value, note: backdrop.querySelector<HTMLInputElement>("#mdNote")!.value.trim() },
-    });
+      data,
+    };
+    const rollback = panel.optimisticMood(
+      { ...payload, id: existingId ?? `tmp-${Date.now()}` },
+      existingId,
+    );
     await close();
-    onSave();
-    window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+    void (async () => {
+      try {
+        await journalUpsert(payload);
+        window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+      } catch (err) {
+        rollback();
+        alert(String(err));
+      }
+    })();
   });
 }

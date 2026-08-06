@@ -2,7 +2,7 @@ use crate::agent::tools::{self, execute as run_tool, start_label};
 use crate::agent::register_tool_confirm;
 use crate::ai::{chat_url, AiChatRequest, AiStreamEvent};
 use crate::data::{read_settings, ChatMessage};
-use crate::dida;
+use crate::ticktick;
 use futures_util::StreamExt;
 use reqwest::Client;
 use serde::Deserialize;
@@ -62,7 +62,7 @@ struct StreamChunk {
 }
 
 fn build_agent_system_prompt(app: &AppHandle) -> String {
-    let connected = dida::dida_auth_status(app.clone())
+    let connected = ticktick::ticktick_auth_status(app.clone())
         .map(|s| s.connected)
         .unwrap_or(false);
     let settings = read_settings(app).ok();

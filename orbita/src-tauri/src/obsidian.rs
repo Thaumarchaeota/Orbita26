@@ -142,7 +142,7 @@ fn walk_md(root: &Path, dir: &Path, out: &mut Vec<ObsidianNote>) -> Result<(), S
 
 
 
-pub fn list_notes(vault_dir: &str, limit: u32) -> Result<Vec<ObsidianNote>, String> {
+pub fn list_notes(vault_dir: &str, limit: u32, subdir: Option<&str>) -> Result<Vec<ObsidianNote>, String> {
 
     if vault_dir.is_empty() {
 
@@ -150,17 +150,28 @@ pub fn list_notes(vault_dir: &str, limit: u32) -> Result<Vec<ObsidianNote>, Stri
 
     }
 
-    let root = PathBuf::from(vault_dir);
+    let vault = PathBuf::from(vault_dir);
 
-    if !root.is_dir() {
+    if !vault.is_dir() {
 
         return Err(format!("目录不存在: {vault_dir}"));
 
     }
 
+    let scan_root = match subdir.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(sub) => vault.join(sub.replace('/', std::path::MAIN_SEPARATOR_STR)),
+        None => vault.clone(),
+    };
+
+    if !scan_root.is_dir() {
+
+        return Err(format!("项目笔记目录不存在: {}", scan_root.display()));
+
+    }
+
     let mut notes = Vec::new();
 
-    walk_md(&root, &root, &mut notes)?;
+    walk_md(&vault, &scan_root, &mut notes)?;
 
     notes.sort_by(|a, b| b.modified.cmp(&a.modified));
 

@@ -56,6 +56,7 @@ pub fn repair_window_show(window: &WebviewWindow) -> Result<(), String> {
 pub fn repair_window_focus(window: &WebviewWindow) -> Result<(), String> {
     let _ = window.unminimize();
     let _ = window.show();
+    fix_transparent_chrome(window);
     bring_to_front(window);
     let win = window.clone();
     std::thread::spawn(move || {

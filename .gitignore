@@ -22,6 +22,7 @@ dist/
 
 orbita/node_modules/
 orbita/dist/
+release/
 orbita/src-tauri/target/
 orbita/src-tauri/binaries/
 tools/LibreHardwareMonitor/

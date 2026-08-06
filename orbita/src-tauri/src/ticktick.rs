@@ -1,6 +1,6 @@
 use crate::data::{read_settings, write_settings, AppSettings, TicktickIntegration};
 use base64::{engine::general_purpose::STANDARD, Engine};
-use reqwest::blocking::Client;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::io::{Read, Write};
@@ -23,7 +23,7 @@ const DEFAULT_TICKTICK_REDIRECT: &str = "http://127.0.0.1:8765/callback";
 
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct DidaAuthStatus {
+pub struct TicktickAuthStatus {
     pub connected: bool,
 }
 
@@ -37,7 +37,7 @@ fn save_token(app: &AppHandle, token: String) -> Result<(), String> {
     write_settings(app, settings)
 }
 
-fn api_get(token: &str, path: &str) -> Result<Value, String> {
+async fn api_get(token: &str, path: &str) -> Result<Value, String> {
     let client = Client::builder()
         .timeout(Duration::from_secs(30))
         .build()
@@ -46,16 +46,17 @@ fn api_get(token: &str, path: &str) -> Result<Value, String> {
         .get(format!("{API_BASE}{path}"))
         .header("Authorization", format!("Bearer {token}"))
         .send()
+        .await
         .map_err(|e| e.to_string())?;
     let status = resp.status();
-    let body = resp.text().map_err(|e| e.to_string())?;
+    let body = resp.text().await.map_err(|e| e.to_string())?;
     if !status.is_success() {
         return Err(format!("API {status}: {body}"));
     }
     serde_json::from_str(&body).map_err(|e| format!("解析失败: {e}"))
 }
 
-fn api_post(token: &str, path: &str, body: &Value) -> Result<Value, String> {
+async fn api_post(token: &str, path: &str, body: &Value) -> Result<Value, String> {
     let client = Client::builder()
         .timeout(Duration::from_secs(30))
         .build()
@@ -66,9 +67,10 @@ fn api_post(token: &str, path: &str, body: &Value) -> Result<Value, String> {
         .header("Content-Type", "application/json")
         .json(body)
         .send()
+        .await
         .map_err(|e| e.to_string())?;
     let status = resp.status();
-    let text = resp.text().map_err(|e| e.to_string())?;
+    let text = resp.text().await.map_err(|e| e.to_string())?;
     if !status.is_success() {
         return Err(format!("API {status}: {text}"));
     }
@@ -78,7 +80,7 @@ fn api_post(token: &str, path: &str, body: &Value) -> Result<Value, String> {
     serde_json::from_str(&text).map_err(|e| format!("解析失败: {e}"))
 }
 
-fn api_delete(token: &str, path: &str) -> Result<(), String> {
+async fn api_delete(token: &str, path: &str) -> Result<(), String> {
     let client = Client::builder()
         .timeout(Duration::from_secs(30))
         .build()
@@ -87,12 +89,13 @@ fn api_delete(token: &str, path: &str) -> Result<(), String> {
         .delete(format!("{API_BASE}{path}"))
         .header("Authorization", format!("Bearer {token}"))
         .send()
+        .await
         .map_err(|e| e.to_string())?;
     let status = resp.status();
     if status.is_success() {
         return Ok(());
     }
-    let body = resp.text().unwrap_or_default();
+    let body = resp.text().await.unwrap_or_default();
     Err(format!("API {status}: {body}"))
 }
 
@@ -103,7 +106,7 @@ fn open_browser(app: &AppHandle, url: &str) -> Result<(), String> {
         .map_err(|e| format!("打开浏览器失败: {e}"))
 }
 
-pub fn dida_begin_oauth(app: AppHandle) -> Result<String, String> {
+pub fn ticktick_begin_oauth(app: AppHandle) -> Result<String, String> {
     let settings = read_settings(&app)?;
     let cfg = effective_cfg(&ticktick_cfg(&settings))?;
     let mut save = settings.clone();
@@ -120,7 +123,7 @@ pub fn dida_begin_oauth(app: AppHandle) -> Result<String, String> {
     Ok(auth_url(&cfg))
 }
 
-pub fn dida_finish_oauth(app: AppHandle) -> Result<DidaAuthStatus, String> {
+pub async fn ticktick_finish_oauth(app: AppHandle) -> Result<TicktickAuthStatus, String> {
     let listener = OAUTH_LISTENER
         .lock()
         .map_err(|e| e.to_string())?
@@ -131,16 +134,18 @@ pub fn dida_finish_oauth(app: AppHandle) -> Result<DidaAuthStatus, String> {
         .map_err(|e| e.to_string())?
         .take()
         .ok_or_else(|| "OAuth 配置丢失".to_string())?;
-    let code = wait_oauth_code_on(listener)?;
-    let token = exchange_token(&cfg, &code)?;
+    let code = tauri::async_runtime::spawn_blocking(move || wait_oauth_code_on(listener))
+        .await
+        .map_err(|e| e.to_string())??;
+    let token = exchange_token(&cfg, &code).await?;
     save_token(&app, token)?;
-    dida_auth_status(app)
+    ticktick_auth_status(app)
 }
 
-pub fn dida_connect(app: AppHandle) -> Result<DidaAuthStatus, String> {
-    let url = dida_begin_oauth(app.clone())?;
+pub async fn ticktick_connect(app: AppHandle) -> Result<TicktickAuthStatus, String> {
+    let url = ticktick_begin_oauth(app.clone())?;
     open_browser(&app, &url)?;
-    dida_finish_oauth(app)
+    ticktick_finish_oauth(app).await
 }
 
 enum OAuthCallback {
@@ -211,28 +216,29 @@ fn redirect_port(redirect_uri: &str) -> u16 {
         .unwrap_or(DEFAULT_PORT)
 }
 
-fn exchange_token(cfg: &TicktickIntegration, code: &str) -> Result<String, String> {
+async fn exchange_token(cfg: &TicktickIntegration, code: &str) -> Result<String, String> {
     let basic = STANDARD.encode(format!("{}:{}", cfg.client_id, cfg.client_secret));
     let client = Client::builder()
         .timeout(Duration::from_secs(30))
         .build()
         .map_err(|e| e.to_string())?;
+    let redirect_uri = cfg.redirect_uri.trim().to_string();
+    let body = form_urlencoded::Serializer::new(String::new())
+        .append_pair("code", code)
+        .append_pair("grant_type", "authorization_code")
+        .append_pair("scope", SCOPE)
+        .append_pair("redirect_uri", &redirect_uri)
+        .finish();
     let resp = client
         .post(TOKEN_URL)
         .header("Authorization", format!("Basic {basic}"))
         .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(
-            form_urlencoded::Serializer::new(String::new())
-                .append_pair("code", code)
-                .append_pair("grant_type", "authorization_code")
-                .append_pair("scope", SCOPE)
-                .append_pair("redirect_uri", &cfg.redirect_uri)
-                .finish(),
-        )
+        .body(body)
         .send()
+        .await
         .map_err(|e| e.to_string())?;
     let status = resp.status();
-    let body: Value = resp.json().map_err(|e| e.to_string())?;
+    let body: Value = resp.json().await.map_err(|e| e.to_string())?;
     if !status.is_success() {
         return Err(format!("换 token 失败: {body}"));
     }
@@ -262,9 +268,9 @@ fn auth_url(cfg: &TicktickIntegration) -> String {
     url.to_string()
 }
 
-pub fn dida_auth_status(app: AppHandle) -> Result<DidaAuthStatus, String> {
+pub fn ticktick_auth_status(app: AppHandle) -> Result<TicktickAuthStatus, String> {
     let settings = read_settings(&app)?;
-    Ok(DidaAuthStatus {
+    Ok(TicktickAuthStatus {
         connected: !settings.integrations.ticktick.access_token.trim().is_empty(),
     })
 }
@@ -320,27 +326,30 @@ fn wait_oauth_code_on(listener: TcpListener) -> Result<String, String> {
     }
 }
 
-pub fn dida_disconnect(app: AppHandle) -> Result<DidaAuthStatus, String> {
+pub fn ticktick_disconnect(app: AppHandle) -> Result<TicktickAuthStatus, String> {
     let mut settings = read_settings(&app)?;
     settings.integrations.ticktick.access_token.clear();
     write_settings(&app, settings)?;
-    dida_auth_status(app)
+    ticktick_auth_status(app)
 }
 
-pub fn dida_list_projects(app: AppHandle) -> Result<Value, String> {
+pub async fn ticktick_list_projects(app: AppHandle) -> Result<Value, String> {
     let (_, token) = require_token(&app)?;
-    api_get(&token, "/project")
+    api_get(&token, "/project").await
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DidaFilterTasksRequest {
+pub struct TicktickFilterTasksRequest {
     pub project_ids: Option<Vec<String>>,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
 }
 
-pub fn dida_filter_tasks(app: AppHandle, req: DidaFilterTasksRequest) -> Result<Value, String> {
+pub async fn ticktick_filter_tasks(
+    app: AppHandle,
+    req: TicktickFilterTasksRequest,
+) -> Result<Value, String> {
     let (_, token) = require_token(&app)?;
     let mut body = json!({ "status": [0] });
     if let Some(ids) = req.project_ids.filter(|v| !v.is_empty()) {
@@ -352,12 +361,12 @@ pub fn dida_filter_tasks(app: AppHandle, req: DidaFilterTasksRequest) -> Result<
     if let Some(ref d) = req.end_date {
         body["endDate"] = json!(d);
     }
-    api_post(&token, "/task/filter", &body)
+    api_post(&token, "/task/filter", &body).await
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DidaCreateTaskRequest {
+pub struct TicktickCreateTaskRequest {
     pub title: String,
     pub project_id: String,
     pub content: Option<String>,
@@ -368,7 +377,10 @@ pub struct DidaCreateTaskRequest {
     pub priority: Option<i32>,
 }
 
-pub fn dida_create_task(app: AppHandle, req: DidaCreateTaskRequest) -> Result<Value, String> {
+pub async fn ticktick_create_task(
+    app: AppHandle,
+    req: TicktickCreateTaskRequest,
+) -> Result<Value, String> {
     let (_, token) = require_token(&app)?;
     let mut body = json!({
         "title": req.title.trim(),
@@ -392,12 +404,12 @@ pub fn dida_create_task(app: AppHandle, req: DidaCreateTaskRequest) -> Result<Va
     if let Some(p) = req.priority {
         body["priority"] = json!(p);
     }
-    api_post(&token, "/task", &body)
+    api_post(&token, "/task", &body).await
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DidaUpdateTaskRequest {
+pub struct TicktickUpdateTaskRequest {
     pub title: String,
     pub project_id: String,
     pub content: Option<String>,
@@ -408,10 +420,10 @@ pub struct DidaUpdateTaskRequest {
     pub priority: Option<i32>,
 }
 
-pub fn dida_update_task(
+pub async fn ticktick_update_task(
     app: AppHandle,
     task_id: String,
-    req: DidaUpdateTaskRequest,
+    req: TicktickUpdateTaskRequest,
 ) -> Result<Value, String> {
     let (_, token) = require_token(&app)?;
     let mut body = json!({
@@ -439,10 +451,10 @@ pub fn dida_update_task(
     if let Some(p) = req.priority {
         body["priority"] = json!(p);
     }
-    api_post(&token, &format!("/task/{task_id}"), &body)
+    api_post(&token, &format!("/task/{task_id}"), &body).await
 }
 
-pub fn dida_complete_task(
+pub async fn ticktick_complete_task(
     app: AppHandle,
     project_id: String,
     task_id: String,
@@ -452,11 +464,12 @@ pub fn dida_complete_task(
         &token,
         &format!("/project/{project_id}/task/{task_id}/complete"),
         &json!({}),
-    )?;
+    )
+    .await?;
     Ok(())
 }
 
-pub fn dida_reopen_task(
+pub async fn ticktick_reopen_task(
     app: AppHandle,
     project_id: String,
     task_id: String,
@@ -470,11 +483,12 @@ pub fn dida_reopen_task(
             "projectId": project_id,
             "status": 0,
         }),
-    )?;
+    )
+    .await?;
     Ok(())
 }
 
-pub fn dida_delete_task(
+pub async fn ticktick_delete_task(
     app: AppHandle,
     project_id: String,
     task_id: String,
@@ -484,6 +498,7 @@ pub fn dida_delete_task(
         &token,
         &format!("/project/{project_id}/task/{task_id}"),
     )
+    .await
 }
 
 #[cfg(test)]

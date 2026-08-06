@@ -53,6 +53,8 @@ const OPAQUE_PALETTE_VARS = [
   "--focus",
   "--toggle-color",
   "--text",
+  "--surface",
+  "--surface-active",
 ] as const;
 
 const GLASS_TINT_VARS = ["--glass-tint-h", "--glass-tint-s", "--glass-tint-l", "--glass-alpha-panel"] as const;
@@ -168,19 +170,23 @@ export function applyOpaquePalette(root: HTMLElement, opaque: OpaqueThemePrefs) 
     root.style.setProperty("--btn-hover", hsl(h, s, l));
     root.style.setProperty("--focus", hsl(h, s, l, 0.4));
     root.style.setProperty("--toggle-color", hsl(h, s, l));
+    root.style.setProperty("--surface", hsl(h, 30, 97));
+    root.style.setProperty("--surface-active", hsl(h, 35, 94));
   } else {
     const accentL = Math.min(l + 22, 68);
+    root.style.setProperty("--text", hsl(h, 25, 88));
+    root.style.setProperty("--time", hsl(h, s, accentL));
+    root.style.setProperty("--muted", hsl(h, 20, 62));
+    root.style.setProperty("--border", hsl(h, s, accentL, 0.18));
+    root.style.setProperty("--border-active", hsl(h, s, accentL, 0.38));
+    root.style.setProperty("--shadow", hsl(h, s, accentL, 0.12));
+    root.style.setProperty("--input-ph", hsl(h, 18, 48));
+    root.style.setProperty("--btn-bg", hsl(h, s, accentL, 0.12));
     root.style.setProperty("--btn-hover", hsl(h, s, accentL, 0.6));
     root.style.setProperty("--focus", hsl(h, s, accentL, 0.45));
-    root.style.removeProperty("--text");
-    root.style.removeProperty("--time");
-    root.style.removeProperty("--muted");
-    root.style.removeProperty("--border");
-    root.style.removeProperty("--border-active");
-    root.style.removeProperty("--shadow");
-    root.style.removeProperty("--input-ph");
-    root.style.removeProperty("--btn-bg");
-    root.style.removeProperty("--toggle-color");
+    root.style.setProperty("--toggle-color", hsl(h, s, accentL));
+    root.style.setProperty("--surface", hsl(h, 28, 14));
+    root.style.setProperty("--surface-active", hsl(h, 28, 18));
   }
 }
 

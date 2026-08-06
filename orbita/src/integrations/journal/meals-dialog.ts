@@ -1,7 +1,8 @@
 import {
   inferMealSlotFromNow,
   inferMealSlotFromTime,
-  mealSlotLabel,
+  mealSlotRowHtml,
+  bindMealSlotRow,
   newMealId,
   normalizeMealSlot,
   type MealEntry,
@@ -53,11 +54,8 @@ async function saveDailyMeals(date: string, meals: MealEntry[], prev: { dailyId:
   });
 }
 
-function slotOptions(selected: MealSlot): string {
-  const slots: MealSlot[] = ["breakfast", "lunch", "dinner", "snack"];
-  return slots
-    .map((s) => `<option value="${s}"${s === selected ? " selected" : ""}>${mealSlotLabel(s)}</option>`)
-    .join("");
+function slotField(selected: MealSlot): string {
+  return `<div class="dialog-field"><label>餐次</label>${mealSlotRowHtml(selected)}</div>`;
 }
 
 function tagHtml(tag: string): string {
@@ -115,15 +113,28 @@ export async function deleteMeal(date: string, mealId: string) {
   await saveDailyMeals(date, meals, prev);
 }
 
+export type TodayPanelRefresh = {
+  cachedMealsForDate?: (date: string) => MealEntry[];
+  refreshRings: () => void;
+  refreshFeed: () => void;
+  repaintFull: () => void | Promise<void>;
+  optimisticMeals: (date: string, meals: MealEntry[]) => () => void;
+  optimisticMealPatches: (patches: { date: string; meals: MealEntry[] }[]) => () => void;
+  optimisticHydration: (date: string, ml: number) => () => void;
+  optimisticEvent: (entry: Record<string, unknown>, existingId?: string) => () => void;
+  optimisticMood: (entry: Record<string, unknown>, existingId?: string) => () => void;
+};
+
 export function openMealDialog(
   root: HTMLElement,
   meal: MealEntry | null,
-  onSave: () => void,
+  panel: TodayPanelRefresh,
   defaultDate?: string,
 ) {
   const backdrop = document.createElement("div");
   backdrop.className = "dialog-backdrop";
   const date = defaultDate ?? beijingToday();
+  const originDate = meal ? date : undefined;
   const slot = meal?.slot ?? inferMealSlotFromNow();
   const at = meal?.at ?? "";
   const items = meal?.items ?? [];
@@ -132,7 +143,7 @@ export function openMealDialog(
       <div class="dialog-title">${meal ? "编辑吃饭" : "记吃饭"}</div>
       <div class="dialog-field"><label>日期</label><input type="date" id="mealDate" value="${date}"></div>
       <div class="dialog-field"><label>时间</label><input type="time" id="mealAt" value="${escHtml(at)}"></div>
-      <div class="dialog-field"><label>餐次</label><select id="mealSlot">${slotOptions(slot)}</select></div>
+      ${slotField(slot)}
       <div class="dialog-field"><label>吃了啥</label>
         <div class="meal-tags">${items.map(tagHtml).join("")}</div>
         <input type="text" class="meal-tag-input" placeholder="回车添加标签">
@@ -149,10 +160,10 @@ export function openMealDialog(
   const motion = bindDialog(backdrop);
   const form = backdrop.querySelector<HTMLFormElement>("#mealForm")!;
   bindTagInput(form);
+  const slotHidden = bindMealSlotRow(form);
   const atInput = form.querySelector<HTMLInputElement>("#mealAt")!;
-  const slotSelect = form.querySelector<HTMLSelectElement>("#mealSlot")!;
   atInput.addEventListener("change", () => {
-    if (!meal) slotSelect.value = inferMealSlotFromTime(atInput.value);
+    if (!meal) slotHidden.value = inferMealSlotFromTime(atInput.value);
   });
   const close = async () => {
     await motion.close();
@@ -174,24 +185,75 @@ export function openMealDialog(
     const entry: MealEntry = {
       id: meal?.id ?? newMealId(),
       at: atInput.value || undefined,
-      slot: normalizeMealSlot(slotSelect.value),
+      slot: normalizeMealSlot(slotHidden.value),
       items: collectTags(form),
       text: form.querySelector<HTMLInputElement>("#mealText")!.value.trim(),
       kcal: Math.round(kcal),
       source: meal?.source ?? "manual",
     };
-    const prev = await loadDailyMeals(d);
-    const meals = meal
-      ? prev.meals.map((m) => (m.id === entry.id ? entry : m))
-      : [...prev.meals, entry];
-    await saveDailyMeals(d, meals, prev);
-    await close();
-    onSave();
-    window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+    let rollback = () => {};
+    if (meal && originDate && d !== originDate) {
+      const oldPrev = await loadDailyMeals(originDate);
+      const oldMeals = oldPrev.meals.filter((m) => m.id !== entry.id);
+      const newPrev = await loadDailyMeals(d);
+      const newMeals = [...newPrev.meals.filter((m) => m.id !== entry.id), entry];
+      rollback = panel.optimisticMealPatches([
+        { date: originDate, meals: oldMeals },
+        { date: d, meals: newMeals },
+      ]);
+      await close();
+      panel.refreshRings();
+      panel.refreshFeed();
+      void (async () => {
+        try {
+          await saveDailyMeals(originDate, oldMeals, oldPrev);
+          await saveDailyMeals(d, newMeals, newPrev);
+          window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+        } catch (err) {
+          rollback();
+          alert(String(err));
+        }
+      })();
+    } else {
+      const cached = panel.cachedMealsForDate?.(d);
+      let prev: Awaited<ReturnType<typeof loadDailyMeals>> | null = null;
+      const meals = cached
+        ? meal
+          ? cached.some((m) => m.id === entry.id)
+            ? cached.map((m) => (m.id === entry.id ? entry : m))
+            : [...cached, entry]
+          : [...cached, entry]
+        : null;
+      let finalMeals: MealEntry[];
+      if (meals) {
+        finalMeals = meals;
+      } else {
+        prev = await loadDailyMeals(d);
+        finalMeals = meal
+          ? prev.meals.some((m) => m.id === entry.id)
+            ? prev.meals.map((m) => (m.id === entry.id ? entry : m))
+            : [...prev.meals, entry]
+          : [...prev.meals, entry];
+      }
+      rollback = panel.optimisticMeals(d, finalMeals);
+      await close();
+      panel.refreshRings();
+      panel.refreshFeed();
+      void (async () => {
+        try {
+          if (!prev) prev = await loadDailyMeals(d);
+          await saveDailyMeals(d, finalMeals, prev);
+          window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+        } catch (err) {
+          rollback();
+          alert(String(err));
+        }
+      })();
+    }
   });
 }
 
-export function openHydrationDialog(root: HTMLElement, date: string, currentMl: number, onSave: () => void) {
+export function openHydrationDialog(root: HTMLElement, date: string, currentMl: number, panel: TodayPanelRefresh) {
   if (!getSettings().dataDir) {
     alert("请先在设置中配置数据存储位置");
     return;
@@ -232,14 +294,23 @@ export function openHydrationDialog(root: HTMLElement, date: string, currentMl: 
     const daily = entries.find((en) => en.kind === "daily" && en.date === d);
     const prevData =
       daily?.data && typeof daily.data === "object" ? { ...(daily.data as Record<string, unknown>) } : {};
-    await journalUpsert({
-      id: daily?.id ? String(daily.id) : "",
-      kind: "daily",
-      date: d,
-      data: { ...prevData, hydrationMl: Math.round(ml) },
-    });
+    const rounded = Math.round(ml);
+    const rollback = panel.optimisticHydration(d, rounded);
     await close();
-    onSave();
-    window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+    panel.refreshRings();
+    void (async () => {
+      try {
+        await journalUpsert({
+          id: daily?.id ? String(daily.id) : "",
+          kind: "daily",
+          date: d,
+          data: { ...prevData, hydrationMl: rounded },
+        });
+        window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+      } catch (err) {
+        rollback();
+        alert(String(err));
+      }
+    })();
   });
 }

@@ -6,46 +6,15 @@ import {
   movePointerGhost,
   animatePopIn,
 } from "../../ui/pointer-drag";
+import { inAbsorbZone, isAppendZone, outsidePanel, tileAtPoint, tileEl } from "./tile-grid-hit";
+import type { TileGridDragHandoff, TileGridOptions } from "./tile-grid-types";
 
-export type TileGridDragHandoff = {
-  sourceId: string;
-  ghost: HTMLElement;
-  ghostOffsetX: number;
-  ghostOffsetY: number;
-  ghostHalfW: number;
-  ghostHalfH: number;
-  clientX: number;
-  clientY: number;
-  capturePointerId: number;
-  external?: boolean;
-  placeholderHtml?: string;
-};
-
-export type TileGridOptions<T extends { id: string; name: string }> = {
-  denseItems?: boolean;
-  isFolder?: (item: T) => boolean;
-  onMoveToFolder?: (sourceId: string, folderId: string) => void;
-  onMerge?: (sourceId: string, targetId: string) => string | void;
-  onRemove?: (items: T[], id: string) => T[];
-  dragOutPanel?: HTMLElement;
-  onDragOutHover?: (active: boolean) => void;
-  onMoveOut?: (sourceId: string) => void;
-  onDragOutLeave?: (sourceId: string, handoff: TileGridDragHandoff) => boolean;
-  onExternalCommit?: (sourceId: string, slot: number, absorb?: { kind: "into" | "merge"; targetId: string }) => void;
-  onExternalCancel?: (sourceId: string) => void;
-  onRenameFolder?: (item: T, trigger: HTMLElement) => T[] | null | Promise<T[] | null>;
-};
+export type { TileGridDragHandoff, TileGridOptions } from "./tile-grid-types";
 
 const GHOST_SCALE = 1;
 const FLIP_DRAG_SEC = 0.22;
 const REORDER_DWELL_MS = 20;
 const ABSORB_DWELL_MS = 200;
-const ZONE_IN = 0.35;
-const ZONE_OUT = 0.30;
-
-function tileEl(target: EventTarget | null): HTMLElement | null {
-  return (target as HTMLElement).closest<HTMLElement>(".launcher-tile");
-}
 
 function captureTilePositions(grid: HTMLElement): Map<string, DOMRect> {
   return capturePositions(grid, ".launcher-tile[data-id]");
@@ -64,49 +33,6 @@ function orderFromDom<T extends { id: string; slot?: number }>(grid: HTMLElement
     if (item) result.push({ ...item, slot: index });
   });
   return result;
-}
-
-function tileAtPoint(x: number, y: number, grid: HTMLElement, skip?: HTMLElement | null): HTMLElement | null {
-  const direct = tileEl(document.elementFromPoint(x, y));
-  if (direct && grid.contains(direct) && direct !== skip) return direct;
-  for (const tile of grid.querySelectorAll<HTMLElement>(".launcher-tile")) {
-    if (tile === skip) continue;
-    const r = tile.getBoundingClientRect();
-    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return tile;
-  }
-  return null;
-}
-
-function pointerInGrid(x: number, y: number, grid: HTMLElement): boolean {
-  const r = grid.getBoundingClientRect();
-  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-}
-
-function isAppendZone(x: number, y: number, grid: HTMLElement, skip?: HTMLElement | null): boolean {
-  if (!pointerInGrid(x, y, grid)) return false;
-  const tiles = Array.from(grid.querySelectorAll<HTMLElement>(".launcher-tile")).filter(
-    (t) => t !== skip && !t.classList.contains("is-empty") && t.dataset.id,
-  );
-  if (!tiles.length) return true;
-  const last = tiles[tiles.length - 1]!;
-  const r = last.getBoundingClientRect();
-  if (y >= r.top && y <= r.bottom && x > r.left + r.width * 0.5) return true;
-  if (y > r.bottom) return true;
-  return false;
-}
-
-function outsidePanel(panel: HTMLElement, x: number, y: number): boolean {
-  const r = panel.getBoundingClientRect();
-  return x < r.left || x > r.right || y < r.top || y > r.bottom;
-}
-
-function inAbsorbZone(tile: HTMLElement, x: number, y: number, latched: boolean): boolean {
-  const r = tile.getBoundingClientRect();
-  const lo = latched ? ZONE_OUT : ZONE_IN;
-  const hi = latched ? 1 - ZONE_OUT : 1 - ZONE_IN;
-  const relX = (x - r.left) / r.width;
-  const relY = (y - r.top) / r.height;
-  return relX > lo && relX < hi && relY > lo && relY < hi;
 }
 
 export function bindTileGrid<T extends { id: string; name: string; slot?: number }>(

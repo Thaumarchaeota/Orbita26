@@ -5,7 +5,7 @@ import { defaultThemePrefs } from "./theme-prefs";
 import type { AiConfig, GridPrefs, Integrations, IntegrationsCredentials, LifeRingColors, UiPrefs } from "./types";
 
 export const DEFAULT_GRID_GAP = 8;
-export const DEFAULT_TOP_GRID: GridPrefs = { cols: 5, rows: 3, tileScale: 100, colGap: 8, rowGap: 8 };
+export const DEFAULT_TOP_GRID: GridPrefs = { cols: 6, rows: 3, tileScale: 100, colGap: 8, rowGap: 8 };
 
 export const DEFAULT_LIFE_RINGS: LifeRingColors = {
   sleep: "#5ac8fa",
@@ -56,6 +56,7 @@ export function defaultIntegrations(): Integrations {
     journal: { dataRoot: "" },
     bkeasy: { dataRoot: "" },
     garmin: { tokenDir: "" },
+    work: { projectNotesDir: "12_project-tracking", ticktickProjectId: "" },
     credentials: defaultCredentials(),
   };
 }

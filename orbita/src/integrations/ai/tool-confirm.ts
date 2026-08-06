@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { MEAL_SLOT_LABELS, normalizeMealSlot, type MealSlot } from "../../core/data/meals";
+import { normalizeMealSlot, parseMeals, mealEntryToArgs, mealSlotRowHtml, bindMealSlotRow, type MealSlot } from "../../core/data/meals";
 import { MOOD_EMOJI_PRESETS } from "../../core/data/mood-emojis";
 import { escHtml } from "../../core/html";
 import { bindDialog } from "../../ui/motion";
@@ -13,7 +13,6 @@ export type ToolConfirmEvent = {
   args: Record<string, unknown>;
 };
 
-const MEAL_SLOTS: MealSlot[] = ["breakfast", "lunch", "dinner", "snack"];
 const TAG_DEL =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 
@@ -34,9 +33,28 @@ function strArr(args: Record<string, unknown>, key: string): string[] {
 }
 
 function mealSlotOptions(selected: MealSlot): string {
-  return MEAL_SLOTS
-    .map((s) => `<option value="${s}"${s === selected ? " selected" : ""}>${MEAL_SLOT_LABELS[s]}</option>`)
-    .join("");
+  return mealSlotRowHtml(selected);
+}
+
+async function loadMealById(date: string, id: string) {
+  try {
+    const { entries } = await journalList({ date });
+    const daily = entries.find((e) => e.kind === "daily" && e.date === date);
+    if (!daily?.data) return null;
+    return parseMeals(daily.data).find((m) => m.id === id) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function hydrateMealArgs(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
+  if (name !== "journal_update_meal") return args;
+  const date = str(args, "date", beijingToday());
+  const id = str(args, "id");
+  if (!id) return args;
+  const existing = await loadMealById(date, id);
+  if (!existing) return args;
+  return { ...mealEntryToArgs(existing, date), ...args, date, id };
 }
 
 function mealTagHtml(tag: string): string {
@@ -113,7 +131,7 @@ function mealFormFields(args: Record<string, unknown>, withId = false, hydration
     ${!withId ? `<p class="settings-hint">今日喝水：${hydrationMl} ml（佳明同步，喝水请在今日面板记录）</p>` : ""}
     <div class="dialog-field"><label>日期</label><input type="date" name="date" value="${escHtml(str(args, "date", today))}"></div>
     ${withId ? `<div class="dialog-field"><label>ID</label><input type="text" name="id" value="${escHtml(str(args, "id"))}"></div>` : ""}
-    <div class="dialog-field"><label>餐次</label><select name="slot">${mealSlotOptions(slot)}</select></div>
+    <div class="dialog-field"><label>餐次</label>${mealSlotOptions(slot)}</div>
     <div class="dialog-field"><label>吃了啥</label>
       <div class="meal-tags">${items.map(mealTagHtml).join("")}</div>
       <input type="text" class="meal-tag-input" placeholder="回车添加标签">
@@ -200,11 +218,20 @@ function readForm(name: string, form: HTMLFormElement): Record<string, unknown> 
   }
   const out: Record<string, unknown> = {};
   fd.forEach((v, k) => {
-    if (k === "days" || k === "amount" || k === "kcal") out[k] = Number(v);
-    else out[k] = String(v);
+    if (k === "days" || k === "amount" || k === "kcal") {
+      const n = Number(v);
+      if (Number.isFinite(n)) out[k] = n;
+    } else out[k] = String(v);
   });
   if (name === "journal_add_meal" || name === "journal_update_meal") {
     out.items = collectMealTags(form);
+    if (name === "journal_update_meal" && !("kcal" in out)) {
+      const raw = fd.get("kcal");
+      if (raw !== null && String(raw).trim() !== "") {
+        const n = Number(raw);
+        if (Number.isFinite(n)) out.kcal = n;
+      }
+    }
   }
   return out;
 }
@@ -213,9 +240,10 @@ export async function openToolConfirm(
   root: HTMLElement,
   event: ToolConfirmEvent,
 ): Promise<Record<string, unknown> | null> {
+  const hydratedArgs = await hydrateMealArgs(event.name, event.args);
   const hydrationMl =
     event.name === "journal_add_meal"
-      ? await loadHydrationMl(str(event.args, "date", beijingToday()))
+      ? await loadHydrationMl(str(hydratedArgs, "date", beijingToday()))
       : 0;
   return new Promise((resolve) => {
     const backdrop = document.createElement("div");
@@ -224,7 +252,7 @@ export async function openToolConfirm(
     backdrop.innerHTML = `
       <form class="dialog-panel" id="toolConfirmForm">
         <div class="dialog-title">${escHtml(title)}</div>
-        ${event.name === "journal_add_meal" ? mealFormFields(event.args, false, hydrationMl) : formFields(event.name, event.args)}
+        ${event.name === "journal_add_meal" ? mealFormFields(hydratedArgs, false, hydrationMl) : formFields(event.name, hydratedArgs)}
         <div class="dialog-actions">
           <button type="button" class="dialog-btn" data-action="cancel">取消</button>
           <button type="submit" class="dialog-btn dialog-btn-primary">确认执行</button>
@@ -236,6 +264,9 @@ export async function openToolConfirm(
     const form = backdrop.querySelector<HTMLFormElement>("#toolConfirmForm")!;
 
     bindMealTags(form);
+    if (event.name === "journal_add_meal" || event.name === "journal_update_meal") {
+      bindMealSlotRow(form);
+    }
 
     const emojiInput = form.querySelector<HTMLInputElement>('input[name="emoji"]');
     if (emojiInput) {
@@ -260,7 +291,19 @@ export async function openToolConfirm(
     });
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      void finish(readForm(event.name, form));
+      const args = readForm(event.name, form);
+      if (event.name === "journal_add_meal" || event.name === "journal_update_meal") {
+        const kcal = args.kcal;
+        if (typeof kcal !== "number" || !Number.isFinite(kcal) || kcal < 0) {
+          alert("请填写有效热量");
+          return;
+        }
+        if (event.name === "journal_update_meal" && !str(args, "id")) {
+          alert("缺少吃饭记录 ID");
+          return;
+        }
+      }
+      void finish(args);
     });
     void motion.open();
   });

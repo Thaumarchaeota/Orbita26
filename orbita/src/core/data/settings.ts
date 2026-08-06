@@ -51,6 +51,7 @@ export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSet
       journal: { ...current.integrations.journal, ...(patch.integrations?.journal ?? {}) },
       bkeasy: { ...current.integrations.bkeasy, ...(patch.integrations?.bkeasy ?? {}) },
       garmin: { ...current.integrations.garmin, ...(patch.integrations?.garmin ?? {}) },
+      work: { ...current.integrations.work, ...(patch.integrations?.work ?? {}) },
       ticktick: { ...current.integrations.ticktick, ...(patch.integrations?.ticktick ?? {}) },
       credentials: {
         garmin: { ...current.integrations.credentials.garmin, ...(patch.integrations?.credentials?.garmin ?? {}) },

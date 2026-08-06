@@ -1,15 +1,19 @@
 import { readLocalFiles, writeLocalFiles } from "../../core/data/client";
+import { createDataStore } from "../../core/data/data-store";
 import type { LocalEntry, LocalEntryKind, LocalFileLeaf } from "../../core/data/types";
 import { addLocalGroup, addLocalLeaf, removeLocalEntry, updateLocalGroupName, updateLocalLeaf } from "./local-tree";
 
 export type { LocalEntryKind, LocalFileLeaf };
 export type LocalFileItem = LocalFileLeaf;
 
-let cache: LocalEntry[] | null = null;
+const store = createDataStore<LocalEntry>({
+  name: "local files",
+  read: readLocalFiles,
+  write: writeLocalFiles,
+});
 
 export async function initLocalFiles(): Promise<LocalEntry[]> {
-  cache = await readLocalFiles();
-  return cache;
+  return store.init();
 }
 
 export function guessLocalName(path: string): string {
@@ -17,13 +21,11 @@ export function guessLocalName(path: string): string {
 }
 
 export function loadLocalFiles(): LocalEntry[] {
-  if (!cache) throw new Error("local files not loaded");
-  return cache;
+  return store.load();
 }
 
 export function saveLocalFiles(items: LocalEntry[]): void {
-  cache = items;
-  void writeLocalFiles(items);
+  store.save(items);
 }
 
 export function addLocalFile(

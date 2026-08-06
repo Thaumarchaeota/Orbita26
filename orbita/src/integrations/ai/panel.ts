@@ -18,9 +18,9 @@ import {
 import { AI_SVG, BRAIN_SVG, CHEVRON_SVG, WEB_SVG } from "./icons";
 import { mountTextDialog } from "./prompt-dialog";
 import { confirmAgentTool } from "./tool-confirm";
-import { mountConfirmDialog } from "../shell/dialog";
+import { getConfirmDialog } from "../shell/dialog";
 import { EDIT_SVG } from "../shell/tiles";
-import { renderMarkdown } from "./render-markdown";
+import { clearMarkdownCache, renderMarkdown, setMarkdownCacheConversation } from "./render-markdown";
 
 const PROMPT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg>`;
 const DELETE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
@@ -37,12 +37,12 @@ function formatPlainText(text: string) {
   return escHtml(text).replace(/\n/g, "<br>");
 }
 
-function formatAssistantHtml(content: string) {
-  return `<div class="ai-md">${renderMarkdown(content)}</div>`;
+function formatAssistantHtml(content: string, index: number) {
+  return `<div class="ai-md">${renderMarkdown(content, index)}</div>`;
 }
 
 function messageBubbleHtml(m: ChatMessage, index: number) {
-  const body = m.role === "user" ? formatPlainText(m.content) : formatAssistantHtml(m.content);
+  const body = m.role === "user" ? formatPlainText(m.content) : formatAssistantHtml(m.content, index);
   return `<div class="ai-msg ai-msg-${m.role}" data-index="${index}"><div class="ai-msg-bubble">${body}</div></div>`;
 }
 
@@ -109,7 +109,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   const modelMenu = aside.querySelector<HTMLElement>("#aiModelMenu")!;
 
   const promptDialog = mountTextDialog(dialogRoot);
-  const confirmDelete = mountConfirmDialog(dialogRoot);
+  const confirmDelete = getConfirmDialog();
   const msgCtxMenu = mountContextMenu(new AbortController().signal);
   let conversation: Conversation | null = null;
   let requestId: string | null = null;
@@ -454,8 +454,10 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   }
 
   async function removeConversation(id: string, title: string, trigger: HTMLElement) {
+    await closeConvPicker(true);
     if (!(await confirmDelete("删除确认", `确定删除「${title}」？`, trigger))) return;
     await deleteConversation(id);
+    clearMarkdownCache(id);
     const list = await listConversations();
     if (conversation?.id === id) {
       if (list.length > 0) {
@@ -556,6 +558,8 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     void closeConvPicker(true);
     conversation = await loadConversation(id);
     setActiveConversationId(id);
+    clearMarkdownCache(id);
+    setMarkdownCacheConversation(id);
     syncConvLabel();
     renderMessages();
     syncModelBtn();
@@ -712,6 +716,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     conversation.title = await uniqueConversationTitle("新对话");
     await saveConversation(conversation);
     setActiveConversationId(conversation.id);
+    setMarkdownCacheConversation(conversation.id);
     syncConvLabel();
     renderMessages();
     syncModelBtn();
@@ -841,6 +846,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
 
   ensureInitialConversation().then((conv) => {
     conversation = conv;
+    setMarkdownCacheConversation(conv.id);
     syncConvLabel();
     renderMessages();
     syncModelBtn();

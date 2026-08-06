@@ -1,6 +1,16 @@
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
+import { mountModalBackdrop } from "../../ui/modal-root";
 
-export function mountConfirmDialog(root: HTMLElement) {
+type ConfirmFn = (
+  title: string,
+  message: string,
+  trigger?: MotionTrigger,
+  opts?: { confirmLabel?: string; danger?: boolean },
+) => Promise<boolean>;
+
+let sharedConfirm: ConfirmFn | null = null;
+
+function createConfirmDialog(): ConfirmFn {
   const backdrop = document.createElement("div");
   backdrop.className = "dialog-backdrop";
   backdrop.innerHTML = `
@@ -13,7 +23,7 @@ export function mountConfirmDialog(root: HTMLElement) {
       </div>
     </div>
   `;
-  root.appendChild(backdrop);
+  mountModalBackdrop(backdrop);
 
   const motion = bindDialog(backdrop);
   const titleEl = backdrop.querySelector<HTMLElement>("#confirmDialogTitle")!;
@@ -43,14 +53,30 @@ export function mountConfirmDialog(root: HTMLElement) {
     opts?: { confirmLabel?: string; danger?: boolean },
   ) =>
     new Promise<boolean>((resolve) => {
+      if (resolvePending) {
+        resolvePending(false);
+        resolvePending = null;
+      }
       resolvePending = resolve;
       titleEl.textContent = title;
       messageEl.textContent = message;
       confirmBtn.textContent = opts?.confirmLabel ?? "删除";
       confirmBtn.classList.toggle("dialog-btn-danger", opts?.danger !== false);
       confirmBtn.classList.toggle("dialog-btn-primary", opts?.danger === false);
-      void motion.open(trigger);
+      void (async () => {
+        if (motion.isOpen()) await motion.close();
+        await motion.open(trigger);
+      })();
     });
+}
+
+export function getConfirmDialog(): ConfirmFn {
+  if (!sharedConfirm) sharedConfirm = createConfirmDialog();
+  return sharedConfirm;
+}
+
+export function mountConfirmDialog(_root?: HTMLElement) {
+  return getConfirmDialog();
 }
 
 export function mountFolderRenameDialog(root: HTMLElement) {

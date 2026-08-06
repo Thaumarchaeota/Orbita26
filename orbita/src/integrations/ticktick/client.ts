@@ -18,31 +18,31 @@ export function invokeError(e: unknown): string {
 
 export async function didaAuthStatus(): Promise<DidaAuthStatus> {
   if (!isTauri()) return { connected: false };
-  return invoke<DidaAuthStatus>("dida_auth_status");
+  return invoke<DidaAuthStatus>("ticktick_auth_status");
 }
 
 export async function didaConnect(): Promise<DidaAuthStatus> {
   if (!isTauri()) throw new Error("需完整 App");
-  const authUrl = await invoke<string>("dida_begin_oauth");
+  const authUrl = await invoke<string>("ticktick_begin_oauth");
   await openUrl(authUrl);
-  return invoke<DidaAuthStatus>("dida_finish_oauth");
+  return invoke<DidaAuthStatus>("ticktick_finish_oauth");
 }
 
 export async function didaDisconnect(): Promise<DidaAuthStatus> {
   if (!isTauri()) return { connected: false };
-  return invoke<DidaAuthStatus>("dida_disconnect");
+  return invoke<DidaAuthStatus>("ticktick_disconnect");
 }
 
 export async function didaListProjects(): Promise<DidaProject[]> {
   if (!isTauri()) return [];
-  return invoke<DidaProject[]>("dida_list_projects");
+  return invoke<DidaProject[]>("ticktick_list_projects");
 }
 
 export async function didaFilterTasks(opts: {
   projectIds?: string[];
 }): Promise<DidaTask[]> {
   if (!isTauri()) return [];
-  return invoke<DidaTask[]>("dida_filter_tasks", {
+  return invoke<DidaTask[]>("ticktick_filter_tasks", {
     req: {
       projectIds: opts.projectIds,
     },
@@ -51,27 +51,27 @@ export async function didaFilterTasks(opts: {
 
 export async function didaCreateTask(input: DidaCreateTaskInput): Promise<DidaTask> {
   if (!isTauri()) throw new Error("需完整 App");
-  return invoke<DidaTask>("dida_create_task", { req: input });
+  return invoke<DidaTask>("ticktick_create_task", { req: input });
 }
 
 export async function didaUpdateTask(taskId: string, input: DidaUpdateTaskInput): Promise<DidaTask> {
   if (!isTauri()) throw new Error("需完整 App");
-  return invoke<DidaTask>("dida_update_task", { taskId, req: input });
+  return invoke<DidaTask>("ticktick_update_task", { taskId, req: input });
 }
 
 export async function didaCompleteTask(projectId: string, taskId: string): Promise<void> {
   if (!isTauri()) return;
-  await invoke("dida_complete_task", { projectId, taskId });
+  await invoke("ticktick_complete_task", { projectId, taskId });
 }
 
 export async function didaReopenTask(projectId: string, taskId: string): Promise<void> {
   if (!isTauri()) return;
-  await invoke("dida_reopen_task", { projectId, taskId });
+  await invoke("ticktick_reopen_task", { projectId, taskId });
 }
 
 export async function didaDeleteTask(projectId: string, taskId: string): Promise<void> {
   if (!isTauri()) return;
-  await invoke("dida_delete_task", { projectId, taskId });
+  await invoke("ticktick_delete_task", { projectId, taskId });
 }
 
 export function parseDidaDate(value?: string): Date | null {

@@ -207,6 +207,7 @@ function fixCorruptedGridPrefs(top: GridPrefs, dock: GridPrefs): { top: GridPref
 }
 
 function migrateLauncherGridPrefs(raw: Partial<AppSettings>): Partial<AppSettings> {
+  if (isTauri()) return raw;
   if ((raw.version ?? 0) >= 5 || !raw.ui) return raw;
   const legacy = raw.ui as LegacyUiPrefs;
   let top = legacy.topGrid;
@@ -285,6 +286,13 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
       journal: { ...base.integrations.journal, ...(intRaw.journal ?? {}) },
       bkeasy: { ...base.integrations.bkeasy, ...(intRaw.bkeasy ?? {}) },
       garmin: { ...base.integrations.garmin, ...(intRaw.garmin ?? {}) },
+      work: {
+        ...base.integrations.work,
+        ...(intRaw.work ?? {}),
+        projectNotesDir:
+          intRaw.work?.projectNotesDir?.trim() || base.integrations.work.projectNotesDir,
+        ticktickProjectId: intRaw.work?.ticktickProjectId?.trim() ?? "",
+      },
       ticktick: {
         ...base.integrations.ticktick,
         ...(intRaw.ticktick ?? {}),

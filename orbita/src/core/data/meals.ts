@@ -93,3 +93,38 @@ export function mealSlotLabel(slot: MealSlot): string {
 export function mealSortSlots(): MealSlot[] {
   return [...SLOT_ORDER];
 }
+
+export function mealEntryToArgs(entry: MealEntry, date: string): Record<string, unknown> {
+  return {
+    date,
+    id: entry.id,
+    slot: entry.slot,
+    items: [...entry.items],
+    text: entry.text,
+    kcal: entry.kcal,
+    at: entry.at ?? "",
+  };
+}
+
+export function mealSlotRowHtml(selected: MealSlot): string {
+  return `<div class="meal-slot-row" role="group" aria-label="餐次">
+    ${SLOT_ORDER.map(
+      (s) =>
+        `<button type="button" class="meal-slot-btn${s === selected ? " is-active" : ""}" data-slot="${s}">${MEAL_SLOT_LABELS[s]}</button>`,
+    ).join("")}
+    <input type="hidden" name="slot" value="${selected}">
+  </div>`;
+}
+
+export function bindMealSlotRow(root: HTMLElement): HTMLInputElement {
+  const row = root.querySelector<HTMLElement>(".meal-slot-row")!;
+  const hidden = row.querySelector<HTMLInputElement>('input[name="slot"]')!;
+  row.querySelectorAll<HTMLButtonElement>(".meal-slot-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const slot = normalizeMealSlot(btn.dataset.slot);
+      hidden.value = slot;
+      row.querySelectorAll(".meal-slot-btn").forEach((b) => b.classList.toggle("is-active", b === btn));
+    });
+  });
+  return hidden;
+}
