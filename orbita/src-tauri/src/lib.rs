@@ -2,8 +2,9 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, WindowEvent};
+use tauri::{Manager, RunEvent, WindowEvent};
 
+mod admin_window;
 mod agent;
 mod ai;
 mod app_icon;
@@ -12,6 +13,7 @@ mod beancount;
 mod capture;
 mod commands;
 mod data;
+mod dev_watch;
 mod ticktick;
 mod everything;
 mod favicon;
@@ -19,6 +21,7 @@ mod file_type_icon;
 mod garmin;
 mod hwmon;
 mod journal;
+mod ledger_sidecar;
 mod obsidian;
 mod paths;
 mod v2ray;
@@ -32,7 +35,7 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
-fn app_icon() -> Result<tauri::image::Image<'static>, String> {
+pub(crate) fn window_icon() -> Result<tauri::image::Image<'static>, String> {
     let bytes = include_bytes!("../icons/logo-source.png");
     let img = image::load_from_memory(bytes).map_err(|e| e.to_string())?;
     let rgba = img.to_rgba8();
@@ -45,6 +48,13 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(
+            tauri_plugin_frame::FramePluginBuilder::new()
+                .titlebar_height(32)
+                .button_width(46)
+                .snap_overlay(true)
+                .build(),
+        )
         .setup(|app| {
             let win = app
                 .get_webview_window("main")
@@ -65,7 +75,7 @@ pub fn run() {
             let show_item = MenuItem::with_id(app, "tray-show", "显示 Orbita", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "tray-quit", "退出", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&show_item, &quit_item])?;
-            let icon = app_icon()?;
+            let icon = window_icon()?;
             let _ = win.set_icon(icon.clone());
             TrayIconBuilder::with_id("main")
                 .icon(icon)
@@ -87,6 +97,8 @@ pub fn run() {
                     }
                 })
                 .build(app)?;
+
+            admin_window::setup_admin_window(app.handle());
 
             let win_for_close = win.clone();
             let win_for_focus = win.clone();
@@ -114,6 +126,7 @@ pub fn run() {
             });
 
             hwmon::init();
+            dev_watch::start(app.handle().clone());
 
             Ok(())
         })
@@ -185,9 +198,19 @@ pub fn run() {
             commands::capture_screen,
             commands::capture_copy_clipboard,
             commands::capture_save_file,
-            commands::capture_crop
+            commands::capture_crop,
+            commands::open_admin_window,
+            commands::ledger_api_base,
+            commands::ensure_ledger_sidecar,
+            commands::restart_ledger_sidecar,
+            commands::init_ledger_bill,
+            commands::ledger_bill_nonempty
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|_app, _event| {});
+        .run(|_app, event| {
+            if matches!(event, RunEvent::Exit) {
+                ledger_sidecar::stop_sidecar();
+            }
+        });
 }

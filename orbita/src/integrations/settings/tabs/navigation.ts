@@ -4,16 +4,6 @@ import { pickAppFile, pickLocalFolder } from "../../shell/adapter";
 export const navigationTabHtml = `
   <div class="settings-tab-panel" data-tab-panel="navigation">
     <div class="settings-section">
-      <div class="settings-section-title">数据</div>
-      <div class="dialog-field">
-        <label for="settingsDataDir">数据存储位置</label>
-        <div class="settings-path-row">
-          <input id="settingsDataDir" type="text" readonly>
-          <button type="button" class="dialog-btn" data-action="browse-data">浏览</button>
-        </div>
-      </div>
-    </div>
-    <div class="settings-section">
       <div class="settings-section-title">工具路径</div>
       <div class="dialog-field">
         <label for="settingsV2rayPath">v2rayN</label>
@@ -64,7 +54,6 @@ export const navigationTabHtml = `
   </div>`;
 
 export type NavigationDraft = {
-  dataDir: string;
   v2rayExePath: string;
   zoteroDataDir: string;
   zoteroNoteDir: string;
@@ -74,7 +63,6 @@ export type NavigationDraft = {
 };
 
 export function bindNavigationTab(root: HTMLElement) {
-  const dataDirInput = root.querySelector<HTMLInputElement>("#settingsDataDir")!;
   const v2rayInput = root.querySelector<HTMLInputElement>("#settingsV2rayPath")!;
   const zoteroInput = root.querySelector<HTMLInputElement>("#settingsZoteroDir")!;
   const noteInput = root.querySelector<HTMLInputElement>("#settingsNoteDir")!;
@@ -82,10 +70,6 @@ export function bindNavigationTab(root: HTMLElement) {
   const everythingInput = root.querySelector<HTMLInputElement>("#settingsEverythingPath")!;
   const cursorInput = root.querySelector<HTMLInputElement>("#settingsCursorPath")!;
 
-  root.querySelector('[data-action="browse-data"]')!.addEventListener("click", async () => {
-    const path = await pickLocalFolder();
-    if (path) dataDirInput.value = path;
-  });
   root.querySelector('[data-action="browse-v2ray"]')!.addEventListener("click", async () => {
     const path = await pickAppFile();
     if (path) v2rayInput.value = path;
@@ -113,7 +97,6 @@ export function bindNavigationTab(root: HTMLElement) {
 
   return {
     fill(settings: AppSettings) {
-      dataDirInput.value = settings.dataDir;
       v2rayInput.value = settings.integrations.v2ray.exePath;
       zoteroInput.value = settings.integrations.zotero.dataDir;
       noteInput.value = settings.integrations.zotero.articleNoteDir;
@@ -123,7 +106,6 @@ export function bindNavigationTab(root: HTMLElement) {
     },
     read(): NavigationDraft {
       return {
-        dataDir: dataDirInput.value.trim(),
         v2rayExePath: v2rayInput.value.trim(),
         zoteroDataDir: zoteroInput.value.trim(),
         zoteroNoteDir: noteInput.value.trim(),

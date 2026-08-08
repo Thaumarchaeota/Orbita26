@@ -213,7 +213,6 @@ function mountSettingsDialog() {
     const cred = savedSettings.integrations.credentials;
     const next = await patchSettings({
       theme: themeFromPrefs(appearance.themePrefs),
-      dataDir: navigation.dataDir,
       ui: {
         ...savedSettings.ui,
         themePrefs: appearance.themePrefs,
@@ -222,6 +221,7 @@ function mountSettingsDialog() {
         lifeRingGoals: life.lifeRingGoals,
       },
       integrations: {
+        ...savedSettings.integrations,
         v2ray: { exePath: navigation.v2rayExePath },
         zotero: {
           dataDir: navigation.zoteroDataDir,
@@ -231,7 +231,6 @@ function mountSettingsDialog() {
         everything: { exePath: navigation.everythingExePath },
         cursor: { exePath: navigation.cursorExePath },
         journal: { dataRoot: life.journalDataRoot },
-        bkeasy: { dataRoot: life.bkeasyDataRoot },
         garmin: { tokenDir: life.garminTokenDir },
         work: {
           projectNotesDir: work.projectNotesDir,

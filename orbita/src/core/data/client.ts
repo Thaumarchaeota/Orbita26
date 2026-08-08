@@ -28,6 +28,30 @@ function webKey(name: string) {
   return `${WEB_PREFIX}${name}`;
 }
 
+function readWebBootstrap(): { dataDir: string } {
+  return readWebJson("bootstrap", { dataDir: "orbita-data" });
+}
+
+function webScopedStoreKey(name: string, dataDir?: string): string {
+  const dir = (dataDir ?? readWebBootstrap().dataDir ?? "orbita-data").trim() || "orbita-data";
+  return `stores.${dir}.${name}`;
+}
+
+function readWebScoped<T>(name: string, fallback: T, dataDir?: string): T {
+  const scoped = readWebJson<T | null>(webScopedStoreKey(name, dataDir), null);
+  if (scoped != null) return scoped;
+  const legacy = readWebJson<T | null>(name, null);
+  if (legacy != null) {
+    writeWebJson(webScopedStoreKey(name, dataDir), legacy);
+    return legacy;
+  }
+  return fallback;
+}
+
+function writeWebScoped(name: string, value: unknown, dataDir?: string): void {
+  writeWebJson(webScopedStoreKey(name, dataDir), value);
+}
+
 function readWebJson<T>(name: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(webKey(name));
@@ -331,11 +355,11 @@ export async function readSettings(): Promise<AppSettings> {
     if ((raw.version ?? 0) < 7) await writeSettings(next);
     return next;
   }
-  const bootstrap = readWebJson<{ dataDir: string }>("bootstrap", { dataDir: "orbita-data" });
-  const raw = readWebJson<Partial<AppSettings> | null>("settings.json", null);
+  const bootstrap = readWebBootstrap();
+  const raw = readWebScoped<Partial<AppSettings> | null>("settings.json", null, bootstrap.dataDir);
   if (!raw) {
     const s = defaultSettings(bootstrap.dataDir);
-    writeWebJson("settings.json", s);
+    writeWebScoped("settings.json", s, bootstrap.dataDir);
     writeWebJson("bootstrap", { dataDir: s.dataDir });
     return s;
   }
@@ -344,7 +368,7 @@ export async function readSettings(): Promise<AppSettings> {
     dataDir: raw.dataDir ?? bootstrap.dataDir,
     theme: raw.theme ?? "light",
   });
-  if ((raw.version ?? 0) < 7) writeWebJson("settings.json", next);
+  if ((raw.version ?? 0) < 7) writeWebScoped("settings.json", next, bootstrap.dataDir);
   return next;
 }
 
@@ -356,7 +380,7 @@ export async function writeSettings(settings: AppSettings): Promise<void> {
     return;
   }
   writeWebJson("bootstrap", { dataDir: next.dataDir });
-  writeWebJson("settings.json", next);
+  writeWebScoped("settings.json", next, next.dataDir);
 }
 
 export async function readBookmarks(): Promise<BookmarkEntry[]> {
@@ -364,7 +388,7 @@ export async function readBookmarks(): Promise<BookmarkEntry[]> {
     const raw = await invoke<unknown[]>("read_bookmarks");
     return normalizeBookmarks(raw);
   }
-  return normalizeBookmarks(readWebJson<unknown[]>("bookmarks.json", []));
+  return normalizeBookmarks(readWebScoped<unknown[]>("bookmarks.json", []));
 }
 
 export async function writeBookmarks(items: BookmarkEntry[]): Promise<void> {
@@ -373,7 +397,7 @@ export async function writeBookmarks(items: BookmarkEntry[]): Promise<void> {
     await invoke("write_bookmarks", { items: next });
     return;
   }
-  writeWebJson("bookmarks.json", next);
+  writeWebScoped("bookmarks.json", next);
 }
 
 export async function readApps(): Promise<AppEntry[]> {
@@ -381,7 +405,7 @@ export async function readApps(): Promise<AppEntry[]> {
     const raw = await invoke<unknown[]>("read_apps");
     return normalizeApps(raw);
   }
-  return normalizeApps(readWebJson<unknown[]>("apps.json", []));
+  return normalizeApps(readWebScoped<unknown[]>("apps.json", []));
 }
 
 export async function writeApps(items: AppEntry[]): Promise<void> {
@@ -390,7 +414,7 @@ export async function writeApps(items: AppEntry[]): Promise<void> {
     await invoke("write_apps", { items: next });
     return;
   }
-  writeWebJson("apps.json", next);
+  writeWebScoped("apps.json", next);
 }
 
 export async function readLocalFiles(): Promise<LocalEntry[]> {
@@ -398,7 +422,7 @@ export async function readLocalFiles(): Promise<LocalEntry[]> {
     const raw = await invoke<unknown[]>("read_local_files");
     return normalizeLocalEntries(raw);
   }
-  return normalizeLocalEntries(readWebJson<unknown[]>("local-files.json", []));
+  return normalizeLocalEntries(readWebScoped<unknown[]>("local-files.json", []));
 }
 
 export async function writeLocalFiles(items: LocalEntry[]): Promise<void> {
@@ -407,7 +431,7 @@ export async function writeLocalFiles(items: LocalEntry[]): Promise<void> {
     await invoke("write_local_files", { items: next });
     return;
   }
-  writeWebJson("local-files.json", next);
+  writeWebScoped("local-files.json", next);
 }
 
 export async function migrateLegacyCaches(): Promise<void> {

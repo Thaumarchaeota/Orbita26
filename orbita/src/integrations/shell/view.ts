@@ -2,12 +2,7 @@ import { isTauri } from "../../core/data/client";
 import { ENGINES } from "./engines";
 import { getCurrentEngine, setEngine, shellStore } from "./store";
 import { openUrl } from "./adapter";
-import {
-  loadApps,
-  saveApps,
-  updateApp,
-  updateAppInFolder,
-} from "./apps";
+import { initApps, loadApps, saveApps, updateApp, updateAppInFolder } from "./apps";
 import { topGridCapacity } from "./grid-slots";
 import { mountAppDialog, getConfirmDialog } from "./dialog";
 import { mountBookmarksPanel } from "./bookmarks-panel";
@@ -115,6 +110,13 @@ function mountSidebar(container: HTMLElement, root: HTMLElement) {
 
   window.addEventListener("orbita:ui-prefs", () => {
     appsGrid.normalizeOnPrefsChange();
+  });
+
+  window.addEventListener("orbita:launcher-reload", () => {
+    void initApps().then((next) => {
+      appsRef.current = next;
+      appsGrid.repaint();
+    });
   });
 
   const defer =

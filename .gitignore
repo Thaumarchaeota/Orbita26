@@ -1,7 +1,5 @@
-HANDOFF.md
-roadmap.md
-调试指南.md
 reference/
+docs/
 
 scripts/env.ps1
 scripts/test_dida365.py

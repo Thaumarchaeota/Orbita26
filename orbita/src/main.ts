@@ -1,36 +1,12 @@
-import "./ui/shell.css";
-import { initClickThrough } from "./ui/click-through";
-import { initWakeRepair } from "./ui/wake-repair";
-import { initHoverTips } from "./ui/hover-tip";
-import { initSettings } from "./core/settings";
-import { initAiConfig } from "./integrations/ai/config";
-import { initApps } from "./integrations/shell/apps";
-import { initBookmarks } from "./integrations/shell/bookmarks";
-import { initLocalFiles } from "./integrations/shell/local-files";
-import { hydrateShellStore } from "./integrations/shell/store";
-import { journalIntegration } from "./integrations/journal";
-import { workIntegration } from "./integrations/work";
-import { initIntegrations, registerIntegration } from "./core/registry";
-import { shellIntegration } from "./integrations/shell";
-import { aiIntegration } from "./integrations/ai";
-import { ticktickIntegration } from "./integrations/ticktick";
-import { initGarminAutoSync } from "./integrations/journal/garmin-auto-sync";
-import { initPrivacyMode } from "./core/privacy-mode";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
-registerIntegration(shellIntegration);
-registerIntegration(journalIntegration);
-registerIntegration(workIntegration);
-registerIntegration(aiIntegration);
-registerIntegration(ticktickIntegration);
+function isAdminWindow(): boolean {
+  if (new URLSearchParams(location.search).get("app") === "admin") return true;
+  return getCurrentWindow().label === "admin";
+}
 
-void (async () => {
-  await initSettings();
-  initClickThrough();
-  initWakeRepair();
-  initHoverTips();
-  hydrateShellStore();
-  await Promise.all([initAiConfig(), initBookmarks(), initApps(), initLocalFiles()]);
-  await initIntegrations();
-  initPrivacyMode();
-  initGarminAutoSync();
-})();
+if (isAdminWindow()) {
+  void import("./apps/admin/main");
+} else {
+  void import("./apps/shell/main");
+}

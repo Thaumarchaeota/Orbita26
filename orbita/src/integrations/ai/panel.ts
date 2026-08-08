@@ -1,7 +1,7 @@
 import { mountContextMenu } from "../../ui/context-menu";
 import { closePopover, isPopoverOpen, openPopover, type MotionTrigger } from "../../ui/motion";
 import { escAttr, escHtml } from "../../core/html";
-import { getAiConfig, saveAiConfig, type ApiEntry } from "./config";
+import { getAiConfig, loadAiConfig, saveAiConfig, type ApiEntry } from "./config";
 import { abortChat, chatStream, generateConversationTitle, type ChatMessage } from "./adapter";
 import {
   deleteConversation,
@@ -731,6 +731,18 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
   }
 
   window.addEventListener("orbita:ai-config", refreshUi);
+
+  window.addEventListener("orbita:ai-reload", () => {
+    void (async () => {
+      await loadAiConfig();
+      conversation = await ensureInitialConversation();
+      setMarkdownCacheConversation(conversation.id);
+      syncConvLabel();
+      renderMessages();
+      refreshUi();
+      void paintConvMenu();
+    })();
+  });
 
   convSelect.addEventListener("click", (e) => {
     e.stopPropagation();

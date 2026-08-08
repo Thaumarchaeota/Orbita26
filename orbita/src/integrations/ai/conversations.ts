@@ -24,12 +24,29 @@ export type Conversation = {
   updatedAt: string;
 };
 
-const WEB_CONV_KEY = "orbita.data.ai.conversations";
+const WEB_CONV_LEGACY = "orbita.data.ai.conversations";
+
+function webConvKey(): string {
+  try {
+    const dir = getSettings().dataDir.trim() || "orbita-data";
+    return `orbita.data.stores.${dir}.ai.conversations`;
+  } catch {
+    return WEB_CONV_LEGACY;
+  }
+}
 
 function readWebConversations(): Conversation[] {
   try {
-    const raw = localStorage.getItem(WEB_CONV_KEY);
+    const key = webConvKey();
+    const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw) as Conversation[];
+    if (key !== WEB_CONV_LEGACY) {
+      const legacy = localStorage.getItem(WEB_CONV_LEGACY);
+      if (legacy) {
+        localStorage.setItem(key, legacy);
+        return JSON.parse(legacy) as Conversation[];
+      }
+    }
   } catch {
     /* ignore */
   }
@@ -37,7 +54,7 @@ function readWebConversations(): Conversation[] {
 }
 
 function writeWebConversations(conversations: Conversation[]) {
-  localStorage.setItem(WEB_CONV_KEY, JSON.stringify(conversations));
+  localStorage.setItem(webConvKey(), JSON.stringify(conversations));
 }
 
 function nowIso() {

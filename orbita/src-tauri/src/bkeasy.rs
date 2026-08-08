@@ -15,12 +15,10 @@ pub struct BkeasySummary {
 }
 
 fn bkeasy_root(app: &AppHandle) -> Result<String, String> {
-    let settings = data::read_settings(app)?;
-    let root = settings.integrations.bkeasy.data_root.trim();
-    if root.is_empty() {
-        return Ok(data::get_data_dir(app)?);
-    }
-    Ok(root.to_string())
+    Ok(Path::new(&data::get_data_dir(app)?)
+        .join("bill")
+        .to_string_lossy()
+        .into_owned())
 }
 
 fn ledger_path(root: &str, year: i32) -> PathBuf {

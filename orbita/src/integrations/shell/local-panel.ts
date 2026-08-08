@@ -21,6 +21,7 @@ import {
   addLocalFile,
   addLocalGroupEntry,
   guessLocalName,
+  initLocalFiles,
   loadLocalFiles,
   removeLocalFile,
   renameLocalGroup,
@@ -433,6 +434,13 @@ function mountFileList(
     },
     { signal },
   );
+
+  window.addEventListener("orbita:launcher-reload", () => {
+    void initLocalFiles().then((next) => {
+      items = next;
+      paint();
+    });
+  });
 }
 
 function renderTabContent(tab: LocalTab): string {

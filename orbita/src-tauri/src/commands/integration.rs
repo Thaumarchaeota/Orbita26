@@ -1,5 +1,6 @@
 use crate::bkeasy;
 use crate::garmin;
+use crate::ledger_sidecar;
 use crate::hwmon;
 use crate::journal;
 use crate::window_shell;
@@ -38,6 +39,33 @@ pub fn journal_delete(app: tauri::AppHandle, req: journal::JournalDeleteRequest)
 #[tauri::command]
 pub fn bkeasy_summary(app: tauri::AppHandle) -> Result<bkeasy::BkeasySummary, String> {
     bkeasy::bkeasy_summary(&app)
+}
+
+#[tauri::command]
+pub fn ledger_api_base(app: tauri::AppHandle) -> Result<String, String> {
+    ledger_sidecar::ensure_started(&app)?;
+    ledger_sidecar::api_base()
+}
+
+#[tauri::command]
+pub fn ensure_ledger_sidecar(app: tauri::AppHandle) {
+    ledger_sidecar::ensure_started_background(&app);
+}
+
+#[tauri::command]
+pub fn restart_ledger_sidecar(app: tauri::AppHandle) -> Result<String, String> {
+    ledger_sidecar::restart_sidecar(&app)?;
+    ledger_sidecar::api_base()
+}
+
+#[tauri::command]
+pub fn ledger_bill_nonempty(app: tauri::AppHandle) -> Result<bool, String> {
+    ledger_sidecar::ledger_bill_nonempty(&app)
+}
+
+#[tauri::command]
+pub fn init_ledger_bill(app: tauri::AppHandle, overwrite: bool) -> Result<(), String> {
+    ledger_sidecar::init_ledger_bill(&app, overwrite)
 }
 
 #[tauri::command]

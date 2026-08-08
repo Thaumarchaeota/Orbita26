@@ -39,13 +39,6 @@ export const lifeTabHtml = `
           <button type="button" class="dialog-btn" data-action="browse-journal">浏览</button>
         </div>
       </div>
-      <div class="dialog-field">
-        <label for="bkeasyDataRoot">账本（bean）目录</label>
-        <div class="settings-path-row">
-          <input id="bkeasyDataRoot" type="text" placeholder="默认：数据目录" readonly>
-          <button type="button" class="dialog-btn" data-action="browse-bkeasy">浏览</button>
-        </div>
-      </div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">佳明</div>
@@ -76,7 +69,6 @@ export const lifeTabHtml = `
 export type LifeDraft = {
   lifeRingGoals: LifeRingGoals;
   journalDataRoot: string;
-  bkeasyDataRoot: string;
   garminEmail: string;
   garminPassword: string;
   garminTokenDir: string;
@@ -106,7 +98,6 @@ export function bindLifeTab(root: HTMLElement) {
   const goalExpEl = root.querySelector<HTMLInputElement>("#goalExp")!;
   const goalHydrationEl = root.querySelector<HTMLInputElement>("#goalHydration")!;
   const journalEl = root.querySelector<HTMLInputElement>("#journalDataRoot")!;
-  const bkeasyEl = root.querySelector<HTMLInputElement>("#bkeasyDataRoot")!;
   const emailEl = root.querySelector<HTMLInputElement>("#garminEmail")!;
   const passEl = root.querySelector<HTMLInputElement>("#garminPassword")!;
   const tokenEl = root.querySelector<HTMLInputElement>("#garminTokenDir")!;
@@ -118,10 +109,6 @@ export function bindLifeTab(root: HTMLElement) {
   root.querySelector('[data-action="browse-journal"]')!.addEventListener("click", async () => {
     const path = await pickLocalFolder();
     if (path) journalEl.value = path;
-  });
-  root.querySelector('[data-action="browse-bkeasy"]')!.addEventListener("click", async () => {
-    const path = await pickLocalFolder();
-    if (path) bkeasyEl.value = path;
   });
   root.querySelector('[data-action="browse-garmin-token"]')!.addEventListener("click", async () => {
     const path = await pickLocalFolder();
@@ -189,7 +176,6 @@ export function bindLifeTab(root: HTMLElement) {
       goalExpEl.value = String(goals.goalExp);
       goalHydrationEl.value = String(goals.goalHydration);
       journalEl.value = settings.integrations.journal.dataRoot;
-      bkeasyEl.value = settings.integrations.bkeasy.dataRoot;
       emailEl.value = settings.integrations.credentials.garmin.email;
       passEl.value = settings.integrations.credentials.garmin.password;
       tokenEl.value = settings.integrations.garmin.tokenDir;
@@ -204,7 +190,6 @@ export function bindLifeTab(root: HTMLElement) {
           goalHydration: Number(goalHydrationEl.value),
         }),
         journalDataRoot: journalEl.value.trim(),
-        bkeasyDataRoot: bkeasyEl.value.trim(),
         garminEmail: emailEl.value.trim(),
         garminPassword: passEl.value,
         garminTokenDir: tokenEl.value.trim(),

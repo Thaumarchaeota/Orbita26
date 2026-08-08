@@ -1,3 +1,45 @@
 @echo off
+setlocal
+
 cd /d "%~dp0.."
-powershell -ExecutionPolicy Bypass -Command ". .\scripts\env.ps1; Get-NetTCPConnection -LocalPort 1420 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Get-Process -Name orbita -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Set-Location orbita; npm run tauri dev"
+
+
+
+:loop
+
+echo [dev.bat] 清理旧进程...
+
+powershell -ExecutionPolicy Bypass -File ".\scripts\dev-clean.ps1"
+
+if errorlevel 1 (
+
+  echo [dev.bat] 清理失败，请手动结束占用 1420 的进程后重试
+
+  pause
+
+  goto :end
+
+)
+
+cd orbita
+
+call npm run tauri dev
+
+set RC=%ERRORLEVEL%
+
+cd ..
+
+if %RC% equ 0 goto :end
+
+echo.
+
+echo [dev.bat] 异常退出 code=%RC% ，5 秒后自动重启（Ctrl+C 终止）
+
+timeout /t 5 /nobreak >nul
+
+goto loop
+
+
+
+:end
+

@@ -23,7 +23,7 @@ import {
   updateBookmarkLink,
 } from "./bookmark-tree";
 import { bindListTreeDrag, consumeRowClickSuppress } from "./list-tree-drag";
-import { loadBookmarks, saveBookmarks } from "./bookmarks";
+import { initBookmarks, loadBookmarks, saveBookmarks } from "./bookmarks";
 import { FOLDER_OPEN_SVG, FOLDER_SVG, applyShellIcon } from "./local-icons";
 import {
   renderTreeList,
@@ -268,4 +268,11 @@ export function mountBookmarksPanel(container: HTMLElement, root: HTMLElement) {
   });
 
   paint();
+
+  window.addEventListener("orbita:launcher-reload", () => {
+    void initBookmarks().then((next) => {
+      items = stripBookmarkSlots(sortBookmarksBySlot(next));
+      paint();
+    });
+  });
 }

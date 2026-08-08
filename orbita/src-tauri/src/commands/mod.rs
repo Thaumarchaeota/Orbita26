@@ -1,3 +1,4 @@
+mod admin;
 mod ai;
 mod capture;
 mod ticktick;
@@ -6,6 +7,7 @@ mod integration;
 mod shell;
 mod store;
 
+pub use admin::*;
 pub use ai::*;
 pub use capture::*;
 pub use ticktick::*;
