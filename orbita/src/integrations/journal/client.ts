@@ -103,7 +103,7 @@ export async function garminStatus() {
 export async function garminSync(params?: { from?: string; to?: string }) {
   const req = params ?? {};
   const SYNC_TIMEOUT_MS = 5 * 60 * 1000;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timer: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = window.setTimeout(
       () => reject(new Error("佳明同步超时（超过 5 分钟），请稍后重试")),
@@ -122,7 +122,7 @@ export async function garminSync(params?: { from?: string; to?: string }) {
 
 export async function garminLogin(params?: { email?: string; password?: string }) {
   const LOGIN_TIMEOUT_MS = 120 * 1000;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timer: number | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = window.setTimeout(
       () => reject(new Error("佳明登录超时（120 秒），请稍后重试")),

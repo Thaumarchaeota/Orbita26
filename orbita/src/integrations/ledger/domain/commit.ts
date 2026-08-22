@@ -1,8 +1,8 @@
-import { entryForApi, isActiveEntry } from "./entry";
-import type { CommitPayload, Entry } from "../types";
-import { cloneEntries } from "../utils";
+import { detailItemForApi, getActiveCommitItems } from "./detail-item-api";
+import type { CommitPayload, DetailItem, Entry } from "../types";
+import { cloneDetailItems, cloneEntries } from "../utils";
 
-export { cloneEntries };
+export { cloneEntries, cloneDetailItems };
 
 export function stripMarkers(entries: Entry[]): Entry[] {
   return cloneEntries(entries).map((e) => {
@@ -13,14 +13,20 @@ export function stripMarkers(entries: Entry[]): Entry[] {
   });
 }
 
-export function getDirtyActiveEntries(entries: Entry[]): Entry[] {
-  return entries.filter(isActiveEntry);
+export function buildCommitPayload(
+  items: DetailItem[],
+  validationToken: string,
+  candidateHash: string,
+): CommitPayload {
+  return {
+    items: getActiveCommitItems(items).map(detailItemForApi),
+    validation_token: validationToken,
+    candidate_hash: candidateHash,
+  };
 }
 
-export function buildCommitPayload(writeTarget: string, entries: Entry[]): CommitPayload {
-  return {
-    files: {
-      [writeTarget]: getDirtyActiveEntries(entries).map(entryForApi),
-    },
-  };
+export function buildValidatePayload(items: DetailItem[]): {
+  items: ReturnType<typeof detailItemForApi>[];
+} {
+  return { items: getActiveCommitItems(items).map(detailItemForApi) };
 }

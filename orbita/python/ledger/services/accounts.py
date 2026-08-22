@@ -1,5 +1,5 @@
 ﻿from ledger.config import ACCOUNT_FILE, CATEGORY_FILE
-from ledger.services.open_line import group_for_name, parse_open_line
+from ledger.services.open_line import OPEN_RE, group_for_name, parse_open_line
 
 GROUP_KEYS = ("expenses", "income", "assets", "liabilities")
 
@@ -36,3 +36,15 @@ def all_accounts() -> list[str]:
     for key in GROUP_KEYS:
         merged.extend(item["name"] for item in groups[key])
     return sorted(set(merged))
+
+
+def all_declared_account_names() -> list[str]:
+    names: list[str] = []
+    for path in (CATEGORY_FILE, ACCOUNT_FILE):
+        if not path.is_file():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            m = OPEN_RE.match(line.strip())
+            if m:
+                names.append(m.group(2))
+    return sorted(set(names))

@@ -27,9 +27,14 @@ export function displayPath(item: AccountRecord): string[] {
 }
 
 export function accountDisplayLabel(item: AccountRecord): string {
-  const path = displayPath(item);
-  if (path.length) return path[path.length - 1];
-  return item.label || item.name;
+  const path = displayPath(item).filter((part) => Boolean(part?.trim()));
+  const last = path.length ? path[path.length - 1]! : "";
+  if (last) return last;
+  return (item.label || item.name || "").trim() || "—";
+}
+
+export function accountDisplaySubtitle(item: AccountRecord): string {
+  return (item.name || "").trim();
 }
 
 export function groupByLabelPath(items: AccountRecord[]): Map<string, AccountRecord[]> {

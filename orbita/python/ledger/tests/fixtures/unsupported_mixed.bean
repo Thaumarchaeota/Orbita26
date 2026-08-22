@@ -1,0 +1,7 @@
+2026-03-01 * "午餐" ""
+    Expenses:Food                   20.00 CNY
+    Assets:Cash                    -20.00 CNY
+  bkeasy-type: "expense"
+  orbita-id: "txn_01ARZ3NDEKTSV4RRFFQ69G5FAZ"
+
+2026-03-02 open Assets:Bank CNY

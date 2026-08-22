@@ -24,15 +24,43 @@ registerIntegration(workIntegration);
 registerIntegration(aiIntegration);
 registerIntegration(ticktickIntegration);
 
-void (async () => {
-  await initSettings();
-  initClickThrough();
-  initWakeRepair();
-  initHoverTips();
-  hydrateShellStore();
-  await Promise.all([initAiConfig(), initBookmarks(), initApps(), initLocalFiles()]);
-  bindLauncherDataReload();
-  await initIntegrations();
-  initPrivacyMode();
-  initGarminAutoSync();
-})();
+const root = document.getElementById("app");
+
+function renderStartupFailure(error: unknown): void {
+  console.error("Orbita shell bootstrap failed", error);
+  if (!root) return;
+  // The main Tauri window is transparent by design. A bootstrap error must
+  // remain visible instead of leaving an indistinguishable empty window.
+  root.replaceChildren();
+  const panel = document.createElement("section");
+  panel.style.cssText = "min-height:100vh;padding:32px;background:#f8fafc;color:#172033;font:14px/1.5 system-ui,sans-serif";
+  const title = document.createElement("h1");
+  title.textContent = "Orbita 启动失败";
+  const detail = document.createElement("pre");
+  detail.style.cssText = "margin-top:12px;white-space:pre-wrap;color:#b42318";
+  detail.textContent = error instanceof Error ? error.message : String(error);
+  panel.append(title, detail);
+  root.appendChild(panel);
+}
+
+if (!root) {
+  document.body.textContent = "#app not found";
+} else {
+  root.innerHTML = '<div style="min-height:100vh;background:#f8fafc;color:#475467;padding:32px;font:14px system-ui,sans-serif">正在启动 Orbita…</div>';
+  void (async () => {
+    try {
+      await initSettings();
+      initClickThrough();
+      initWakeRepair();
+      initHoverTips();
+      hydrateShellStore();
+      await Promise.all([initAiConfig(), initBookmarks(), initApps(), initLocalFiles()]);
+      bindLauncherDataReload();
+      await initIntegrations();
+      initPrivacyMode();
+      initGarminAutoSync();
+    } catch (error) {
+      renderStartupFailure(error);
+    }
+  })();
+}

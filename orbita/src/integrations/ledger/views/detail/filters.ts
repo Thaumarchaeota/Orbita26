@@ -1,51 +1,111 @@
+import { mountDatePicker, type DatePickerHandle } from "../../../../ui/date-picker";
+import { isTransactionItem } from "../../domain/detail-item";
 import { sortDetailEntries } from "../../domain/seq";
-import { getDetailEntries } from "../../state/ledger";
-import type { EntryType } from "../../types";
-import { paintDetailList } from "./list";
+import { getDetailEntries, getDetailItems } from "../../state/ledger";
+import type { DetailItem, EntryType } from "../../types";
 
-let selectedTypes = new Set<EntryType>();
+export type DetailFiltersHandle = {
+  getSelectedTypes: () => ReadonlySet<EntryType>;
+  getFilteredItems: () => DetailItem[];
+  getFilteredEntries: () => DetailItem[];
+  refresh: () => void;
+  reset: () => void;
+  dispose: () => void;
+};
 
-export function getSelectedTypes(): Set<EntryType> {
-  return selectedTypes;
-}
+/**
+ * Filter state belongs to the cached DetailSurface instance.
+ */
 
-export function dragEnabled(): boolean {
-  return selectedTypes.size === 0;
-}
+export function mountDetailFilters(
+  root: HTMLElement,
+  onFilterChange: () => void,
+): DetailFiltersHandle {
+  const lifecycle = new AbortController();
+  const selectedTypes = new Set<EntryType>();
+  let from = "";
+  let to = "";
+  let fromPicker: DatePickerHandle | null = null;
+  let toPicker: DatePickerHandle | null = null;
 
-export function getFilteredEntries() {
-  let entries = getDetailEntries();
-  const from = document.querySelector<HTMLInputElement>("#filter-from")?.value;
-  const to = document.querySelector<HTMLInputElement>("#filter-to")?.value;
-  if (from) entries = entries.filter((e) => e.date >= from);
-  if (to) entries = entries.filter((e) => e.date <= to);
-  if (selectedTypes.size > 0) {
-    entries = entries.filter((e) => selectedTypes.has(e.type));
-  }
-  return entries;
-}
+  const typeButtons = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-detail-type]"));
+  const syncTypeButtons = () => {
+    for (const button of typeButtons) {
+      button.classList.toggle("active", selectedTypes.has(button.dataset.detailType as EntryType));
+    }
+  };
+  const getFilteredItems = (): DetailItem[] => {
+    let items = getDetailItems();
+    if (from) items = items.filter((item) => item.date >= from);
+    if (to) items = items.filter((item) => item.date <= to);
+    if (selectedTypes.size) {
+      items = items.filter(
+        (item) => isTransactionItem(item) && selectedTypes.has(item.type),
+      );
+    }
+    return items;
+  };
+  const refresh = () => {
+    sortDetailEntries(getDetailEntries());
+    onFilterChange();
+  };
+  const notifyChange = () => onFilterChange();
 
-export function applyDetailFilters(): void {
-  sortDetailEntries(getDetailEntries());
-  paintDetailList();
-}
-
-export function initDetailFilters(onFilterChange: () => void): void {
-  const fromEl = document.querySelector<HTMLInputElement>("#filter-from");
-  const toEl = document.querySelector<HTMLInputElement>("#filter-to");
-  fromEl?.addEventListener("change", onFilterChange);
-  toEl?.addEventListener("change", onFilterChange);
-  document.querySelectorAll<HTMLButtonElement>(".type-filter").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const t = btn.dataset.type as EntryType;
-      if (selectedTypes.has(t)) {
-        selectedTypes.delete(t);
-        btn.classList.remove("active");
-      } else {
-        selectedTypes.add(t);
-        btn.classList.add("active");
-      }
-      onFilterChange();
+  const fromMount = root.querySelector<HTMLElement>("[data-detail-filter-from-mount]");
+  const toMount = root.querySelector<HTMLElement>("[data-detail-filter-to-mount]");
+  if (fromMount) {
+    fromPicker = mountDatePicker(fromMount, {
+      compact: true,
+      placeholder: "起始日期",
+      onChange: (value) => {
+        from = value;
+        notifyChange();
+      },
     });
-  });
+  }
+  if (toMount) {
+    toPicker = mountDatePicker(toMount, {
+      compact: true,
+      placeholder: "截止日期",
+      onChange: (value) => {
+        to = value;
+        notifyChange();
+      },
+    });
+  }
+  for (const button of typeButtons) {
+    button.addEventListener(
+      "click",
+      () => {
+        const type = button.dataset.detailType as EntryType;
+        if (selectedTypes.has(type)) selectedTypes.delete(type);
+        else selectedTypes.add(type);
+        syncTypeButtons();
+        notifyChange();
+      },
+      { signal: lifecycle.signal },
+    );
+  }
+
+  const handle: DetailFiltersHandle = {
+    getSelectedTypes: () => selectedTypes,
+    getFilteredItems,
+    getFilteredEntries: () => getFilteredItems().filter(isTransactionItem),
+    refresh,
+    reset: () => {
+      selectedTypes.clear();
+      from = "";
+      to = "";
+      fromPicker?.setValue("");
+      toPicker?.setValue("");
+      syncTypeButtons();
+      notifyChange();
+    },
+    dispose: () => {
+      lifecycle.abort();
+      void fromPicker?.close();
+      void toPicker?.close();
+    },
+  };
+  return handle;
 }

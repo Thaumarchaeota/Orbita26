@@ -1,10 +1,12 @@
-import { placeholderPanel } from "../shell";
-import type { AdminTabDefinition } from "../types";
+import { mountPlaceholderDestination } from "../placeholder";
+import type { InsightDestination } from "../types";
 
-export const healthTab: AdminTabDefinition = {
+export const healthDestination: InsightDestination = {
   id: "health",
+  kind: "domain",
   label: "健康",
-  mount(panel) {
-    placeholderPanel(panel, "健康");
+  icon: "health",
+  mount(root) {
+    return mountPlaceholderDestination(root, "健康");
   },
 };

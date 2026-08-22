@@ -1,4 +1,5 @@
-import { ERROR_MIN_MS, SUCCESS_MIN_MS, CHECK_ICON, REMARK_MAX_LENGTH } from "../constants";
+import { REMARK_MAX_LENGTH } from "../constants";
+import { ACTION_SUCCESS_MS, clearActionMotion, ensureActionButton, playActionError, playActionSuccess, withActionPending } from "../../../ui/action-motion";
 import { buildPostingsFromSimple } from "../domain/entry";
 import {
   accountDisplayLabel,
@@ -7,7 +8,7 @@ import {
 } from "../state/accounts";
 import { commitNewEntry } from "../state/ledger";
 import type { AccountGroup, AccountRecord } from "../types";
-import { formatTags, sleep, todayIso } from "../utils";
+import { formatTags, todayIso } from "../utils";
 
 type EntryType = "expense" | "income" | "transfer";
 
@@ -194,7 +195,7 @@ export function mountEntryForm(container: HTMLElement): () => void {
         <div id="ledger-tag-box" class="ledger-tag-box">
           <input type="text" id="ledger-tag-field" class="ledger-tag-field" placeholder="回车添加">
         </div>
-        <button type="submit" id="ledger-submit-btn" class="ledger-submit-btn">保存</button>
+        <button type="submit" id="ledger-submit-btn" class="ledger-submit-btn orbita-action-btn">保存</button>
         <p id="ledger-form-error" class="ledger-form-error" hidden></p>
       </form>
     </div>`;
@@ -212,6 +213,7 @@ export function mountEntryForm(container: HTMLElement): () => void {
   const tagBox = container.querySelector<HTMLElement>("#ledger-tag-box")!;
   const tagField = container.querySelector<HTMLInputElement>("#ledger-tag-field")!;
   const submitBtn = container.querySelector<HTMLButtonElement>("#ledger-submit-btn")!;
+  ensureActionButton(submitBtn);
   const errorEl = container.querySelector<HTMLElement>("#ledger-form-error")!;
   const slider = container.querySelector<HTMLElement>(".ledger-type-slider")!;
 
@@ -267,22 +269,11 @@ export function mountEntryForm(container: HTMLElement): () => void {
     errorEl.textContent = "";
   }
 
-  function setBtnState(state: "idle" | "pending" | "success" | "error"): void {
-    submitBtn.classList.remove("is-pending", "is-success", "is-error");
-    if (state === "pending") {
-      submitBtn.classList.add("is-pending");
-      submitBtn.textContent = "保存中…";
-    } else if (state === "success") {
-      submitBtn.classList.add("is-success");
-      submitBtn.innerHTML = CHECK_ICON;
-    } else if (state === "error") {
-      submitBtn.classList.add("is-error");
-      submitBtn.textContent = "✕";
-    } else {
-      submitBtn.textContent = "保存";
-    }
-    submitAnimating = state !== "idle";
-    submitBtn.disabled = state !== "idle";
+  function resetSubmitBtn(): void {
+    clearActionMotion(submitBtn);
+    submitBtn.textContent = "保存";
+    submitAnimating = false;
+    submitBtn.disabled = false;
   }
 
   container.querySelector<HTMLFormElement>("#ledger-entry-form")!.addEventListener(
@@ -330,29 +321,31 @@ export function mountEntryForm(container: HTMLElement): () => void {
       const tags = formatTags(getTagsFromBox(tagBox));
       const postings = buildPostingsFromSimple(activeType, account1, account2, amount, currency);
 
-      setBtnState("pending");
+      submitAnimating = true;
       const start = Date.now();
       try {
-        await commitNewEntry({
-          type: activeType,
-          date: dateEl.value,
-          flag: "*",
-          payee: "",
-          remark,
-          tags,
-          postings,
+        await withActionPending(submitBtn, { label: "保存中…" }, () =>
+          commitNewEntry({
+            type: activeType,
+            date: dateEl.value,
+            flag: "*",
+            payee: "",
+            remark,
+            tags,
+            postings,
+          }),
+        );
+        await playActionSuccess(submitBtn, {
+          minMs: Math.max(0, ACTION_SUCCESS_MS - (Date.now() - start)),
+          onDone: () => resetSubmitBtn(),
         });
-        setBtnState("success");
-        await sleep(Math.max(0, SUCCESS_MIN_MS - (Date.now() - start)));
         amountEl.value = "";
         remarkEl.value = "";
         setTagsInBox(tagBox, tagField, []);
-        setBtnState("idle");
       } catch (err) {
-        setBtnState("error");
         showError(err instanceof Error ? err.message : "保存失败");
-        await sleep(ERROR_MIN_MS);
-        setBtnState("idle");
+        await playActionError(submitBtn);
+        resetSubmitBtn();
       }
     },
     { signal },

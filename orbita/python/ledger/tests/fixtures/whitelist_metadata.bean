@@ -1,0 +1,6 @@
+2026-05-19 * "午餐" "带时间"
+  time: "2026-05-19T14:32:00+08:00"
+    Expenses:Food                   20.00 CNY
+    Assets:Cash                    -20.00 CNY
+  bkeasy-type: "expense"
+  custom-note: "保留"

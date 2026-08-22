@@ -7,6 +7,7 @@ from ledger.api.commit import router as commit_router
 from ledger.api.entries import router as entries_router
 from ledger.api.health import router as health_router
 from ledger.api.settings import router as settings_router
+from ledger.api.stats import router as stats_router
 from ledger.api.validate import router as validate_router
 
 app = FastAPI()
@@ -23,6 +24,7 @@ app.include_router(commit_router, prefix="/api")
 app.include_router(accounts_router, prefix="/api")
 app.include_router(categories_router, prefix="/api")
 app.include_router(settings_router, prefix="/api")
+app.include_router(stats_router, prefix="/api")
 app.include_router(validate_router, prefix="/api")
 
 

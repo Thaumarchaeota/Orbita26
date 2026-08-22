@@ -47,6 +47,7 @@ export type FontPrefs = {
   literature: FontPresetId;
   note: FontPresetId;
   ai: FontPresetId;
+  finance: FontPresetId;
   clock: FontBasePreset;
   lifeRing: FontBasePreset;
   lifeRingSub: FontBasePreset;
@@ -60,6 +61,7 @@ export function defaultFontPrefs(): FontPrefs {
     literature: "harding",
     note: "inherit",
     ai: "inherit",
+    finance: "inherit",
     clock: "ubuntu",
     lifeRing: "ubuntuBold",
     lifeRingSub: "helvetica",
@@ -91,6 +93,7 @@ export function normalizeFontPrefs(raw: Partial<FontPrefs> | undefined): FontPre
     literature: normalizeFontPreset(raw.literature, base.literature),
     note: normalizeFontPreset(raw.note, base.note),
     ai: normalizeFontPreset(raw.ai, base.ai),
+    finance: normalizeFontPreset(raw.finance, base.finance),
     clock: normalizeFontBasePreset(raw.clock, base.clock),
     lifeRing: normalizeFontBasePreset(raw.lifeRing, base.lifeRing),
     lifeRingSub: normalizeFontBasePreset(raw.lifeRingSub, base.lifeRingSub),
@@ -111,6 +114,9 @@ export function applyFontPrefs(fonts: FontPrefs, root: HTMLElement = document.do
   root.style.setProperty("--font-literature", resolveFontStack(fonts.literature, baseStack));
   root.style.setProperty("--font-note", resolveFontStack(fonts.note, baseStack));
   root.style.setProperty("--font-ai", resolveFontStack(fonts.ai, baseStack));
+  root.style.setProperty("--font-finance", resolveFontStack(fonts.finance, baseStack));
+  root.style.setProperty("--font-finance-chrome", FONT_STACKS.ubuntuBold);
+  root.style.setProperty("--font-finance-chrome-weight", "700");
   root.style.setProperty("--font-clock", FONT_STACKS[fonts.clock]);
   root.style.setProperty("--font-life-ring", FONT_STACKS[fonts.lifeRing]);
   root.style.setProperty("--font-life-ring-sub", FONT_STACKS[fonts.lifeRingSub]);

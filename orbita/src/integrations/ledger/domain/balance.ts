@@ -1,5 +1,6 @@
 import { EPSILON } from "../constants";
 import type { Entry, Posting } from "../types";
+import { parseDecimalInput, parseOptionalDecimalInput } from "./field-validate";
 
 export type BalanceResult = { ok: true } | { ok: false; message: string };
 
@@ -13,6 +14,7 @@ export function validatePostingBalance(postings: Posting[]): BalanceResult {
   if (currencies.size <= 1) {
     const totals: Record<string, number> = {};
     for (const p of postings) {
+      if (p.amount == null) continue;
       const cur = postingCurrency(p);
       totals[cur] = (totals[cur] ?? 0) + p.amount;
     }
@@ -35,6 +37,7 @@ export function validatePostingBalance(postings: Posting[]): BalanceResult {
   const costAnnotated = new Set<string>();
 
   for (const p of postings) {
+    if (p.amount == null) continue;
     const cur = postingCurrency(p);
     totals[cur] = (totals[cur] ?? 0) + p.amount;
     if (p.cost_amount != null && Math.abs(p.cost_amount) > EPSILON) {
@@ -67,10 +70,13 @@ export function previewEntryBalance(
   const postings = entry.postings.map((p, i) => {
     if (i !== postingIndex) return { ...p };
     const copy = { ...p };
-    if (field === "amount") copy.amount = parseFloat(value) || 0;
-    else if (field === "currency") copy.currency = value;
+    if (field === "amount") {
+      const parsed = parseDecimalInput(value, { allowZero: true });
+      copy.amount = parsed.ok ? parsed.value : 0;
+    } else if (field === "currency") copy.currency = value;
     else if (field === "cost_amount") {
-      copy.cost_amount = String(value).trim() ? parseFloat(value) || 0 : null;
+      const parsed = parseOptionalDecimalInput(value);
+      copy.cost_amount = parsed.ok ? parsed.value : null;
     } else if (field === "cost_currency") copy.cost_currency = String(value).trim();
     else if (field === "account") copy.account = value;
     return copy;

@@ -2,7 +2,7 @@ let root: HTMLElement | null = null;
 let zCounter = 200;
 
 export function getModalRoot(): HTMLElement {
-  if (!root) {
+  if (!root || !root.isConnected) {
     root = document.createElement("div");
     root.id = "orbita-modal-root";
     document.body.appendChild(root);

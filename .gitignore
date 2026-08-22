@@ -1,5 +1,5 @@
 reference/
-docs/
+docs_legacy/
 
 scripts/env.ps1
 scripts/test_dida365.py

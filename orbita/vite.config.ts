@@ -4,6 +4,10 @@ const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
   clearScreen: false,
+  test: {
+    environment: "happy-dom",
+    include: ["src/integrations/ledger/**/*.test.ts", "src/integrations/admin/**/*.test.ts"],
+  },
   build: {
     rollupOptions: {
       input: {

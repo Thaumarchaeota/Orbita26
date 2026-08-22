@@ -1,5 +1,6 @@
-import { CHECK_ICON, SUCCESS_MIN_MS } from "../../constants";
+import { SUCCESS_MIN_MS } from "../../constants";
 import { fetchAccounts, postCategoriesCommit } from "../../api/client";
+import { ensureActionButton, isActionVisualHeld, applyActionPendingVisual, playActionSuccess } from "../../../../ui/action-motion";
 import { setAccounts } from "../../state/accounts";
 import {
   categoriesForCommit,
@@ -7,10 +8,9 @@ import {
   loadCategoriesFromAccounts,
   resetCategoriesBaseline,
 } from "../../state/categories";
-import { sleep } from "../../utils";
 import { renderCategoriesView } from "./render";
 
-type SaveState = "unedited" | "edited" | "submitting" | "success";
+type SaveState = "unedited" | "edited" | "submitting";
 
 let saveLock = false;
 
@@ -21,20 +21,29 @@ function setSaveBtnVisual(
   disabled: boolean,
   spinning: boolean,
 ): void {
-  btn.className = "categories-save-btn";
+  ensureActionButton(btn);
+  btn.className = "categories-save-btn orbita-action-btn";
   btn.classList.add(`categories-save-${state}`);
+  if (state === "submitting") {
+    applyActionPendingVisual(btn, { label, spinning: true, disabled: true });
+    return;
+  }
   btn.disabled = disabled;
   if (spinning) {
     btn.innerHTML = `<span class="categories-save-spinner"></span>${label}`;
-  } else if (state === "success") {
-    btn.innerHTML = CHECK_ICON;
   } else {
     btn.textContent = label;
   }
 }
 
+async function showCategorySaveSuccess(btn: HTMLButtonElement): Promise<void> {
+  ensureActionButton(btn);
+  btn.className = "categories-save-btn orbita-action-btn";
+  await playActionSuccess(btn, { minMs: SUCCESS_MIN_MS, onDone: () => recomputeCategorySaveUI(btn) });
+}
+
 export function recomputeCategorySaveUI(btn: HTMLButtonElement): void {
-  if (saveLock) return;
+  if (saveLock || isActionVisualHeld(btn)) return;
   if (isCategoriesDirty()) {
     setSaveBtnVisual(btn, "edited", "保存", false, false);
   } else {
@@ -58,8 +67,7 @@ export function initCategorySave(
       if (!payload.length) {
         resetCategoriesBaseline();
         renderCategoriesView(expensesEl, incomeEl);
-        setSaveBtnVisual(btn, "success", "", true, false);
-        await sleep(SUCCESS_MIN_MS);
+        await showCategorySaveSuccess(btn);
         return;
       }
       const { res, data } = await postCategoriesCommit({ categories: payload });
@@ -71,14 +79,13 @@ export function initCategorySave(
       loadCategoriesFromAccounts(acc);
       resetCategoriesBaseline();
       renderCategoriesView(expensesEl, incomeEl);
-      setSaveBtnVisual(btn, "success", "", true, false);
-      await sleep(SUCCESS_MIN_MS);
+      await showCategorySaveSuccess(btn);
     } catch (err) {
       alert(err instanceof Error ? err.message : "保存失败");
       setSaveBtnVisual(btn, "edited", "保存", false, false);
     } finally {
       saveLock = false;
-      recomputeCategorySaveUI(btn);
+      if (!isActionVisualHeld(btn)) recomputeCategorySaveUI(btn);
     }
   });
   recomputeCategorySaveUI(btn);

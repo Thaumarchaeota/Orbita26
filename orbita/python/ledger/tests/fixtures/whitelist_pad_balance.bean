@@ -1,0 +1,9 @@
+2026-03-01 pad Assets:Cash Equity:Opening
+
+2026-03-02 balance Assets:Cash  100.00 CNY
+
+2026-03-03 * "午餐" ""
+    Expenses:Food                   20.00 CNY
+    Assets:Cash                    -20.00 CNY
+  bkeasy-type: "expense"
+  orbita-id: "txn_01ARZ3NDEKTSV4RRFFQ69G5FAZ"

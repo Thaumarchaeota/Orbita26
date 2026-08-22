@@ -1,0 +1,463 @@
+.cds-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  min-height: 0;
+}
+
+.cds-composer-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ledger-text);
+}
+
+.cds-composer-type-switch {
+  display: flex;
+  position: relative;
+  padding: 3px;
+  margin-bottom: 4px;
+  background: var(--ledger-hover);
+  border-radius: var(--admin-radius-sm);
+  --cds-tab-index: 0;
+}
+
+.cds-composer-type-slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 4);
+  height: calc(100% - 6px);
+  background: var(--ledger-surface);
+  border-radius: calc(var(--admin-radius-sm) - 2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transform: translateX(calc(var(--cds-tab-index) * 100%));
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.cds-composer-type-btn {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--ledger-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.22s ease, font-weight 0.22s ease;
+}
+
+.cds-composer-type-btn.is-active {
+  color: var(--ledger-accent);
+  font-weight: 600;
+}
+
+.cds-composer-simple:not(.is-visible),
+.cds-composer-advanced:not(.is-visible),
+.cds-composer-simple[hidden],
+.cds-composer-advanced[hidden] {
+  display: none !important;
+}
+
+.cds-composer-simple.is-visible,
+.cds-composer-advanced.is-visible {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: cds-composer-panel-in 0.2s ease;
+}
+
+@keyframes cds-composer-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.cds-composer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cds-composer-row-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+  gap: 10px;
+}
+
+.cds-composer-field-amount .cds-composer-amount-row .cds-composer-input:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.cds-composer-field .cds-composer-amount-row .cds-composer-input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cds-composer-date-time {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7.2em;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.cds-composer-time,
+.cds-composer-adv-time {
+  min-width: 0;
+  padding: 0 4px;
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+  text-align: start;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+
+.cds-composer-time:hover,
+.cds-composer-time:focus,
+.cds-composer-time:focus-visible,
+.cds-composer-adv-time:hover,
+.cds-composer-adv-time:focus,
+.cds-composer-adv-time:focus-visible {
+  padding: 0 4px;
+}
+
+.cds-composer-time::-webkit-calendar-picker-indicator,
+.cds-composer-adv-time::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cds-composer-time::-webkit-datetime-edit,
+.cds-composer-time::-webkit-datetime-edit-fields-wrapper,
+.cds-composer-adv-time::-webkit-datetime-edit,
+.cds-composer-adv-time::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+  margin: 0;
+}
+
+.cds-composer-date-mount,
+.cds-composer-date-mount .orbita-date-picker,
+.cds-composer-date-mount .orbita-date-picker-btn {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.cds-composer-date-mount .orbita-date-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.cds-composer-date-mount .orbita-date-picker-btn {
+  padding: 0 8px;
+  height: 34px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-bg);
+}
+
+.cds-composer-label {
+  display: block;
+  font-size: 12px;
+  color: var(--ledger-muted);
+  margin: 0;
+}
+
+.cds-composer-input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-bg);
+  color: var(--ledger-text);
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cds-composer-picker {
+  min-width: 0;
+}
+
+.cds-composer-amount-row {
+  display: flex;
+  gap: 6px;
+}
+
+.cds-composer-currency {
+  flex: 0 0 3.2em;
+  min-width: 3.2em;
+  padding: 0 6px;
+  text-align: center;
+}
+
+.cds-composer-tags {
+  min-height: 34px;
+}
+
+.cds-composer-guide {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ledger-muted);
+}
+
+.cds-composer-guide-btn {
+  border: none;
+  background: none;
+  color: var(--ledger-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cds-composer-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ledger-danger, #c44);
+}
+
+.cds-composer-feedback {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ledger-muted);
+  text-align: center;
+}
+
+.cds-composer-submit {
+  height: 38px;
+  margin-top: 4px;
+  border: none;
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cds-composer-submit:disabled:not(.is-action-success):not(.is-action-pending) {
+  background: var(--ledger-border);
+  color: var(--ledger-muted);
+  cursor: not-allowed;
+}
+
+.cds-composer-advanced-mount .composer-advanced-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cds-composer-advanced-mount .composer-adv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cds-composer-advanced-mount .composer-adv-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cds-composer-advanced-mount label {
+  display: block;
+  font-size: 12px;
+  color: var(--ledger-muted);
+  margin: 0;
+}
+
+.cds-composer-advanced-mount input,
+.cds-composer-advanced-mount select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-bg);
+  color: var(--ledger-text);
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-date-mount,
+.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker,
+.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-btn {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-btn {
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-bg);
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-tag-box {
+  min-height: 34px;
+}
+
+.cds-composer-advanced-mount .composer-posting-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cds-composer-advanced-mount .composer-posting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-bg);
+}
+
+.cds-composer-advanced-mount .composer-posting-top {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.cds-composer-advanced-mount .composer-posting-account {
+  flex: 1;
+  min-width: 0;
+}
+
+.cds-composer-advanced-mount .composer-posting-remove {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 34px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-surface);
+  color: var(--ledger-muted);
+  cursor: pointer;
+}
+
+.cds-composer-advanced-mount .composer-posting-remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.cds-composer-advanced-mount .composer-posting-line {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cds-composer-advanced-mount .composer-posting-values,
+.cds-composer-advanced-mount .composer-posting-costs {
+  display: grid;
+  gap: 4px;
+  align-items: center;
+  min-width: 0;
+}
+
+.cds-composer-advanced-mount .composer-posting-values {
+  grid-template-columns: minmax(0, 1fr) 3.2em;
+}
+
+.cds-composer-advanced-mount .composer-posting-costs {
+  grid-template-columns: 1.25em minmax(0, 1fr) 3.2em;
+}
+
+.cds-composer-advanced-mount .composer-posting-line input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.cds-composer-advanced-mount .composer-posting-top .ledger-account-picker,
+.cds-composer-advanced-mount .composer-posting-top .ledger-account-picker-btn {
+  width: 100%;
+}
+
+.cds-composer-advanced-mount .composer-posting-amount,
+.cds-composer-advanced-mount .composer-posting-currency,
+.cds-composer-advanced-mount .composer-posting-cost-amount,
+.cds-composer-advanced-mount .composer-posting-cost-currency {
+  height: 32px;
+  min-width: 0;
+  padding: 0 6px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-surface);
+  color: var(--ledger-text);
+  font: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.cds-composer-advanced-mount .composer-posting-currency,
+.cds-composer-advanced-mount .composer-posting-cost-currency {
+  text-align: center;
+}
+
+.cds-composer-advanced-mount .composer-posting-cost-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--ledger-muted);
+}
+
+.cds-composer-advanced-mount .composer-add-row {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px dashed var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: transparent;
+  color: var(--ledger-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cds-composer-advanced-mount .composer-add-row:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

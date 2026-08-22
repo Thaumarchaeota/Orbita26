@@ -7,8 +7,9 @@ from pathlib import Path
 
 PYTHON_ROOT = Path(__file__).resolve().parents[2]
 BKEASY_DATA = Path(__file__).resolve().parents[4] / "reference" / "20260717_BKeasy" / "data"
-os.environ.setdefault("ORBITA_LEDGER_DATA_ROOT", str(BKEASY_DATA))
 sys.path.insert(0, str(PYTHON_ROOT))
+
+from ledger.tests.bill_isolation import assert_safe_smoke_data_root
 
 LOG = Path(__file__).resolve().parent / "smoke-debug.log"
 
@@ -27,6 +28,18 @@ def log(hypothesis_id: str, message: str, data: dict | None = None):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def _bootstrap_data_root() -> Path:
+    env = os.environ.get("ORBITA_LEDGER_DATA_ROOT")
+    if env:
+        path = Path(env)
+        assert_safe_smoke_data_root(path)
+        return path
+    if not BKEASY_DATA.is_dir():
+        raise RuntimeError(f"smoke_test reference fixture missing: {BKEASY_DATA}")
+    os.environ["ORBITA_LEDGER_DATA_ROOT"] = str(BKEASY_DATA)
+    return BKEASY_DATA
+
+
 def main():
     from ledger.services.parser import (
         assign_initial_seq,
@@ -41,7 +54,7 @@ def main():
     from ledger.services.settings import get_write_target
     from ledger.services.accounts import list_accounts
 
-    data_root = Path(os.environ["ORBITA_LEDGER_DATA_ROOT"])
+    data_root = _bootstrap_data_root()
     results = {"pass": 0, "fail": 0, "cases": []}
 
     def check(name: str, hid: str, ok: bool, detail: dict):

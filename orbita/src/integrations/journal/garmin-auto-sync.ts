@@ -2,7 +2,7 @@ import { getSettings } from "../../core/settings";
 import { beijingToday, garminStatus, garminSync, journalConfigured, syncFromDate } from "./client";
 
 let syncing = false;
-let timer: ReturnType<typeof setTimeout> | null = null;
+let timer: number | null = null;
 let lastSlotKey = "";
 
 function beijingParts() {

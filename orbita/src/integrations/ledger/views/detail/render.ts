@@ -1,16 +1,9 @@
-import { TYPE_LABELS } from "../../constants";
 import { validatePostingBalance } from "../../domain/balance";
 import { hasPostingCost, normEntry, postingCostKey } from "../../domain/entry";
 import { getBaseline, getDetailEntries } from "../../state/ledger";
-import type { Entry } from "../../types";
+import type { BalanceItem, Entry, PadItem } from "../../types";
 import { escapeHtml, parseTagsString } from "../../utils";
-import { dragEnabled } from "./filters";
 
-const expandedCostPanels = new Set<string>();
-
-export function getExpandedCostPanels(): Set<string> {
-  return expandedCostPanels;
-}
 
 export function findEntry(id: string): Entry | undefined {
   return getDetailEntries().find((e) => e.id === id);
@@ -116,22 +109,27 @@ function editableSpan(id: string, field: string, entry: Entry, pi: number): stri
 function renderBalanceBadge(entry: Entry): string {
   if (entry._deleted) return "";
   const ok = isEntryBalanced(entry);
-  const cls = ok ? "entry-balance-badge is-ok" : "entry-balance-badge is-err";
+  const cls = ok ? "detail-card-balance-badge is-ok" : "detail-card-balance-badge is-err";
   return `<span class="${cls}" data-balance-for="${entry.id}">${ok ? "✓" : "未配平"}</span>`;
 }
 
-export function updateEntryBalanceBadge(id: string, postingsOverride?: Entry["postings"]): void {
+/** Updates only the card owned by a DetailSurface; never reaches across views. */
+export function updateEntryBalanceBadgeInList(
+  listEl: HTMLElement,
+  id: string,
+  postingsOverride?: Entry["postings"],
+): void {
   const entry = findEntry(id);
-  const block = document.querySelector<HTMLElement>(`.entry-block[data-entry-id="${id}"]`);
+  const block = listEl.querySelector<HTMLElement>(`.detail-card[data-entry-id="${id}"]`);
   if (!block) return;
-  let badge = block.querySelector<HTMLElement>(".entry-balance-badge");
+  let badge = block.querySelector<HTMLElement>(".detail-card-balance-badge");
   if (!entry || entry._deleted) {
     badge?.remove();
     return;
   }
   const postings = postingsOverride || entry.postings || [];
   const ok = validatePostingBalance(postings).ok;
-  const cls = ok ? "entry-balance-badge is-ok" : "entry-balance-badge is-err";
+  const cls = ok ? "detail-card-balance-badge is-ok" : "detail-card-balance-badge is-err";
   const label = ok ? "✓" : "未配平";
   if (!badge) {
     const typeEl = block.querySelector('.editable[data-field="type"]');
@@ -150,12 +148,12 @@ export function updateEntryBalanceBadge(id: string, postingsOverride?: Entry["po
 function renderEntryTags(entry: Entry): string {
   const tags = parseTagsString(entry.tags);
   const chips = tags.map((t) => `<span class="tag-chip">${escapeHtml(t)}</span>`).join("");
-  return `<div class="entry-tags-box" data-entry-id="${entry.id}">${chips}<input type="text" class="tag-field entry-tag-input" placeholder="标签"></div>`;
+  return `<div class="detail-card-tags" data-entry-id="${entry.id}">${chips}<input type="text" class="tag-field detail-card-tag-input" placeholder="标签"></div>`;
 }
 
-function renderPostingLine(entry: Entry, p: Entry["postings"][0], i: number): string {
+function renderPostingLine(entry: Entry, p: Entry["postings"][0], i: number, expandedCosts: ReadonlySet<string>): string {
   const key = postingCostKey(entry.id, i);
-  const expanded = expandedCostPanels.has(key) || hasPostingCost(p);
+  const expanded = expandedCosts.has(key) || hasPostingCost(p);
   const panelClass = expanded ? "posting-cost-panel is-open" : "posting-cost-panel";
   const toggleClass = expanded ? "posting-cost-toggle is-open" : "posting-cost-toggle";
   const toggleLabel = expanded ? "−" : "+";
@@ -176,41 +174,49 @@ function renderPostingLine(entry: Entry, p: Entry["postings"][0], i: number): st
   </div>`;
 }
 
-export function canDragEntry(e: Entry): boolean {
-  return dragEnabled() && !e._deleted;
+export function renderPadBlockHtml(p: PadItem): string {
+  const text = `Pad · ${p.account} ← ${p.source_account}`;
+  return `<div class="detail-card-wrap is-readonly" data-entry-id="${p.id}" data-date="${p.date}">
+    <div class="detail-card detail-card-readonly" data-entry-id="${p.id}">
+      <div class="detail-card-readonly-line">${escapeHtml(text)}</div>
+    </div>
+  </div>`;
 }
 
-function dragHandleHtml(e: Entry): string {
-  if (!canDragEntry(e)) return "";
-  return '<span class="entry-drag-handle" aria-label="拖动排序">⋮⋮</span>';
+export function renderBalanceBlockHtml(b: BalanceItem): string {
+  const text = `Balance · ${b.account} · ${b.amount} ${b.currency}`;
+  return `<div class="detail-card-wrap is-readonly" data-entry-id="${b.id}" data-date="${b.date}">
+    <div class="detail-card detail-card-readonly" data-entry-id="${b.id}">
+      <div class="detail-card-readonly-line">${escapeHtml(text)}</div>
+    </div>
+  </div>`;
 }
 
-export function renderEntryBlockHtml(e: Entry): string {
+export function renderEntryBlockHtml(e: Entry, expandedCosts: ReadonlySet<string> = new Set()): string {
   const visual = entryVisualState(e);
-  const classes = ["entry-block"];
-  if (visual === "deleted") classes.push("entry-deleted");
-  else if (visual === "new") classes.push("entry-new");
-  else if (visual === "modified") classes.push("entry-modified");
-  const delLabel = e._deleted ? "撤销" : "✕";
-  const delClass = e._deleted ? "entry-delete-btn is-undo" : "entry-delete-btn";
-  const wrapClass = canDragEntry(e) ? "entry-block-wrap" : "entry-block-wrap is-undraggable";
-  const postings = e.postings.map((p, i) => renderPostingLine(e, p, i)).join("");
-  return `<div class="${wrapClass}" data-entry-id="${e.id}" data-date="${e.date}">
+  const classes = ["detail-card"];
+  if (visual === "deleted") classes.push("detail-card-deleted");
+  else if (visual === "new") classes.push("detail-card-new");
+  else if (visual === "modified") classes.push("detail-card-modified");
+  if (visual !== "unchanged") classes.push("detail-card-state-animate");
+  const delContent = e._deleted ? "↩" : "✕";
+  const delClass = e._deleted ? "detail-card-delete-btn is-undo" : "detail-card-delete-btn";
+  const postings = e.postings.map((p, i) => renderPostingLine(e, p, i, expandedCosts)).join("");
+  return `<div class="detail-card-wrap" data-entry-id="${e.id}" data-date="${e.date}">
     <div class="${classes.join(" ")}" data-entry-id="${e.id}">
-      <div class="entry-block-header">
-        ${dragHandleHtml(e)}
+      <div class="detail-card-header">
         ${editableSpan(e.id, "date", e, -1)}
         ${editableSpan(e.id, "payee", e, -1)}
         ${editableSpan(e.id, "remark", e, -1)}
         ${editableSpan(e.id, "type", e, -1)}
         ${renderBalanceBadge(e)}
-        <button type="button" class="${delClass}" data-id="${e.id}" aria-label="${e._deleted ? "撤销" : "删除"}">${delLabel}</button>
+        <button type="button" class="${delClass}" data-id="${e.id}" aria-label="${e._deleted ? "撤销" : "删除"}">${delContent}</button>
       </div>
-      <div class="entry-block-meta">
+      <div class="detail-card-meta">
         ${editableSpan(e.id, "flag", e, -1)}
         ${renderEntryTags(e)}
       </div>
-      <div class="entry-block-postings">${postings}</div>
+      <div class="detail-card-postings">${postings}</div>
     </div>
   </div>`;
 }

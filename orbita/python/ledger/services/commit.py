@@ -2,9 +2,29 @@
 
 from ledger.services.io import atomic_write, resolve_data_path
 from ledger.services.models import Entry, Posting
-from ledger.services.parser import _fill_implicit_amounts
 from ledger.services.render import render_file
 from ledger.services.validate import validate_entries
+
+
+def _fill_implicit_amounts(entry: Entry) -> None:
+    total = sum(p.amount for p in entry.postings)
+    if abs(total) < 0.001:
+        for p in entry.postings:
+            if not (p.currency or "").strip():
+                p.currency = "CNY"
+        return
+    zeros = [p for p in entry.postings if p.amount == 0]
+    if len(zeros) == 1:
+        zeros[0].amount = round(-total, 2)
+        non_zero = [p for p in entry.postings if p is not zeros[0] and p.amount != 0]
+        nz_currencies = {(p.currency or "").strip() for p in non_zero}
+        if len(nz_currencies) == 1:
+            zeros[0].currency = next(iter(nz_currencies)) or "CNY"
+        elif not (zeros[0].currency or "").strip():
+            zeros[0].currency = "CNY"
+    for p in entry.postings:
+        if not (p.currency or "").strip():
+            p.currency = "CNY"
 
 
 def entry_from_dict(d: dict) -> Entry:

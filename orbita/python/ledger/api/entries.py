@@ -1,5 +1,6 @@
 ﻿from fastapi import APIRouter, Query
 
+from ledger.services.ledger_item import item_to_dict
 from ledger.services.parser import parse_write_target
 
 router = APIRouter()
@@ -12,13 +13,14 @@ def list_entries(
     limit: int | None = Query(None, ge=1),
     offset: int = Query(0, ge=0),
 ):
-    all_entries = parse_write_target()
-    all_dates = [e.date for e in all_entries]
-    filtered = all_entries
+    parsed = parse_write_target()
+    all_items = parsed.items
+    all_dates = [item.date for item in all_items]
+    filtered = all_items
     if date_from:
-        filtered = [e for e in filtered if e.date >= date_from]
+        filtered = [item for item in filtered if item.date >= date_from]
     if date_to:
-        filtered = [e for e in filtered if e.date <= date_to]
+        filtered = [item for item in filtered if item.date <= date_to]
     total = len(filtered)
     if limit is not None:
         page = filtered[offset : offset + limit]
@@ -30,7 +32,8 @@ def list_entries(
         page = filtered
         has_more = False
     return {
-        "entries": [e.to_dict() for e in page],
+        "entries": [item_to_dict(item) for item in page],
+        "diagnostics": [d.to_dict() for d in parsed.diagnostics],
         "total": total,
         "has_more": has_more,
         "date_min": min(all_dates) if all_dates else None,

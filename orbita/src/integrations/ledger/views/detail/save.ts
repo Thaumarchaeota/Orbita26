@@ -1,204 +1,200 @@
-import { CHECK_ICON, SUCCESS_MIN_MS } from "../../constants";
 import { postCommit, postValidate } from "../../api/client";
 import { buildCommitPayload } from "../../domain/commit";
 import { isActiveEntry } from "../../domain/entry";
-import { ledgerStateEqual } from "../../domain/ledger-equal";
-import { getWriteTarget } from "../../state/write-target";
 import {
   applyDetailFiltersAfterCommit,
+  applyIdentityBackfill,
+  beginSaveCheck,
+  beginSaveSubmit,
   ensureLoadReady,
-  getBaseline,
+  enterConfirming,
+  enterRefreshFailedAfterCommit,
   getConfirmSnapshot,
   getDetailEntries,
-  getLoadState,
-  getSaveLock,
-  isLedgerDirty,
+  getLoadDiagnostics,
+  getSavePhase,
+  getValidationSession,
+  hasLoadDiagnostics,
+  isRefreshFailedPhase,
   loadDetail,
-  setConfirmSnapshot,
-  setSaveLock,
+  markSaveSucceeded,
+  returnToConfirmingAfterSubmitFailure,
+  returnToEditedAfterCheckFailure,
+  resetConfirmSnapshot,
 } from "../../state/ledger";
-import type { ValidateError } from "../../types";
+import type { CandidateDiagnostic, IdentityBackfill } from "../../types";
+import type { SaveChromeHandle } from "../../ui/chrome";
+import { showSaveSuccess } from "../../ui/chrome";
 import { cloneEntries, sleep } from "../../utils";
-import { commitEdit } from "./edit";
-import { animateCommitRemovals } from "./list";
+import type { DetailSurfaceHandle } from "./surface";
 
-function setSaveBtnVisual(
-  state: string,
-  label: string,
-  disabled: boolean,
-  spinning: boolean,
-): void {
-  const btn = document.getElementById("save-btn");
-  if (!btn) return;
-  btn.className = "save-btn";
-  btn.classList.add(`save-${state}`);
-  (btn as HTMLButtonElement).disabled = disabled;
-  if (spinning) {
-    btn.innerHTML = `<span class="save-spinner"></span>${label}`;
-  } else {
-    btn.textContent = label;
-  }
-}
+export type DetailSaveController = {
+  handleSave: () => Promise<void>;
+  recompute: () => void;
+  dispose: () => void;
+};
 
-function setSaveBtnSuccess(): void {
-  const btn = document.getElementById("save-btn");
-  if (!btn) return;
-  btn.className = "save-btn save-success";
-  (btn as HTMLButtonElement).disabled = true;
-  btn.innerHTML = CHECK_ICON;
-}
+export type DetailSaveControllerOptions = {
+  chrome: SaveChromeHandle;
+  surface: Pick<DetailSurfaceHandle, "showValidationErrors" | "animateCommitRemovals" | "applyFilters" | "commitEdit">;
+};
 
-export function recomputeSaveUI(): void {
-  const detailEntries = getDetailEntries();
-  const baseline = getBaseline();
-  const confirmSnapshot = getConfirmSnapshot();
-  const saveLock = getSaveLock();
-
-  if (saveLock === "checking") {
-    setSaveBtnVisual("checking", "保存", true, true);
-    return;
-  }
-  if (saveLock === "submitting") {
-    setSaveBtnVisual("submitting", "确认保存", true, true);
-    return;
-  }
-  if (getLoadState() === "partial") {
-    setSaveBtnVisual("unedited", "加载中…", true, true);
-    return;
-  }
-  if (ledgerStateEqual(detailEntries, baseline)) {
-    setConfirmSnapshot(null);
-    setSaveBtnVisual("unedited", "保存", true, false);
-    return;
-  }
-  if (confirmSnapshot && ledgerStateEqual(detailEntries, confirmSnapshot)) {
-    setSaveBtnVisual("confirming", "确认保存", false, false);
-    return;
-  }
-  setSaveBtnVisual("edited", "保存", false, false);
-}
-
-async function shakeSaveBtn(): Promise<void> {
-  const btn = document.getElementById("save-btn");
-  if (!btn) return;
-  btn.classList.add("save-error");
-  await sleep(350);
-  btn.classList.remove("save-error");
-}
-
-function markEntryValidationErrors(errors: ValidateError[]): void {
-  document.querySelectorAll<HTMLElement>(".entry-block.field-error-block").forEach((el) => {
-    el.classList.remove("field-error-block");
-  });
-  if (!errors.length) return;
-  const first = errors[0];
-  const block = document.querySelector<HTMLElement>(
-    `.entry-block[data-entry-id="${first.entry_id}"]`,
-  );
-  if (block) {
-    block.classList.add("field-error-block");
-    block.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-}
-
-async function validateDirtyEntries(): Promise<ValidateError[]> {
+async function validateDirtyEntries(): Promise<
+  | { ok: true; token: string; hash: string; identityBackfill: IdentityBackfill[] }
+  | { ok: false; errors: CandidateDiagnostic[] }
+> {
   const entries = getDetailEntries().filter(isActiveEntry);
   const { data } = await postValidate(entries);
-  if (data.ok) return [];
-  return data.errors || [];
+  if (data.ok && data.validation_token && data.candidate_hash) {
+    return {
+      ok: true,
+      token: data.validation_token,
+      hash: data.candidate_hash,
+      identityBackfill: data.identity_backfill ?? [],
+    };
+  }
+  if (data.diagnostics?.length) return { ok: false, errors: data.diagnostics };
+  return {
+    ok: false,
+    errors: (data.errors || []).map((error) => ({
+      message: error.error,
+      item_ids: error.entry_id ? [error.entry_id] : [],
+    })),
+  };
 }
 
-export async function handleSaveClick(): Promise<void> {
-  if (getSaveLock()) return;
-  commitEdit();
+export function createDetailSaveController(
+  options: DetailSaveControllerOptions,
+): DetailSaveController {
+  let disposed = false;
+  const recompute = () => {
+    if (!disposed) options.chrome.recompute();
+  };
+  const shake = async () => {
+    if (!disposed) await options.chrome.shake();
+  };
 
-  const detailEntries = getDetailEntries();
-  const confirmSnapshot = getConfirmSnapshot();
-
-  if (confirmSnapshot && ledgerStateEqual(detailEntries, confirmSnapshot)) {
-    await submitCommit();
-    return;
-  }
-
-  if (!(await ensureLoadReady())) {
-    alert("数据仍在加载，请稍候再保存");
-    return;
-  }
-
-  setSaveLock("checking");
-  recomputeSaveUI();
-  await sleep(50);
-
-  try {
-    const errors = await validateDirtyEntries();
-    if (errors.length) {
-      setSaveLock(null);
-      recomputeSaveUI();
-      markEntryValidationErrors(errors);
-      await shakeSaveBtn();
+  async function submitCommit(): Promise<void> {
+    const session = getValidationSession();
+    if (!session) {
+      resetConfirmSnapshot();
+      recompute();
       return;
     }
-    setConfirmSnapshot(cloneEntries(detailEntries));
-    setSaveLock(null);
-    recomputeSaveUI();
-  } catch {
-    setSaveLock(null);
-    recomputeSaveUI();
-    await shakeSaveBtn();
+
+    const payload = buildCommitPayload(getDetailEntries(), session.token, session.hash);
+    if (!payload.items.length) {
+      resetConfirmSnapshot();
+      recompute();
+      return;
+    }
+
+    beginSaveSubmit();
+    recompute();
+    try {
+      const { data } = await postCommit(payload);
+      if (data.ok) {
+        const removedIds = getDetailEntries().filter((entry) => entry._deleted).map((entry) => entry.id);
+        try {
+          await loadDetail(true);
+          applyDetailFiltersAfterCommit();
+          markSaveSucceeded();
+          if (!disposed) await showSaveSuccess(options.chrome);
+          if (removedIds.length) await options.surface.animateCommitRemovals(removedIds);
+          options.surface.applyFilters();
+          recompute();
+        } catch {
+          enterRefreshFailedAfterCommit();
+          await shake();
+          recompute();
+          alert("已提交，但刷新账本失败，请重试刷新");
+        }
+        return;
+      }
+      returnToConfirmingAfterSubmitFailure();
+      await shake();
+      recompute();
+      alert(data.error || "保存失败");
+    } catch {
+      returnToConfirmingAfterSubmitFailure();
+      await shake();
+      recompute();
+      alert("保存失败");
+    }
   }
-}
 
-async function submitCommit(): Promise<void> {
-  const payload = buildCommitPayload(getWriteTarget(), getDetailEntries());
-  if (!Object.keys(payload.files).length) {
-    setConfirmSnapshot(null);
-    recomputeSaveUI();
-    return;
-  }
-
-  setSaveLock("submitting");
-  recomputeSaveUI();
-
-  try {
-    const { data } = await postCommit(payload);
-    if (data.ok) {
-      const removedIds = getDetailEntries().filter((e) => e._deleted).map((e) => e.id);
-      setSaveLock(null);
-      setSaveBtnSuccess();
-      await sleep(SUCCESS_MIN_MS);
-      if (removedIds.length) await animateCommitRemovals(removedIds);
+  async function retryAuthoritativeReload(): Promise<void> {
+    beginSaveSubmit();
+    recompute();
+    try {
+      const removedIds = getDetailEntries().filter((entry) => entry._deleted).map((entry) => entry.id);
       await loadDetail(true);
       applyDetailFiltersAfterCommit();
-      recomputeSaveUI();
+      markSaveSucceeded();
+      if (!disposed) await showSaveSuccess(options.chrome);
+      if (removedIds.length) await options.surface.animateCommitRemovals(removedIds);
+      options.surface.applyFilters();
+      recompute();
+    } catch {
+      enterRefreshFailedAfterCommit();
+      await shake();
+      recompute();
+      alert("已提交，但刷新账本失败，请重试刷新");
+    }
+  }
+
+  async function handleSave(): Promise<void> {
+    const phase = getSavePhase();
+    if (phase === "checking" || phase === "submitting") return;
+    options.surface.commitEdit();
+
+    if (isRefreshFailedPhase()) {
+      await retryAuthoritativeReload();
       return;
     }
-    const failed = (data.results || []).filter((r) => !r.ok);
-    const msg = failed.map((r) => `${r.file}: ${r.error || "失败"}`).join("\n");
-    setSaveLock(null);
-    await shakeSaveBtn();
-    recomputeSaveUI();
-    alert(msg || "保存失败");
-  } catch {
-    setSaveLock(null);
-    await shakeSaveBtn();
-    recomputeSaveUI();
-    alert("保存失败");
-  }
-}
 
-export function initSaveUI(ac: AbortController): void {
-  const btn = document.getElementById("save-btn");
-  if (!btn) return;
-  const { signal } = ac;
-  btn.addEventListener("click", () => void handleSaveClick(), { signal });
-  window.addEventListener(
-    "beforeunload",
-    (e) => {
-      if (getSaveLock() || isLedgerDirty()) {
-        e.preventDefault();
-        e.returnValue = "";
+    const confirmSnapshot = getConfirmSnapshot();
+    if (phase === "confirming" && confirmSnapshot) {
+      await submitCommit();
+      return;
+    }
+    if (!(await ensureLoadReady())) {
+      alert("数据仍在加载，请稍候再保存");
+      return;
+    }
+    if (hasLoadDiagnostics()) {
+      const messages = getLoadDiagnostics().map((diagnostic) => diagnostic.message).join("\n");
+      alert(`账本文件存在阻断性诊断，无法保存：\n${messages}`);
+      return;
+    }
+
+    beginSaveCheck();
+    recompute();
+    await sleep(50);
+    try {
+      const result = await validateDirtyEntries();
+      if (!result.ok) {
+        returnToEditedAfterCheckFailure();
+        recompute();
+        options.surface.showValidationErrors(result.errors);
+        await shake();
+        return;
       }
+      if (result.identityBackfill.length) applyIdentityBackfill(result.identityBackfill);
+      enterConfirming(cloneEntries(getDetailEntries()), result.token, result.hash);
+      recompute();
+    } catch {
+      returnToEditedAfterCheckFailure();
+      recompute();
+      await shake();
+    }
+  }
+
+  return {
+    handleSave,
+    recompute,
+    dispose: () => {
+      disposed = true;
     },
-    { signal },
-  );
+  };
 }

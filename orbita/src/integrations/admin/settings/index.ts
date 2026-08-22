@@ -84,11 +84,12 @@ export function openAdminSettings(): void {
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const { requestInsightDataDirChange } = await import("../shell");
+    if (!(await requestInsightDataDirChange())) return;
     const current = getSettings();
     await patchSettings(patchForDataDirChange(current, dataDirEl.value));
     if (isTauri()) await invoke("restart_ledger_sidecar");
     notifyDataDirChanged();
-    window.dispatchEvent(new CustomEvent("orbita:ledger-settings-changed"));
     close();
   });
 

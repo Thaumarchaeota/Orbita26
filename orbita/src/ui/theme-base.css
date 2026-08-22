@@ -62,6 +62,9 @@
   --font-literature: var(--font-base);
   --font-note: var(--font-base);
   --font-ai: var(--font-base);
+  --font-finance: var(--font-base);
+  --font-finance-chrome: var(--font-life-ring, var(--font-clock));
+  --font-finance-chrome-weight: var(--font-life-ring-weight, 700);
   --font-clock: Ubuntu, sans-serif;
   --font-life-ring-weight: 400;
   --glass-tint-h: 222;

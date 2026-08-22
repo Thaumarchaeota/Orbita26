@@ -27,6 +27,17 @@ pub fn open_admin_window(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(debug_assertions)]
+pub fn dev_open_finance_detail(app: &AppHandle) -> Result<(), String> {
+    open_admin_window(app)?;
+    if let Some(win) = app.get_webview_window(ADMIN_LABEL) {
+        let _ = win.eval(
+            "setTimeout(() => { location.hash = '#dev-finance-detail'; }, 800);",
+        );
+    }
+    Ok(())
+}
+
 fn create_admin_window(app: &AppHandle) -> Result<tauri::WebviewWindow, String> {
     let win = WebviewWindowBuilder::new(
         app,

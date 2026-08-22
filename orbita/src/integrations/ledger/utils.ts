@@ -1,4 +1,4 @@
-import type { Entry } from "./types";
+import type { DetailItem, Entry } from "./types";
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -21,6 +21,10 @@ export function todayMinusDays(days: number): string {
 
 export function cloneEntries(entries: Entry[]): Entry[] {
   return JSON.parse(JSON.stringify(entries));
+}
+
+export function cloneDetailItems(items: DetailItem[]): DetailItem[] {
+  return JSON.parse(JSON.stringify(items));
 }
 
 export function escapeHtml(s: string): string {

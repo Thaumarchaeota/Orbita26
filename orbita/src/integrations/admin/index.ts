@@ -1,17 +1,25 @@
-export type { AdminTabDefinition, AdminTabId } from "./types";
+export type {
+  InsightDestination,
+  InsightDestinationHandle,
+  InsightDestinationId,
+  InsightHostContext,
+  AdminTabDefinition,
+  AdminTabId,
+} from "./types";
+export { registerInsightDestination, getInsightDestinations, getInsightDestination } from "./registry";
 export { registerAdminTab, getAdminTabs, getAdminTab } from "./registry";
 export { openAdminWindow, mountAdminButton } from "./window";
-export { mountAdminShell } from "./shell";
+export { mountAdminShell, requestInsightDataDirChange } from "./shell";
 
-import { registerAdminTab } from "./registry";
-import { healthTab } from "./tabs/health";
-import { journalTab } from "./tabs/journal";
-import { assetsTab } from "./tabs/assets";
-import { workTab } from "./tabs/work";
+import { registerInsightDestination } from "./registry";
+import { healthDestination } from "./tabs/health";
+import { journalDestination } from "./tabs/journal";
+import { financeDestination } from "./tabs/finance";
+import { workDestination } from "./tabs/work";
 
 export function registerDefaultAdminTabs(): void {
-  registerAdminTab(healthTab);
-  registerAdminTab(journalTab);
-  registerAdminTab(assetsTab);
-  registerAdminTab(workTab);
+  registerInsightDestination(healthDestination);
+  registerInsightDestination(journalDestination);
+  registerInsightDestination(financeDestination);
+  registerInsightDestination(workDestination);
 }

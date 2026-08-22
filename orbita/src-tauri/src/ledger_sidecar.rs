@@ -15,6 +15,7 @@ static START_LOCK: Mutex<()> = Mutex::new(());
 const HOST: &str = "127.0.0.1";
 const PORT_MIN: u16 = 8000;
 const PORT_MAX: u16 = 8010;
+const EXPECTED_PARSER_REV: &str = "1";
 
 pub fn ledger_data_root(app: &AppHandle) -> Result<String, String> {
     Ok(Path::new(&data::get_data_dir(app)?)
@@ -77,10 +78,14 @@ fn health_ok(port: u16) -> bool {
     if !resp.status().is_success() {
         return false;
     }
-    resp.json::<serde_json::Value>()
-        .ok()
-        .and_then(|v| v.get("ok").and_then(|b| b.as_bool()))
-        == Some(true)
+    let v = resp.json::<serde_json::Value>().ok();
+    let ok = v.as_ref().and_then(|v| v.get("ok").and_then(|b| b.as_bool())) == Some(true);
+    if !ok {
+        return false;
+    }
+    v.as_ref()
+        .and_then(|v| v.get("parser_rev").and_then(|r| r.as_str()))
+        == Some(EXPECTED_PARSER_REV)
 }
 
 fn port_available(port: u16) -> bool {

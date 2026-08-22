@@ -33,4 +33,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "验证 garminconnect..."
 & $Py -c "import garminconnect; print('garminconnect ok')"
 
+Write-Host "验证 beancount..."
+& $Py -c "import beancount; print('beancount ok')"
+
 Write-Host "完成。Python: $Py"

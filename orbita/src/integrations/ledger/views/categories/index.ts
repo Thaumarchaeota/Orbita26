@@ -35,7 +35,7 @@ export function mountCategoriesView(panel: HTMLElement): () => void {
       </div>
       <aside class="categories-sidebar">
         <div class="categories-save-dock">
-          <button type="button" id="category-save-btn" class="categories-save-btn categories-save-unedited" disabled>保存</button>
+          <button type="button" id="category-save-btn" class="categories-save-btn categories-save-unedited orbita-action-btn" disabled>保存</button>
         </div>
       </aside>
     </div>`;

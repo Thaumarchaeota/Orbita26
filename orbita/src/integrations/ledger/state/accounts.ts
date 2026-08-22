@@ -1,7 +1,7 @@
 import type { AccountGroup, AccountRecord, AccountsResponse } from "../types";
-import { accountDisplayLabel } from "./category-display";
+import { accountDisplayLabel, accountDisplaySubtitle } from "./category-display";
 
-export { accountDisplayLabel };
+export { accountDisplayLabel, accountDisplaySubtitle };
 
 let accounts: AccountsResponse = {
   expenses: [],

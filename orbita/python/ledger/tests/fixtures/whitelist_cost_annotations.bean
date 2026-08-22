@@ -1,0 +1,11 @@
+2026-03-01 * "外汇" "单价"
+    Assets:Cash                   -70.00 CNY
+    Expenses:Food                  10.00 USD @ 7.00 CNY
+
+2026-03-02 * "八达通" "总价"
+    Assets:Card:Octopus           -332.00 HKD @@ 290.00 CNY
+    Assets:Receivable:Family
+
+2026-03-03 * "批次" "lot"
+    Assets:Cash                   -85.00 EUR
+    Expenses:Food                  10.00 USD {8.50 EUR, 2026-01-15}

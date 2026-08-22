@@ -200,6 +200,8 @@ pub fn run() {
             commands::capture_save_file,
             commands::capture_crop,
             commands::open_admin_window,
+            #[cfg(debug_assertions)]
+            commands::dev_open_finance_detail,
             commands::ledger_api_base,
             commands::ensure_ledger_sidecar,
             commands::restart_ledger_sidecar,

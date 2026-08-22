@@ -5,6 +5,9 @@
   position: fixed;
   inset: 0;
   z-index: 200;
+  --orbita-popover-z: 205;
+  --admin-radius-sm: 6px;
+  --finance-control-radius: 8px;
   pointer-events: none;
 }
 #orbita-modal-root > .dialog-backdrop.is-open {

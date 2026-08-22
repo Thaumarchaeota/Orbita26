@@ -1,5 +1,7 @@
+import { getActiveCommitItems } from "./detail-item-api";
 import { isActiveEntry, normEntry } from "./entry";
-import type { Entry } from "../types";
+import { sortForCommit } from "./seq";
+import type { DetailItem, Entry } from "../types";
 
 export { isActiveEntry };
 
@@ -26,21 +28,8 @@ export function ledgerEqual(a: Entry[], b: Entry[]): boolean {
   return true;
 }
 
-function seqKey(e: Entry): string {
-  return (e.seq || "").trim() || `z${String(e.source_line).padStart(9, "0")}`;
-}
-
 export function commitOrderIds(entries: Entry[]): string[] {
-  return entries
-    .filter(isActiveEntry)
-    .slice()
-    .sort((a, b) => {
-      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
-      const sa = seqKey(a);
-      const sb = seqKey(b);
-      return sa < sb ? -1 : sa > sb ? 1 : 0;
-    })
-    .map((e) => e.id);
+  return sortForCommit(entries.filter(isActiveEntry)).map((e) => e.id);
 }
 
 export function ledgerStateEqual(a: Entry[], b: Entry[]): boolean {
@@ -51,4 +40,54 @@ export function ledgerStateEqual(a: Entry[], b: Entry[]): boolean {
     if (orderA[i] !== orderB[i]) return false;
   }
   return ledgerEqual(a, b);
+}
+
+function normPad(item: Extract<DetailItem, { kind: "pad" }>) {
+  return {
+    kind: "pad" as const,
+    date: item.date,
+    account: item.account,
+    source_account: item.source_account,
+    seq: (item.seq || "").trim(),
+  };
+}
+
+function normBalance(item: Extract<DetailItem, { kind: "balance" }>) {
+  return {
+    kind: "balance" as const,
+    date: item.date,
+    account: item.account,
+    amount: item.amount,
+    currency: item.currency,
+    seq: (item.seq || "").trim(),
+  };
+}
+
+function detailItemKey(item: DetailItem): string {
+  return item.id || `${item.source_file}:${item.source_line}`;
+}
+
+export function detailStateEqual(a: DetailItem[], b: DetailItem[]): boolean {
+  const activeA = getActiveCommitItems(a);
+  const activeB = getActiveCommitItems(b);
+  if (activeA.length !== activeB.length) return false;
+  const ma = new Map(activeA.map((item) => [detailItemKey(item), item]));
+  const mb = new Map(activeB.map((item) => [detailItemKey(item), item]));
+  if (ma.size !== mb.size) return false;
+  for (const [id, va] of ma) {
+    const vb = mb.get(id);
+    if (!vb || va.kind !== vb.kind) return false;
+    if (va.kind === "pad" && vb.kind === "pad") {
+      if (JSON.stringify(normPad(va)) !== JSON.stringify(normPad(vb))) return false;
+      continue;
+    }
+    if (va.kind === "balance" && vb.kind === "balance") {
+      if (JSON.stringify(normBalance(va)) !== JSON.stringify(normBalance(vb))) return false;
+      continue;
+    }
+    if (va.kind !== "transaction" || vb.kind !== "transaction") return false;
+    if (!isActiveEntry(va) || !isActiveEntry(vb)) return false;
+    if (!normEqual(normEntry(va), normEntry(vb))) return false;
+  }
+  return true;
 }

@@ -37,7 +37,7 @@ def render_entry(entry: Entry) -> str:
         lines.append(
             _line(p.account, p.amount, p.currency, p.cost_amount, p.cost_currency)
         )
-    lines.append(f'    bkeasy-type: "{entry.type}"')
+    lines.append(f'  bkeasy-type: "{entry.type}"')
     return "\n".join(lines)
 
 
