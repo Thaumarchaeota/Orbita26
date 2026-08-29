@@ -1,0 +1,293 @@
+.orbita-time-picker {
+  min-width: 0;
+}
+
+.orbita-time-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: var(--finance-control-radius, 8px);
+  background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.orbita-time-picker-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--ledger-text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  cursor: text;
+}
+
+.orbita-time-picker-input::placeholder {
+  color: var(--ledger-muted);
+}
+
+.orbita-time-picker-trigger:focus-within,
+.orbita-time-picker-trigger.is-open {
+  border-color: var(--ledger-accent, #2563eb);
+}
+
+.orbita-time-picker-chevron-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  min-height: 36px;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--ledger-border, #e5e7eb);
+  background: transparent;
+  cursor: pointer;
+  color: var(--ledger-muted);
+}
+
+.orbita-time-picker-chevron-btn:hover {
+  background: var(--ledger-hover);
+  color: var(--ledger-text);
+}
+
+.orbita-time-picker-chevron-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.orbita-time-picker-chevron-btn.is-open svg {
+  transform: rotate(180deg);
+}
+
+.orbita-time-picker-menu {
+  --orbita-time-item-h: 26px;
+  --orbita-time-viewport-h: 118px;
+  --orbita-time-col-label-h: 16px;
+  position: fixed;
+  z-index: var(--orbita-popover-z, 205);
+  width: 156px;
+  max-width: calc(100vw - 16px);
+  background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
+  border: 1px solid color-mix(in srgb, var(--ledger-border) 70%, transparent);
+  border-radius: var(--finance-control-radius, 8px);
+  box-shadow: var(--finance-popover-shadow, 0 2px 8px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.orbita-time-picker-menu.motion-popover {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.96);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0s linear 0.2s;
+}
+
+.orbita-time-picker-menu.motion-popover.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    visibility 0s;
+}
+
+.orbita-time-panel {
+  padding: 6px 6px 4px;
+}
+
+.orbita-time-panel-head {
+  padding: 0 2px 4px;
+}
+
+.orbita-time-panel-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 4px;
+  background: var(--ledger-surface, #fff);
+  color: var(--ledger-text);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+}
+
+.orbita-time-panel-input:focus {
+  border-color: var(--ledger-accent, #2563eb);
+}
+
+.orbita-time-panel-input::placeholder {
+  color: var(--ledger-muted);
+  font-weight: 400;
+}
+
+.orbita-time-wheel {
+  position: relative;
+}
+
+.orbita-time-wheel-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+}
+
+.orbita-time-wheel-band {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: calc(var(--orbita-time-col-label-h) + (var(--orbita-time-viewport-h) - var(--orbita-time-item-h)) / 2);
+  height: var(--orbita-time-item-h);
+  border-top: 1px solid var(--ledger-border, #e5e7eb);
+  border-bottom: 1px solid var(--ledger-border, #e5e7eb);
+  background: color-mix(in srgb, var(--ledger-text, #111827) 4%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.orbita-time-wheel-col-label {
+  text-align: center;
+  font-size: 10px;
+  line-height: var(--orbita-time-col-label-h);
+  color: var(--ledger-muted);
+}
+
+.orbita-time-wheel-viewport {
+  position: relative;
+  height: var(--orbita-time-viewport-h);
+  overflow: hidden;
+}
+
+.orbita-time-wheel-viewport::before,
+.orbita-time-wheel-viewport::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 32px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.orbita-time-wheel-viewport::before {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--ledger-surface-opaque, var(--ledger-surface, #fff)) 30%,
+    transparent
+  );
+}
+
+.orbita-time-wheel-viewport::after {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--ledger-surface-opaque, var(--ledger-surface, #fff)) 30%,
+    transparent
+  );
+}
+
+.orbita-time-wheel-scroll {
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  outline: none;
+}
+
+.orbita-time-wheel-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.orbita-time-wheel-spacer {
+  height: calc((var(--orbita-time-viewport-h) - var(--orbita-time-item-h)) / 2);
+  flex-shrink: 0;
+}
+
+.orbita-time-wheel-item {
+  display: block;
+  width: 100%;
+  height: var(--orbita-time-item-h);
+  line-height: var(--orbita-time-item-h);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ledger-muted, #9ca3af);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+  scroll-snap-align: center;
+}
+
+.orbita-time-wheel-item:hover {
+  color: var(--ledger-text);
+}
+
+.orbita-time-wheel-item.is-selected {
+  color: var(--ledger-text, #111827);
+  font-weight: 600;
+}
+
+.orbita-time-panel-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--ledger-border, #e5e7eb);
+}
+
+.orbita-time-panel-clear,
+.orbita-time-panel-confirm {
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  background: var(--ledger-surface, #fff);
+}
+
+.orbita-time-panel-clear {
+  color: var(--ledger-muted);
+}
+
+.orbita-time-panel-clear:hover {
+  color: var(--ledger-text);
+  background: var(--ledger-hover, #f3f4f6);
+}
+
+.orbita-time-panel-confirm {
+  background: var(--ledger-accent, #2563eb);
+  border-color: var(--ledger-accent, #2563eb);
+  color: #fff;
+}
+
+.orbita-time-panel-confirm:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.orbita-time-panel-confirm:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

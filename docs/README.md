@@ -1,35 +1,32 @@
 # Orbita 文档
 
-> 文档基线：`0.0.17-snapshot`  
+> 文档与计划收束基线：`0.0.17-closeout`；代码版本基线仍为 `0.0.17-snapshot`。  
 > 代码版本以 manifest 为准；当前实现状态以 `CURRENT.md` 为准；当前工作范围以 `plans/` 中的计划为准。
 
-`0.0.17-snapshot` 表示代码与产品设计已进入 0.0.17，但本轮工作仍在核验、收束与文档整理中；它不是已完整收官的正式版本。
+`0.0.17-closeout` 是 0.0.17 的收束总计划（2026-08-30 文档与实现收束完成）；`0.0.17-snapshot` 仍表示代码基线，不是正式发布版本号。`plans/` 中其他文件（如 0.0.18 讨论草案）不是 0.0.17 执行输入。
 
 ## 从这里开始
 
 日常开发、审阅，或 AI 接手任务时，按下列顺序阅读：
 
 1. 本文件：了解文档边界与维护规则。
-2. [GLOSSARY.md](GLOSSARY.md)：确认 Panel / Insight / Archive / Finance 等现行名称。
-3. [CURRENT.md](CURRENT.md)：确认当前真实状态、已知问题与下一步。
-4. 当前计划：
-    - [0.0.17-snapshot](plans/v0.0.17-snapshot.md)：Insight / sidecar / dataDir 收束与文档迁移验收。
-   - [0.0.17 Insight Host 实施规格](plans/v0.0.17-insight-spec.md)：Insight 的自绘窗口、工作空间侧栏、缓存领域根与全局生命周期。
-   - [0.0.17 Finance 数据与服务规格](plans/v0.0.17-spec.md)：Finance 的数据、Parser、Commit、sidecar 与产品边界。
-   - [0.0.17 Finance UI 执行计划](plans/v0.0.17-finance-ui-execution.md)：Finance CardDetailSurface 重构的唯一 UI 执行依据。
-   - [0.0.17 Finance 重构收束规格](plans/v0.0.17-finance-rebuild.md)：已停止的「新壳 + 旧 Detail」失败路线记录；不得作为实现输入。
-   - [0.0.17](plans/v0.0.17.md)：Finance 重构的讨论与来源计划；只有 §25 的已确认产品结论可作为现行规格来源。
-5. [DECISIONS.md](DECISIONS.md)：审查、重构或提出替代方案前，先排除已否决路线。
-6. [ADR](adr/README.md)：评估或提出新的重要产品、架构与数据取舍时，了解待确认决策与记录格式。
-7. [SYSTEM.md](SYSTEM.md)：涉及架构、数据模型、迁移或 sidecar 时阅读。
-8. [DEV.md](DEV.md)：需要运行、调试或验证时阅读。
-9. [数据架构演进方向](architecture/data-layer-vision.md)：设计 Archive、Insight 或跨领域关联时阅读。
-10. [可复用 UI 与动效原语目录](UI-PRIMITIVES.md)：新增跨场景控件、浮层或动效前，确认应复用什么以及真实调用点。
+2. [AGENTS.md](AGENTS.md)：AI 协作、测试与进程护栏（完整版）。
+3. [GLOSSARY.md](GLOSSARY.md)：确认 Panel / Insight / Archive / Finance 等现行名称。
+4. [CURRENT.md](CURRENT.md)：确认当前真实状态、已知问题与下一步。
+5. 当前计划：
+    - [0.0.17 收束总计划](plans/v0.0.17-closeout.md)：0.0.17 收束记录（2026-08-30 完成）；§4.1 运行时项仍开放。
+    - 已结束、取消或被替代的过程计划见 [plans/archive/](plans/archive/README.md)，只供追溯，不作为实现输入。
+6. [DECISIONS.md](DECISIONS.md)：审查、重构或提出替代方案前，先排除已否决路线。
+7. [ADR](adr/README.md)：评估或提出新的重要产品、架构与数据取舍时，了解待确认决策与记录格式。
+8. [SYSTEM.md](SYSTEM.md)：涉及架构、数据模型、迁移或 sidecar 时阅读。
+9. [DEV.md](DEV.md)：需要运行、调试或验证时阅读。
+10. [数据架构演进方向](architecture/data-layer-vision.md)：设计 Archive、Insight 或跨领域关联时阅读。
+11. [可复用 UI 与动效原语目录](UI-PRIMITIVES.md)：新增跨场景控件、浮层或动效前，确认应复用什么以及真实调用点。
 
 ## 当前基线
 
 - 一个 Orbita：Orbita Panel（代码 `main`）与 Orbita Insight（代码 `admin`）是两个窗口，不拆成第二个应用。
-- Orbita Insight 有健康、随记、财务、工作四个领域区；当前代码 id 仍为 `health | journal | assets | work`。
+- Orbita Insight 有健康、随记、财务、工作四个领域区；当前代码 id 为 `health | journal | finance | work`。
 - Orbita Archive 是长期个人档案数据域；当前物理上仍与 App State 共用 `dataDir`。
 - Finance Service 不在 Orbita Panel 启动；当前代码在 Orbita Insight 入口异步确保它启动，Finance 页面使用该服务。若要收窄为仅进入 Finance 才启动，须先另立计划并验收生命周期与错误体验。
 - 本阶段不做手机端、NAS 前置，以及今日区的 7 日切换。
@@ -96,17 +93,12 @@
 
 ## 面向 AI 的协作规则
 
-AI 在开始实现前必须阅读本文件、`CURRENT.md`、`DECISIONS.md` 和当前计划；涉及架构或数据时还必须阅读 `SYSTEM.md`。遵循本文件的文档更新与归档规则。
+完整协作、测试、进程护栏与行为边界见 [AGENTS.md](AGENTS.md)。本文档只保留文档维护相关摘要：
 
-未经用户明确允许，AI 不得创建 Git commit、提交、推送、改写历史或执行其他 Git 写操作。
-
-每次完成代码修改后，AI 必须运行 `orbita/dev.bat`，等待启动过程完成并确认无报错，方可结束对话。`orbita/dev-web.bat` 只能用于中途快速预览，不能替代结束前验证。未经用户明确要求，不运行 `cargo check`、`npm run build`、`tauri build` 或其他 build 命令。
-
-AI 自动加载的规则文件只应保留上述短指令和本文件链接；详细规则以本文件为唯一来源，避免两处内容漂移。
-
-AI 必须先证据、后重构；不擅自扩展任务范围，不因审查建议恢复已否决方案。未经真实验证，不得标记任务完成或声称修复。涉及数据迁移、覆盖、删除或重建时，必须先取得用户明确许可；不得吞错、伪造成功或用 fallback 掩盖失败。会改变产品语义、交互口径、数据归属或路线的选择必须交由用户决定。
-
-AI 对复杂或反直觉的实现应写邻近代码注释，说明“为何如此”与不可破坏边界，而不是复述代码。数据写入/迁移、兼容层、窗口或 Finance Service 生命周期、并发/时区、外部服务限制和已否决路线必须有简短注释；注释可链接相关 `DECISIONS.md`、spec 或 plan。普通直观代码和纯样式不强制添加注释。
+- 开始实现前必须阅读本文件、`CURRENT.md`、`DECISIONS.md` 和当前计划；涉及架构或数据时还必须阅读 `SYSTEM.md`。
+- 未经用户明确允许，AI 不得创建 Git commit、提交、推送、改写历史或执行其他 Git 写操作。
+- 每次完成代码修改后，AI 必须运行 `orbita/dev.bat` 并确认无报错后方可结束对话（用户另有指示时除外）。
+- 根目录 `AGENTS.md` 仅保留短入口；详细规则以 [AGENTS.md](AGENTS.md) 为准，避免两处漂移。
 
 ## 公开仓库边界
 

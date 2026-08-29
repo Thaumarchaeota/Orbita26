@@ -73,12 +73,43 @@ export type AccountsResponse = {
   income: AccountRecord[];
   assets: AccountRecord[];
   liabilities: AccountRecord[];
+  equity: AccountRecord[];
+};
+
+export type SettingsDiagnostic = {
+  code: string;
+  message: string;
+  path: string;
+  index?: number;
+  preset_id?: string;
 };
 
 export type SettingsResponse = {
   write_target: string;
   reporting_currency: string;
   card_stripes?: CardStripesSettings;
+  settings_revision?: number;
+  expected_settings_revision?: number;
+  filter_presets_version?: number;
+  filter_presets?: FilterPreset[];
+  diagnostics?: SettingsDiagnostic[];
+};
+
+export type FilterPresetDate =
+  | { mode: "all" }
+  | { mode: "relative"; preset: "today" | "last7" | "thisMonth" | "thisYear" | "all" }
+  | { mode: "absolute"; from: string; to: string };
+
+export type FilterPreset = {
+  id: string;
+  name: string;
+  date: FilterPresetDate;
+  typeMode: "all" | "selected";
+  types: string[];
+  accounts: string[];
+  accountMode: "or" | "and";
+  tags: string[];
+  tagMode: "or" | "and";
 };
 
 export type CardStripesSettings = Partial<
@@ -112,6 +143,27 @@ export type CategoryExpenseStat = {
 };
 
 export type CategoryIncomeStat = CategoryExpenseStat;
+
+export type AccountPeriodCurrencyStat = {
+  currency: string;
+  opening_balance?: string;
+  inflows?: string;
+  outflows?: string;
+  net_change?: string;
+  closing_balance?: string;
+  balance?: string;
+  transaction_count: number;
+};
+
+export type AccountPeriodStatsResponse = {
+  ok: boolean;
+  error?: string;
+  account?: string;
+  account_kind?: "asset" | "liability";
+  date_from?: string;
+  date_to?: string;
+  currencies?: AccountPeriodCurrencyStat[];
+};
 
 export type StatsResponse = {
   ok: boolean;
@@ -241,7 +293,7 @@ export type AccountLabelCommitPayload = {
   accounts: AccountLabelModel[];
 };
 
-export type AccountGroup = "expenses" | "income" | "assets" | "liabilities";
+export type AccountGroup = "expenses" | "income" | "assets" | "liabilities" | "equity";
 
 export type AccountDeleteScanReference = {
   kind: string;

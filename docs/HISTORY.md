@@ -11,6 +11,12 @@
 Garmin、开发启动保护等。它是证据档案，不再作为日常入口。本轮将仍有效的结论提炼到
 `SYSTEM.md`、`DEV.md` 和 `CURRENT.md`；未迁移的细节保留原文，不应凭摘要删除。
 
+## 0.0.17：计划容器收束
+
+0.0.17 曾以 snapshot、Host、Finance 数据、UI、时间排序和工作台等多份过程计划并行记录。收束后，入口为 [`plans/v0.0.17-closeout.md`](plans/v0.0.17-closeout.md)（2026-08-30 文档与实现收束完成）；旧计划保留真实 Outcome 后移入 [`plans/archive/`](plans/archive/README.md)。
+
+本轮确认：Insight Host 的基础路线已落，Finance “新壳 + 旧 Detail”路线停止，同日拖拽由时间排序与 ADR 0002 取代，旧壳层步骤由工作台重构取代，AccountSelect 由 ADR 0004 落地并于 2026-08-30 用户验收。稳定 Host、Finance、交互与数据边界分别迁至 SYSTEM、Finance spec、decisions 与 ADR。
+
 ## Garmin SSO 封禁事故
 
 **结论：同步路径必须零 SSO；token 是资产，禁止自动删除。**

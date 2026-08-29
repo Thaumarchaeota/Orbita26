@@ -114,6 +114,34 @@
   align-items: stretch;
 }
 
+.cds-composer-time-mount .orbita-time-picker,
+.cds-composer-time-mount .orbita-time-picker-trigger {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.cds-composer-time-mount .orbita-time-picker-trigger {
+  height: 34px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-bg);
+}
+
+.cds-composer-time-mount .orbita-time-picker-input {
+  height: 100%;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.cds-composer-time-mount .orbita-time-picker-chevron-btn {
+  height: 100%;
+  width: 30px;
+  min-height: 0;
+  border-radius: 0 var(--admin-radius-sm) var(--admin-radius-sm) 0;
+}
+
 .cds-composer-time,
 .cds-composer-adv-time {
   min-width: 0;
@@ -157,21 +185,21 @@
 
 .cds-composer-date-mount,
 .cds-composer-date-mount .orbita-date-picker,
-.cds-composer-date-mount .orbita-date-picker-btn {
+.cds-composer-date-mount .orbita-date-picker-trigger {
   width: 100%;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
 }
 
-.cds-composer-date-mount .orbita-date-picker-label {
+.cds-composer-date-mount .orbita-date-picker-input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
 }
 
-.cds-composer-date-mount .orbita-date-picker-btn {
+.cds-composer-date-mount .orbita-date-picker-trigger {
   padding: 0 8px;
   height: 34px;
   border: 1px solid var(--ledger-border);
@@ -309,13 +337,13 @@
 
 .cds-composer-advanced-mount .cds-composer-adv-date-mount,
 .cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker,
-.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-btn {
+.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-trigger {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
-.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-btn {
+.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-trigger {
   height: 34px;
   padding: 0 8px;
   border: 1px solid var(--ledger-border);
@@ -323,11 +351,35 @@
   background: var(--ledger-bg);
 }
 
-.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-label {
+.cds-composer-advanced-mount .cds-composer-adv-date-mount .orbita-date-picker-input {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 12px;
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-time-mount,
+.cds-composer-advanced-mount .cds-composer-adv-time-mount .orbita-time-picker,
+.cds-composer-advanced-mount .cds-composer-adv-time-mount .orbita-time-picker-trigger {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-time-mount .orbita-time-picker-trigger {
+  height: 34px;
+  border: 1px solid var(--ledger-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--ledger-bg);
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-time-mount .orbita-time-picker-input {
+  font-size: 12px;
+}
+
+.cds-composer-advanced-mount .cds-composer-adv-time-mount .orbita-time-picker-chevron-btn {
+  width: 30px;
+  min-height: 0;
 }
 
 .cds-composer-advanced-mount .cds-composer-adv-tag-box {

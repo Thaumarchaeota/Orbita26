@@ -4,13 +4,19 @@ import type { CsvImportOrder } from "../domain/csv-import";
 import type { EntryFieldPatch } from "../state/ledger-store";
 import type { CandidateDiagnostic, DetailItem, Entry } from "../types";
 import type { FilterableStripeKind } from "./filter-kinds";
+import type { SetMatchMode, TypeFilterMode } from "../domain/filter-apply";
 
 export type CardDetailLoadState = "loading" | "partial" | "ready" | "error";
 
 export type CardDetailFilterSnapshot = {
   readonly dateFrom: string;
   readonly dateTo: string;
+  readonly typeMode: TypeFilterMode;
   readonly types: ReadonlySet<FilterableStripeKind>;
+  readonly accounts: ReadonlySet<string>;
+  readonly accountMode: SetMatchMode;
+  readonly tags: ReadonlySet<string>;
+  readonly tagMode: SetMatchMode;
 };
 
 export type BalanceAuditSnapshot = {
@@ -41,7 +47,14 @@ export type NewTransactionDraft = Omit<
 export type CardDetailCommand =
   | { type: "set-date-from"; value: string }
   | { type: "set-date-to"; value: string }
+  | { type: "set-date-range"; from: string; to: string }
+  | { type: "set-type-mode"; mode: TypeFilterMode }
   | { type: "toggle-type"; stripeKind: FilterableStripeKind }
+  | { type: "set-all-types" }
+  | { type: "set-accounts"; accounts: ReadonlySet<string> }
+  | { type: "set-account-mode"; mode: SetMatchMode }
+  | { type: "set-tags"; tags: ReadonlySet<string> }
+  | { type: "set-tag-mode"; mode: SetMatchMode }
   | { type: "reset-filters" }
   | { type: "update-entry"; id: string; patch: EntryFieldPatch }
   | { type: "soft-delete"; id: string }
@@ -53,20 +66,28 @@ export type CardDetailCommand =
 
 export type CardDetailStore = {
   getSnapshot(): CardDetailSnapshot;
+  getFilterSnapshot(): CardDetailFilterSnapshot;
   subscribe(listener: () => void): () => void;
+  subscribeFilter(listener: () => void): () => void;
+  subscribeRendered(listener: () => void): () => void;
   dispatch(command: CardDetailCommand): void;
   handleSave(): Promise<void>;
+  revertAllEdits(): boolean;
   consumeMergeFocus(): string;
   setCommitEdit?(fn: () => void): void;
+  setDismissEdit?(fn: () => void): void;
   dispose(): void;
   tryLoadOlder?: () => Promise<void>;
   onAfterCommit?: (fn: () => void) => () => void;
 };
 
+import type { FinanceSearchHighlight } from "./finance-search";
+
 export type CardDetailHandle = {
   getScrollTargets(): { primary: HTMLElement; secondary?: HTMLElement };
   focusItem(id: string): void;
   refresh(): void;
+  setSearchHighlight(highlight: FinanceSearchHighlight | null): void;
   animateCommitRemovals(ids: string[]): Promise<void>;
   dispose(): void;
 };

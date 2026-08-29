@@ -33,7 +33,7 @@ Get-Process -Name orbita -ErrorAction SilentlyContinue | Stop-Process -Force -Er
 
 Start-Sleep -Seconds 1
 
-foreach ($checkPort in 1420, 8000) {
+foreach ($checkPort in $ports) {
     $busyPid = Get-ListeningProcessIds $checkPort | Select-Object -First 1
     if ($busyPid) {
         Write-Host "Port $checkPort still in use by PID $busyPid"

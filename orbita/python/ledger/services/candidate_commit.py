@@ -24,7 +24,7 @@ def commit_validated_items(items: list[dict], validation_token: str, candidate_h
     try:
         disk_diags = on_disk_safety_diagnostics()
         if disk_diags:
-            # v0.0.17-spec.md §4.2 — never overwrite unsupported on-disk content
+            # docs/specs/orbita-finance.md — never overwrite unsupported on-disk content
             raise ValueError(disk_diags[0].message)
 
         active = active_items(items)

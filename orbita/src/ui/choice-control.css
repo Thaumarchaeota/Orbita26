@@ -1,0 +1,86 @@
+.orbita-tri-state-marker {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  border: 1.5px solid var(--ledger-muted, #9ca3af);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ledger-text, #1f2937);
+  font: inherit;
+  line-height: 1;
+}
+
+.orbita-tri-state-marker::after {
+  content: "";
+  display: block;
+  opacity: 0;
+}
+
+.orbita-tri-state-marker.is-checked::after {
+  width: 4px;
+  height: 7px;
+  margin-top: -1px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  opacity: 1;
+}
+
+.orbita-tri-state-marker.is-indeterminate::after {
+  width: 7px;
+  height: 0;
+  border-top: 1.5px solid currentColor;
+  opacity: 1;
+}
+
+.orbita-tri-state-marker.is-checked,
+.orbita-tri-state-marker.is-indeterminate {
+  border-color: var(--ledger-text, #1f2937);
+  background: var(--ledger-hover, #f3f4f6);
+}
+
+.orbita-toggle-switch {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
+
+.orbita-toggle-switch-track {
+  position: relative;
+  display: block;
+  width: 32px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--ledger-border, #d1d5db);
+  transition: background 0.2s ease;
+}
+
+.orbita-toggle-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ledger-surface, #fff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease;
+}
+
+.orbita-toggle-switch.is-on .orbita-toggle-switch-track {
+  background: var(--ledger-accent, #2563eb);
+}
+
+.orbita-toggle-switch.is-on .orbita-toggle-switch-thumb {
+  transform: translateX(14px);
+}

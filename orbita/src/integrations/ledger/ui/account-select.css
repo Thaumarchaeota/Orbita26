@@ -1,0 +1,36 @@
+.orbita-account-select-trigger { display: flex; align-items: center; justify-content: space-between; gap: 8px; box-sizing: border-box; width: 100%; min-height: 36px; padding: 5px 10px; border: 1px solid var(--ledger-border, #e5e7eb); border-radius: 6px; background: var(--ledger-surface, #fff); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.orbita-account-select-text { display: grid; min-width: 0; flex: 1; }
+.orbita-account-select-label, .orbita-account-select-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orbita-account-select-label.is-placeholder { color: var(--ledger-muted, #6b7280); }
+.orbita-account-select-sub, .orbita-account-select-option-sub, .orbita-account-select-nav-sub { font-size: 11px; color: var(--ledger-muted, #6b7280); }
+.orbita-account-select--admin .orbita-account-select-trigger { min-height: 32px; padding-block: 0; }
+.orbita-account-select--admin .orbita-account-select-label { line-height: 1; }
+.orbita-account-select--search-trigger .orbita-account-select-trigger.is-open { cursor: text; }
+.orbita-account-select--search-trigger .orbita-account-select-trigger.is-open .orbita-account-select-text { display: none; }
+.orbita-account-select-trigger-search { box-sizing: border-box; flex: 1; min-width: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; outline: none; background: transparent; font: inherit; font-size: inherit; line-height: inherit; color: inherit; text-align: left; }
+.orbita-account-select-trigger-search::-webkit-search-decoration,
+.orbita-account-select-trigger-search::-webkit-search-cancel-button { display: none; }
+.orbita-account-select-toggle { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 24px; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.orbita-account-select-chevron { display: flex; align-items: center; }
+.orbita-account-select-menu { max-width: calc(100vw - 16px); overflow: visible; background: transparent; border: 0; box-shadow: none; }
+.orbita-account-select-search-wrap { padding: 8px; background: var(--ledger-surface, #fff); border: 1px solid var(--ledger-border, #e5e7eb); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); }
+.orbita-account-select-search { box-sizing: border-box; width: 100%; height: 32px; padding: 0 10px; border: 1px solid var(--ledger-border, #e5e7eb); border-radius: 6px; font: inherit; font-size: 13px; }
+.orbita-account-select-body { margin-top: 4px; }
+.orbita-account-select-cascade-host { display: flex; align-items: flex-start; gap: 4px; max-width: calc(100vw - 16px); overflow-x: auto; overflow-y: visible; }
+.orbita-account-select-cascade-host.is-anchor-row { display: block; overflow: visible; }
+.orbita-account-select-column { flex: 0 0 auto; box-sizing: border-box; width: max-content; min-width: 7.5rem; max-width: min(320px, calc(100vw - 32px)); max-height: 280px; overflow-x: hidden; overflow-y: auto; background: var(--ledger-surface, #fff); border: 1px solid var(--ledger-border, #e5e7eb); border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, .12); }
+.orbita-account-select-column-root { position: relative; }
+.orbita-account-select-column-flyout { position: absolute; z-index: 1; }
+.orbita-account-select-scroll-hidden { scrollbar-width: none; -ms-overflow-style: none; }
+.orbita-account-select-scroll-hidden::-webkit-scrollbar { display: none; }
+.orbita-account-select-option, .orbita-account-select-nav { display: flex; align-items: center; gap: 8px; box-sizing: border-box; width: 100%; min-height: 42px; padding: 7px 14px; border: 0; background: transparent; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.orbita-account-select-option { flex-direction: column; align-items: flex-start; gap: 2px; }
+.orbita-account-select-nav { justify-content: space-between; }
+.orbita-account-select-nav-text { display: grid; min-width: 0; }
+.orbita-account-select-column .orbita-account-select-nav-label,
+.orbita-account-select-column .orbita-account-select-nav-sub,
+.orbita-account-select-column .orbita-account-select-option-label,
+.orbita-account-select-column .orbita-account-select-option-sub { overflow: visible; text-overflow: clip; white-space: nowrap; }
+.orbita-account-select-nav-chevron { flex-shrink: 0; margin-left: 12px; color: var(--ledger-muted, #6b7280); font-size: 16px; }
+.orbita-account-select-option:hover, .orbita-account-select-option:focus-visible, .orbita-account-select-option.is-active, .orbita-account-select-nav:hover, .orbita-account-select-nav:focus-visible, .orbita-account-select-nav.is-branch-open { outline: none; background: var(--ledger-hover, #f3f4f6); }
+.orbita-account-select-empty { padding: 14px 14px; color: var(--ledger-muted, #6b7280); font-size: 13px; white-space: nowrap; }

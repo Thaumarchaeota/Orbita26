@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mountCdsCsvModal } from "./cds-csv-modal";
-import { mountFinanceDetailShell } from "./finance-detail-shell";
 import type { Transaction } from "../domain/ledger-item";
 
 vi.mock("../views/import/csv", () => ({
@@ -39,42 +38,21 @@ beforeEach(() => {
 });
 
 describe("CSV import regression", () => {
-  it("import button opens modal backdrop", async () => {
+  it("import modal opens backdrop", async () => {
     const ac = new AbortController();
-    let opened = false;
-    let openDone: Promise<void> | undefined;
     const modal = mountCdsCsvModal(ac, {
       resetFilters: () => {},
       scrollToEntry: () => {},
       onMerge: () => "",
     });
 
-    const host = document.createElement("div");
-    document.body.appendChild(host);
-    const shell = mountFinanceDetailShell(host, {
-      title: "资产·明细",
-      onBack: () => {},
-      onImport: () => {
-        opened = true;
-        openDone = modal.open();
-      },
-      renderFilter: () => {},
-      renderBody: () => {},
-      renderRail: () => {},
-    });
-
-    const importBtn = host.querySelector<HTMLButtonElement>(
-      '[data-role="finance-detail-import"]',
-    )!;
-    importBtn.click();
+    const openDone = modal.open();
     await vi.waitFor(() => {
-      expect(opened).toBe(true);
       const backdrop = document.querySelector<HTMLElement>(".dialog-backdrop");
       expect(backdrop?.classList.contains("is-open")).toBe(true);
     });
     await openDone;
 
-    shell.dispose();
     modal.dispose();
     ac.abort();
   });
@@ -86,7 +64,6 @@ describe("CSV import regression", () => {
 
     let merged: Transaction[] | null = null;
     let focusId = "";
-    let openDone: Promise<void> | undefined;
     const modal = mountCdsCsvModal(ac, {
       resetFilters: () => {},
       scrollToEntry: (id) => {
@@ -99,20 +76,7 @@ describe("CSV import regression", () => {
       },
     });
 
-    const host = document.createElement("div");
-    document.body.appendChild(host);
-    const shell = mountFinanceDetailShell(host, {
-      title: "资产·明细",
-      onBack: () => {},
-      onImport: () => {
-        openDone = modal.open();
-      },
-      renderFilter: () => {},
-      renderBody: () => {},
-      renderRail: () => {},
-    });
-
-    host.querySelector<HTMLButtonElement>('[data-role="finance-detail-import"]')!.click();
+    const openDone = modal.open();
     const backdrop = await vi.waitFor(() => {
       const el = document.querySelector<HTMLElement>(".dialog-backdrop.is-open");
       if (!el) throw new Error("modal not open");
@@ -137,7 +101,6 @@ describe("CSV import regression", () => {
       expect(backdrop.hasAttribute("hidden")).toBe(true);
     });
 
-    shell.dispose();
     modal.dispose();
     ac.abort();
   });

@@ -107,12 +107,6 @@ def _validate_transaction(txn: Transaction) -> list[CandidateDiagnostic]:
                 CandidateDiagnostic(message=f"分录 {i + 1} 金额无效", item_ids=[iid])
             )
             continue
-        root = _root(p.account)
-        if root == "Equity":
-            diags.append(
-                CandidateDiagnostic(message="普通交易不可使用 Equity 账户", item_ids=[iid])
-            )
-
     return diags
 
 

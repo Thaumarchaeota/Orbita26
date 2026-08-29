@@ -243,7 +243,13 @@ export function patchTransactionCard(
     const tags = identity.querySelector<HTMLElement>("[data-role='txn-tags']");
     if (tags) patchInlineTags(tags, item.tags);
     const btn = identity.querySelector<HTMLButtonElement>("[data-role='delete-btn']");
-    if (btn) applyEntryDeleteButton(btn, !!item._deleted);
+    if (btn) {
+      const deleted = !!item._deleted;
+      if (btn.classList.contains("is-undo") !== deleted) {
+        transitionClassPaint(btn, "is-undo", deleted, ["backgroundColor"]);
+      }
+      applyEntryDeleteButton(btn, deleted);
+    }
   }
 
   const lines = card.querySelectorAll<HTMLElement>("[data-role='posting']");

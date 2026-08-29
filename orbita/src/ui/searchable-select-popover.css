@@ -1,0 +1,78 @@
+.orbita-searchable-select {
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 16px));
+  background: var(--ledger-surface, var(--admin-surface, #fff));
+  border: 1px solid var(--ledger-border, var(--admin-border, #e5e7eb));
+  border-radius: var(--admin-radius-sm, 8px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  z-index: var(--orbita-popover-z, 205);
+}
+
+.orbita-searchable-select.orbita-popover-portal-item {
+  position: fixed;
+  z-index: var(--orbita-popover-z, 205);
+}
+
+.orbita-searchable-select-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--ledger-border, #e5e7eb);
+}
+
+.orbita-searchable-select-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--ledger-bg, #f9fafb);
+}
+
+.orbita-searchable-select-list {
+  overflow-y: auto;
+  max-height: 280px;
+  scrollbar-width: none;
+}
+
+.orbita-searchable-select-list::-webkit-scrollbar {
+  display: none;
+}
+
+.orbita-searchable-select-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.orbita-searchable-select-option:hover,
+.orbita-searchable-select-option.is-selected {
+  background: var(--ledger-hover, #f3f4f6);
+}
+
+.orbita-searchable-select-option.is-selected {
+  color: var(--ledger-accent, #2563eb);
+}
+
+.orbita-searchable-select-option-sub {
+  font-size: 11px;
+  color: var(--ledger-muted, #6b7280);
+}
+
+.orbita-searchable-select-empty {
+  padding: 16px 12px;
+  font-size: 13px;
+  color: var(--ledger-muted, #6b7280);
+  text-align: center;
+}

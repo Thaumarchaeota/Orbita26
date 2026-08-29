@@ -1,12 +1,19 @@
 use std::path::PathBuf;
-use std::time::Duration;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::{
     AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
     webview::Color,
 };
 use tauri_plugin_frame::WebviewWindowExt;
 
+use crate::window_shell;
+
 pub const ADMIN_LABEL: &str = "admin";
+
+static ADMIN_HIDDEN_AT: Mutex<Option<Instant>> = Mutex::new(None);
+
+const ADMIN_HIDDEN_RELOAD_SECS: u64 = 180;
 
 pub fn setup_admin_window(app: &AppHandle) {
     if let Some(win) = app.get_webview_window(ADMIN_LABEL) {
@@ -19,12 +26,34 @@ pub fn open_admin_window(app: &AppHandle) -> Result<(), String> {
         Some(w) => w,
         None => create_admin_window(app)?,
     };
+    let reload = admin_open_should_reload();
+    ADMIN_HIDDEN_AT.lock().unwrap().take();
+    if reload {
+        if let Err(err) = window_shell::repair_window(&win, true) {
+            eprintln!("[orbita admin] repair_window reload failed: {err}");
+        }
+        apply_titlebar_now(&win);
+        schedule_titlebar_retry(&win);
+        win.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
     let _ = win.create_overlay_titlebar();
     win.show().map_err(|e| e.to_string())?;
     apply_titlebar_now(&win);
     schedule_titlebar_retry(&win);
     win.set_focus().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+fn admin_open_should_reload() -> bool {
+    if cfg!(debug_assertions) {
+        return true;
+    }
+    ADMIN_HIDDEN_AT
+        .lock()
+        .unwrap()
+        .map(|t| t.elapsed() >= Duration::from_secs(ADMIN_HIDDEN_RELOAD_SECS))
+        .unwrap_or(false)
 }
 
 #[cfg(debug_assertions)]
@@ -69,6 +98,7 @@ fn attach_admin_window(win: &tauri::WebviewWindow) {
     win.on_window_event(move |event| {
         if let WindowEvent::CloseRequested { api, .. } = event {
             api.prevent_close();
+            ADMIN_HIDDEN_AT.lock().unwrap().replace(Instant::now());
             let _ = win_clone.hide();
         }
     });

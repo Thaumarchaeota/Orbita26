@@ -7,7 +7,6 @@ export type {
   AdminTabId,
 } from "./types";
 export { registerInsightDestination, getInsightDestinations, getInsightDestination } from "./registry";
-export { registerAdminTab, getAdminTabs, getAdminTab } from "./registry";
 export { openAdminWindow, mountAdminButton } from "./window";
 export { mountAdminShell, requestInsightDataDirChange } from "./shell";
 

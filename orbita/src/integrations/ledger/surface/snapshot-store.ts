@@ -1,73 +1,50 @@
-import { isTransactionItem } from "../domain/detail-item";
-import type { DetailItem } from "../types";
-import { ALL_FILTERABLE_STRIPE_KINDS } from "./filter-kinds";
-import type { FilterableStripeKind } from "./filter-kinds";
-import { resolveStripeKind } from "./stripe-kind";
+import {
+  defaultDetailFilter,
+  resetDetailFilter,
+  setAllTypesFilter,
+  toggleTypeFilter,
+} from "../domain/filter-apply";
 import { CARD_DETAIL_FIXTURES } from "./fixtures";
-import { cloneFrozenDetailItems } from "./snapshot-freeze";
+import {
+  createFilterDeriveScheduler,
+  deriveFilteredItems,
+  freezeFilterSnapshot,
+  isFilterCommand,
+  type MutableFilter,
+} from "./filter-render-derive";
 import type {
   CardDetailCommand,
   CardDetailSnapshot,
   CardDetailStore,
 } from "./types";
 
-type MutableFilter = {
-  dateFrom: string;
-  dateTo: string;
-  types: Set<FilterableStripeKind>;
-};
-
-function applyFilter(items: DetailItem[], filter: MutableFilter): DetailItem[] {
-  let next = items;
-  if (filter.dateFrom) next = next.filter((item) => item.date >= filter.dateFrom);
-  if (filter.dateTo) next = next.filter((item) => item.date <= filter.dateTo);
-  if (filter.types.size && filter.types.size < ALL_FILTERABLE_STRIPE_KINDS.length) {
-    next = next.filter((item) => {
-      if (!isTransactionItem(item)) return true;
-      const kind = resolveStripeKind(item);
-      return filter.types.has(kind as FilterableStripeKind);
-    });
-  }
-  return next;
-}
-
-function freezeFilter(filter: MutableFilter) {
-  return Object.freeze({
-    dateFrom: filter.dateFrom,
-    dateTo: filter.dateTo,
-    types: new Set(filter.types) as ReadonlySet<FilterableStripeKind>,
-  });
-}
-
-function toggleStripeKind(types: Set<FilterableStripeKind>, stripeKind: FilterableStripeKind): void {
-  if (!types.size) {
-    for (const kind of ALL_FILTERABLE_STRIPE_KINDS) {
-      if (kind !== stripeKind) types.add(kind);
-    }
-    return;
-  }
-  if (types.has(stripeKind)) types.delete(stripeKind);
-  else types.add(stripeKind);
-  if (types.size >= ALL_FILTERABLE_STRIPE_KINDS.length) types.clear();
-}
-
 /** Phase A fixture store; tests and static previews. */
 export function createCardDetailSnapshotStore(): CardDetailStore {
-  const filter: MutableFilter = { dateFrom: "", dateTo: "", types: new Set() };
+  const filter = defaultDetailFilter() as MutableFilter;
   const listeners = new Set<() => void>();
+  const filterListeners = new Set<() => void>();
+  const renderedListeners = new Set<() => void>();
+  const deriveScheduler = createFilterDeriveScheduler();
   let disposed = false;
+  let cachedFilterSnapshot = freezeFilterSnapshot(filter);
+  let cachedRenderedSnapshot: CardDetailSnapshot | null = null;
 
-  function notify(): void {
+  function notifyRendered(): void {
+    for (const listener of renderedListeners) listener();
     for (const listener of listeners) listener();
   }
 
-  function getSnapshot(): CardDetailSnapshot {
-    const items = cloneFrozenDetailItems(applyFilter(CARD_DETAIL_FIXTURES, filter));
+  function notifyFilter(): void {
+    for (const listener of filterListeners) listener();
+  }
+
+  function buildSnapshot(): CardDetailSnapshot {
+    const items = deriveFilteredItems(CARD_DETAIL_FIXTURES, filter);
     return Object.freeze({
       items,
       loadState: "ready" as const,
       error: null,
-      filter: freezeFilter(filter),
+      filter: cachedFilterSnapshot,
       savePhase: "unedited" as const,
       isDirty: false,
       validationErrors: Object.freeze([]),
@@ -82,6 +59,39 @@ export function createCardDetailSnapshotStore(): CardDetailStore {
     });
   }
 
+  function recomputeRendered(): void {
+    cachedRenderedSnapshot = buildSnapshot();
+  }
+
+  function scheduleFilterDerive(): void {
+    deriveScheduler.schedule(() => {
+      recomputeRendered();
+      notifyRendered();
+    });
+  }
+
+  function publishFilterInput(): void {
+    cachedFilterSnapshot = freezeFilterSnapshot(filter);
+    notifyFilter();
+    scheduleFilterDerive();
+  }
+
+  recomputeRendered();
+
+  function getSnapshot(): CardDetailSnapshot {
+    const base = cachedRenderedSnapshot!;
+    if (base.filter === cachedFilterSnapshot) return base;
+    return Object.freeze({ ...base, filter: cachedFilterSnapshot });
+  }
+
+  function flushRenderedDerive(): void {
+    deriveScheduler.flush();
+  }
+
+  function getFilterSnapshot() {
+    return cachedFilterSnapshot;
+  }
+
   function dispatch(command: CardDetailCommand): void {
     if (disposed) return;
     switch (command.type) {
@@ -91,25 +101,62 @@ export function createCardDetailSnapshotStore(): CardDetailStore {
       case "set-date-to":
         filter.dateTo = command.value;
         break;
+      case "set-date-range":
+        filter.dateFrom = command.from;
+        filter.dateTo = command.to;
+        break;
+      case "set-type-mode":
+        filter.typeMode = command.mode;
+        if (command.mode === "all") filter.types.clear();
+        break;
       case "toggle-type":
-        toggleStripeKind(filter.types, command.stripeKind);
+        toggleTypeFilter(filter, command.stripeKind);
+        break;
+      case "set-all-types":
+        setAllTypesFilter(filter);
+        break;
+      case "set-accounts":
+        filter.accounts.clear();
+        for (const account of command.accounts) filter.accounts.add(account);
+        break;
+      case "set-account-mode":
+        filter.accountMode = command.mode;
+        break;
+      case "set-tags":
+        filter.tags.clear();
+        for (const tag of command.tags) filter.tags.add(tag);
+        break;
+      case "set-tag-mode":
+        filter.tagMode = command.mode;
         break;
       case "reset-filters":
-        filter.dateFrom = "";
-        filter.dateTo = "";
-        filter.types.clear();
+        resetDetailFilter(filter);
         break;
       default:
         break;
     }
-    notify();
+    if (isFilterCommand(command.type)) {
+      publishFilterInput();
+      return;
+    }
+    recomputeRendered();
+    notifyRendered();
   }
 
   return {
     getSnapshot,
+    getFilterSnapshot,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+    subscribeFilter(listener) {
+      filterListeners.add(listener);
+      return () => filterListeners.delete(listener);
+    },
+    subscribeRendered(listener) {
+      renderedListeners.add(listener);
+      return () => renderedListeners.delete(listener);
     },
     dispatch,
     async handleSave() {},
@@ -118,7 +165,11 @@ export function createCardDetailSnapshotStore(): CardDetailStore {
     },
     dispose() {
       disposed = true;
+      deriveScheduler.dispose();
       listeners.clear();
+      filterListeners.clear();
+      renderedListeners.clear();
     },
+    flushRenderedDerive,
   };
 }

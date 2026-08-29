@@ -66,7 +66,7 @@ export function countCardsInGroupRange(
 }
 
 /**
- * Expand a virtual window by whole date groups. See v0.0.17-spec.md §3.2.
+ * Expand a virtual window by whole date groups. See docs/specs/orbita-finance.md.
  */
 export function computeGroupWindow(
   groups: readonly DateGroupLike[],

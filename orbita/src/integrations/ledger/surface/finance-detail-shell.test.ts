@@ -21,7 +21,6 @@ describe("finance detail shell layout", () => {
     const shell = mountFinanceDetailShell(host, {
       title: "资产·明细",
       onBack: () => {},
-      renderFilter: () => {},
       renderBody: () => {},
       renderRail: () => {},
     });
@@ -36,47 +35,21 @@ describe("finance detail shell layout", () => {
     shell.dispose();
   });
 
-  it("keeps inline filters on desktop without filter toggle", () => {
+  it("centers clickable title with search host and no topbar filters", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const shell = mountFinanceDetailShell(host, {
       title: "资产·明细",
       onBack: () => {},
-      renderFilter: () => {},
       renderBody: () => {},
       renderRail: () => {},
     });
 
-    const toggle = host.querySelector<HTMLButtonElement>('[data-role="finance-detail-filter-toggle"]')!;
-    const inlineFilters = host.querySelector('[data-role="finance-detail-topbar-filters"]');
-    expect(inlineFilters?.querySelector('[data-detail-filter-from-mount]')).toBeTruthy();
-    expect(toggle.hidden).toBe(true);
-    shell.dispose();
-  });
-
-  it("shows filter toggle on narrow width without clearing filter state", () => {
-    Object.defineProperty(window, "innerWidth", { configurable: true, value: 900 });
-    const host = document.createElement("div");
-    document.body.appendChild(host);
-    const shell = mountFinanceDetailShell(host, {
-      title: "资产·明细",
-      onBack: () => {},
-      renderFilter: (el) => {
-        el.querySelector<HTMLButtonElement>('[data-role="detail-filter-clear"]')!.hidden = false;
-      },
-      renderBody: () => {},
-      renderRail: () => {},
-    });
-
-    const root = host.querySelector<HTMLElement>('[data-role="finance-detail-root"]')!;
-    expect(root.classList.contains("is-filter-narrow")).toBe(true);
-    const toggle = host.querySelector<HTMLButtonElement>('[data-role="finance-detail-filter-toggle"]')!;
-    expect(toggle.hidden).toBe(false);
-    toggle.click();
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    toggle.click();
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(host.querySelector('[data-detail-filter-from-mount]')).toBeTruthy();
+    expect(host.querySelector('[data-role="finance-detail-topbar-filters"]')).toBeNull();
+    expect(host.querySelector('[data-role="finance-detail-filter-toggle"]')).toBeNull();
+    expect(host.querySelector('[data-role="finance-detail-import"]')).toBeNull();
+    expect(shell.titleBtn.textContent).toBe("资产·明细");
+    expect(shell.searchHost.getAttribute("data-role")).toBe("finance-search-host");
     shell.dispose();
   });
 
@@ -86,7 +59,6 @@ describe("finance detail shell layout", () => {
     const shell = mountFinanceDetailShell(host, {
       title: "资产·明细",
       onBack: () => {},
-      renderFilter: () => {},
       renderBody: () => {},
       renderRail: () => {},
     });
@@ -112,16 +84,5 @@ describe("shell motion css guards", () => {
     const css = readFileSync(adminCssPath, "utf8");
     const block = css.match(/\.admin-sidebar\s*\{[^}]+\}/s)?.[0] ?? "";
     expect(block).not.toMatch(/transition:\s*width/);
-  });
-
-  it("finance-chrome.css hides filter toggle until narrow breakpoint", () => {
-    const chromeCssPath = resolve(surfaceDir, "../ui/finance-chrome.css");
-    const css = readFileSync(chromeCssPath, "utf8");
-    expect(css).toMatch(
-      /\.ledger-page\.is-finance-detail \.finance-topbar-filter-toggle\s*\{[^}]*display:\s*none/,
-    );
-    expect(css).toMatch(
-      /\.ledger-page\.is-finance-detail\.is-filter-narrow \.finance-topbar-filter-toggle\s*\{[^}]*display:\s*inline-flex/,
-    );
   });
 });

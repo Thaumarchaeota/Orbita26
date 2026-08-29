@@ -75,8 +75,78 @@ export function getConfirmDialog(): ConfirmFn {
   return sharedConfirm;
 }
 
-export function mountConfirmDialog(_root?: HTMLElement) {
-  return getConfirmDialog();
+type NamePromptFn = (
+  title: string,
+  opts?: { label?: string; initial?: string; submitLabel?: string },
+  trigger?: MotionTrigger,
+) => Promise<string | null>;
+
+let sharedNamePrompt: NamePromptFn | null = null;
+
+function createNamePromptDialog(): NamePromptFn {
+  const backdrop = document.createElement("div");
+  backdrop.className = "dialog-backdrop";
+  backdrop.innerHTML = `
+    <form class="dialog-panel" id="namePromptDialogForm">
+      <div class="dialog-title" id="namePromptDialogTitle"></div>
+      <div class="dialog-field">
+        <label for="namePromptDialogInput" id="namePromptDialogLabel">名称</label>
+        <input id="namePromptDialogInput" type="text" autocomplete="off" required>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="dialog-btn" data-action="cancel">取消</button>
+        <button type="submit" class="dialog-btn dialog-btn-primary" id="namePromptDialogSubmit">保存</button>
+      </div>
+    </form>
+  `;
+  mountModalBackdrop(backdrop);
+
+  const motion = bindDialog(backdrop);
+  const titleEl = backdrop.querySelector<HTMLElement>("#namePromptDialogTitle")!;
+  const labelEl = backdrop.querySelector<HTMLElement>("#namePromptDialogLabel")!;
+  const submitBtn = backdrop.querySelector<HTMLButtonElement>("#namePromptDialogSubmit")!;
+  const form = backdrop.querySelector<HTMLFormElement>("#namePromptDialogForm")!;
+  const input = backdrop.querySelector<HTMLInputElement>("#namePromptDialogInput")!;
+  let resolvePending: ((value: string | null) => void) | null = null;
+
+  const close = async (value: string | null) => {
+    await motion.close();
+    resolvePending?.(value);
+    resolvePending = null;
+  };
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = input.value.trim();
+    if (!name) return;
+    void close(name);
+  });
+  backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) void close(null);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && motion.isOpen()) void close(null);
+  });
+
+  return (title, opts, trigger) =>
+    new Promise<string | null>((resolve) => {
+      if (resolvePending) {
+        resolvePending(null);
+        resolvePending = null;
+      }
+      resolvePending = resolve;
+      titleEl.textContent = title;
+      labelEl.textContent = opts?.label ?? "名称";
+      submitBtn.textContent = opts?.submitLabel ?? "保存";
+      input.value = opts?.initial ?? "";
+      void motion.open(trigger).then(() => requestAnimationFrame(() => input.focus()));
+    });
+}
+
+export function getNamePromptDialog(): NamePromptFn {
+  if (!sharedNamePrompt) sharedNamePrompt = createNamePromptDialog();
+  return sharedNamePrompt;
 }
 
 export function mountFolderRenameDialog(root: HTMLElement) {

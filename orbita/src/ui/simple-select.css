@@ -1,0 +1,103 @@
+.orbita-simple-select {
+  min-width: 0;
+}
+
+.orbita-simple-select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--ledger-surface, #fff);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.orbita-simple-select-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orbita-simple-select-label.is-placeholder {
+  color: var(--ledger-muted, #6b7280);
+}
+
+.orbita-simple-select-chevron svg {
+  width: 16px;
+  height: 16px;
+  color: var(--ledger-muted, #6b7280);
+  flex-shrink: 0;
+}
+
+.orbita-simple-select-btn.is-open .orbita-simple-select-chevron svg {
+  transform: rotate(180deg);
+}
+
+.orbita-simple-select-menu {
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 16px));
+  background: var(--ledger-surface, var(--admin-surface, #fff));
+  border: 1px solid var(--ledger-border, var(--admin-border, #e5e7eb));
+  border-radius: var(--admin-radius-sm, 8px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.orbita-simple-select-menu.orbita-popover-portal-item {
+  position: fixed;
+  z-index: var(--orbita-popover-z, 205);
+}
+
+.orbita-simple-select-list {
+  overflow-y: auto;
+  max-height: 280px;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.orbita-simple-select-list::-webkit-scrollbar {
+  display: none;
+}
+
+.orbita-simple-select-option {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--ledger-text, inherit);
+}
+
+.orbita-simple-select-option:hover:not(:disabled) {
+  background: var(--ledger-hover, #f3f4f6);
+}
+
+.orbita-simple-select-option.is-selected {
+  color: var(--ledger-accent, #2563eb);
+  font-weight: 500;
+}
+
+.orbita-simple-select-option:disabled {
+  cursor: default;
+  color: var(--ledger-muted, #6b7280);
+}
+
+.orbita-simple-select-option.is-separator {
+  padding: 4px 12px;
+  font-size: 11px;
+  text-align: center;
+  pointer-events: none;
+}

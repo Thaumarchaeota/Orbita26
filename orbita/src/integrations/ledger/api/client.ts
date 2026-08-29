@@ -14,6 +14,7 @@ import type {
   Entry,
   SettingsResponse,
   StatsResponse,
+  AccountPeriodStatsResponse,
   ValidateResponse,
 } from "../types";
 import { normalizeDetailItem } from "../domain/detail-item";
@@ -155,6 +156,9 @@ export async function updateSettings(
     signal,
   });
   const data = (await res.json()) as SettingsResponse & { error?: string };
+  if (res.status === 409) {
+    throw new LedgerApiError(data.error || "设置已被其他会话更新，请重试", res.status, data);
+  }
   if (!res.ok) throw new LedgerApiError(data.error || "保存设置失败", res.status, data);
   return data;
 }
@@ -164,6 +168,21 @@ export async function fetchStats(signal?: AbortSignal): Promise<StatsResponse> {
   const data = (await res.json()) as StatsResponse;
   if (!res.ok || !data.ok) {
     throw new LedgerApiError(data.error || "加载统计失败", res.status, data);
+  }
+  return data;
+}
+
+export async function fetchAccountPeriodStats(
+  params: { account: string; date_from?: string; date_to?: string },
+  signal?: AbortSignal,
+): Promise<AccountPeriodStatsResponse> {
+  const q = new URLSearchParams({ account: params.account });
+  if (params.date_from) q.set("date_from", params.date_from);
+  if (params.date_to) q.set("date_to", params.date_to);
+  const res = await ledgerFetch(`/api/stats/account-period?${q.toString()}`, { signal });
+  const data = (await res.json()) as AccountPeriodStatsResponse;
+  if (!res.ok || !data.ok) {
+    throw new LedgerApiError(data.error || "加载账户期间统计失败", res.status, data);
   }
   return data;
 }

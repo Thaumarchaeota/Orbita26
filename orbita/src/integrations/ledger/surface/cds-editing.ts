@@ -1,7 +1,7 @@
 import { REMARK_MAX_LENGTH } from "../constants";
 import { buildValidatedPatch } from "../domain/field-validate";
 import { displayTxnTime, normalizeTimeInput } from "../domain/txn-time";
-import { getAllAccountList } from "../state/accounts";
+import { mountAccountSelect, type AccountSelectHandle } from "../ui/account-select";
 import type { EntryFieldPatch } from "../state/ledger-store";
 import type { Entry } from "../types";
 import { formatTags, parseTagsString } from "../utils";
@@ -36,6 +36,7 @@ type ActiveEdit = {
   id: string;
   postingIndex: number;
   tagBox?: HTMLElement;
+  accountSelect?: AccountSelectHandle;
 };
 
 export type CdsEditingHandle = {
@@ -94,18 +95,6 @@ function fieldDisplay(field: EditableField, entry: Entry, pi: number): string {
 function isPlaceholder(field: EditableField, entry: Entry, pi: number): boolean {
   if (field === "time" || field === "datetime") return false;
   return !fieldDisplay(field, entry, pi).trim();
-}
-
-function fillSelect(el: HTMLSelectElement, items: string[], selected: string): void {
-  el.replaceChildren(
-    ...items.map((name) => {
-      const option = document.createElement("option");
-      option.value = name;
-      option.textContent = name;
-      option.selected = name === selected;
-      return option;
-    }),
-  );
 }
 
 function findEntryInSnapshot(store: CardDetailStore, id: string): Entry | undefined {
@@ -198,6 +187,7 @@ export function mountCdsEditing(
       edit.el.textContent = text;
       edit.el.classList.toggle("is-ghost", isPlaceholder(edit.field, entry, edit.postingIndex));
     }
+    edit.accountSelect?.dispose();
     edit.el.classList.remove("is-editing");
     activeEdit = null;
   }
@@ -215,6 +205,9 @@ export function mountCdsEditing(
   function editValue(edit: ActiveEdit): string {
     if (edit.field === "tags" && edit.tagBox) {
       return formatTags(getTagsFromBox(edit.tagBox));
+    }
+    if (edit.field === "account" && edit.accountSelect) {
+      return edit.accountSelect.getValue();
     }
     return edit.input.value;
   }
@@ -246,6 +239,10 @@ export function mountCdsEditing(
     if (activeDateTime) return;
     const edit = activeEdit;
     if (!edit) return;
+    if (edit.field === "account") {
+      cancelEdit();
+      return;
+    }
     if (edit.field === "tags" && edit.el.querySelector(".ledger-tag-chip-edit")) return;
     const result = buildPatch(edit, editValue(edit));
     if (!result) {
@@ -255,10 +252,11 @@ export function mountCdsEditing(
     }
     if ("error" in result) {
       showFieldError(edit.el, result.error);
-      edit.input.focus();
+      if (edit.field !== "account") edit.input.focus();
       return;
     }
     clearFieldError(edit.el);
+    edit.accountSelect?.dispose();
     activeEdit = null;
     store.dispatch({ type: "update-entry", id: edit.id, patch: result.patch });
     restoreFieldDisplay(edit);
@@ -331,10 +329,42 @@ export function mountCdsEditing(
       }
       input = select;
     } else if (field === "account") {
-      const select = document.createElement("select");
-      select.className = "cds-edit-input";
-      fillSelect(select, getAllAccountList(), raw);
-      input = select;
+      const mount = document.createElement("div");
+      mount.className = "cds-edit-account-mount";
+      const placeholderInput = document.createElement("input");
+      const accountSelect = mountAccountSelect(mount, {
+        groups: ["expenses", "income", "assets", "liabilities", "equity"],
+        displayMode: "admin",
+        searchPlacement: "trigger",
+        cascadeAlign: "anchor-row",
+        value: raw,
+        placeholder: "选择账户",
+        onDismiss: () => cancelEdit(),
+        onChange: (name) => {
+          if (!activeEdit || activeEdit.el !== el) return;
+          const result = buildPatch(activeEdit, name);
+          if (!result) return;
+          if ("error" in result) {
+            showFieldError(el, result.error);
+            return;
+          }
+          clearFieldError(el);
+          const saved = activeEdit;
+          activeEdit = null;
+          saved.accountSelect?.dispose();
+          store.dispatch({ type: "update-entry", id: saved.id, patch: result.patch });
+          restoreFieldDisplay(saved);
+        },
+      });
+      el.replaceChildren(mount);
+      el.classList.remove("is-ghost", "is-empty");
+      el.classList.add("is-editing");
+      clearFieldError(el);
+      activeEdit = { el, input: placeholderInput, field, id, postingIndex, accountSelect };
+      queueMicrotask(() => {
+        mount.querySelector<HTMLElement>(".orbita-account-select-trigger")?.click();
+      });
+      return;
     } else {
       const text = document.createElement("input");
       text.type = field === "amount" || field === "cost_amount" ? "number" : "text";
@@ -412,6 +442,7 @@ export function mountCdsEditing(
       if (!activeEdit && !activeDateTime) return;
       const t = e.target as Node;
       if (activeEdit?.el.contains(t)) return;
+      if (activeEdit?.accountSelect?.containsTarget(t)) return;
       if (t instanceof Element && t.closest(".cds-datetime-popover")) return;
       if (activeDateTime) {
         if (!commitDateTimeEdit()) {

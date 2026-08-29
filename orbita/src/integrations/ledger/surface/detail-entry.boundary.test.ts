@@ -63,14 +63,10 @@ describe("Finance detail entry boundary", () => {
     document.body.appendChild(host);
     let bodyMount: HTMLElement | null = null;
     let railMount: HTMLElement | null = null;
-    let filterMount: HTMLElement | null = null;
 
     const shell = mountFinanceDetailShell(host, {
       title: "资产·明细",
       onBack: () => {},
-      renderFilter: (el) => {
-        filterMount = el;
-      },
       renderBody: (el) => {
         bodyMount = el;
       },
@@ -84,7 +80,7 @@ describe("Finance detail entry boundary", () => {
     expect(host.querySelector('[data-role="finance-detail-root"]')).toBeTruthy();
     expect(host.querySelector('[data-role="finance-detail-body"]')).toBe(bodyMount);
     expect(host.querySelector('[data-role="finance-detail-rail-mount"]')).toBe(railMount);
-    expect(host.querySelector('[data-role="finance-detail-filter-inner"]')).toBe(filterMount);
+    expect(host.querySelector('[data-role="finance-search-host"]')).toBeTruthy();
     expect(shell.saveBtn.getAttribute("data-role")).toBe("finance-detail-save");
     shell.dispose();
   });

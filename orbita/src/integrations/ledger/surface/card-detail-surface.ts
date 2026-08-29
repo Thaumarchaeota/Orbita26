@@ -8,6 +8,9 @@ import { installCdsMotionSurfaceDiag } from "./cds-motion-diag";
 
 import type { CardDetailHandle, CardDetailStore } from "./types";
 
+import type { FinanceSearchHighlight } from "./finance-search";
+import { applyFinanceSearchHighlightToCard } from "./finance-search";
+
 import "./card-detail-surface.css";
 
 
@@ -15,6 +18,8 @@ import "./card-detail-surface.css";
 export type CardDetailSurfaceOptions = {
 
   store: CardDetailStore;
+
+  onAddEntry?: (date: string, trigger: HTMLElement) => void;
 
 };
 
@@ -62,22 +67,6 @@ function renderError(scroll: HTMLElement, message: string): void {
 
 
 
-function renderEmpty(scroll: HTMLElement): void {
-
-  const empty = document.createElement("div");
-
-  empty.className = "cds-empty";
-
-  empty.setAttribute("data-role", "card-detail-empty");
-
-  empty.textContent = "暂无条目";
-
-  scroll.replaceChildren(empty);
-
-}
-
-
-
 export function mountCardDetailSurface(
 
   container: HTMLElement,
@@ -86,7 +75,7 @@ export function mountCardDetailSurface(
 
 ): CardDetailHandle {
 
-  const { store } = options;
+  const { store, onAddEntry } = options;
 
   let disposed = false;
 
@@ -94,7 +83,11 @@ export function mountCardDetailSurface(
 
   let globalErrorEl: HTMLElement | null = null;
 
+  let searchHighlight: FinanceSearchHighlight | null = null;
 
+  let emptyStateEl: HTMLElement | null = null;
+
+  let emptyFilterScrollTop: number | null = null;
 
   const surface = document.createElement("div");
 
@@ -123,6 +116,7 @@ export function mountCardDetailSurface(
   const editing = mountCdsEditing(scroll, store);
 
   store.setCommitEdit?.(() => editing.commitEdit());
+  store.setDismissEdit?.(() => editing.cancelEdit());
 
 
 
@@ -212,6 +206,8 @@ export function mountCardDetailSurface(
 
         loadOlder: store.tryLoadOlder,
 
+        onAddEntry,
+
       });
 
       if (!motionDiagInstalled) {
@@ -228,7 +224,41 @@ export function mountCardDetailSurface(
 
   }
 
+  function showFilteredEmpty(): void {
+    if (emptyStateEl) return;
 
+    // Keep the rendered list mounted while a filter has no matches. Recreating it on
+    // recovery discards the user's reading position; §11.1 requires that position to survive.
+    emptyFilterScrollTop = scroll.scrollTop;
+    for (const child of Array.from(scroll.children)) child.hidden = true;
+
+    emptyStateEl = document.createElement("div");
+    emptyStateEl.className = "cds-empty";
+    emptyStateEl.setAttribute("data-role", "card-detail-empty");
+    emptyStateEl.textContent = "暂无条目";
+    scroll.append(emptyStateEl);
+  }
+
+  function restoreFilteredList(): void {
+    if (!emptyStateEl) return;
+
+    emptyStateEl.remove();
+    emptyStateEl = null;
+    for (const child of Array.from(scroll.children)) child.hidden = false;
+
+    if (emptyFilterScrollTop !== null) {
+      scroll.scrollTop = emptyFilterScrollTop;
+      emptyFilterScrollTop = null;
+    }
+  }
+
+
+
+  function applySearchHighlights(): void {
+    for (const wrap of scroll.querySelectorAll<HTMLElement>(".cds-card-wrap")) {
+      applyFinanceSearchHighlightToCard(wrap, searchHighlight);
+    }
+  }
 
   function paint(): void {
 
@@ -258,6 +288,8 @@ export function mountCardDetailSurface(
 
     if (snapshot.loadState === "loading") {
 
+      restoreFilteredList();
+
       virtualList?.dispose();
 
       virtualList = null;
@@ -271,6 +303,8 @@ export function mountCardDetailSurface(
 
 
     if (snapshot.loadState === "error") {
+
+      restoreFilteredList();
 
       virtualList?.dispose();
 
@@ -286,11 +320,7 @@ export function mountCardDetailSurface(
 
     if (!snapshot.items.length) {
 
-      virtualList?.dispose();
-
-      virtualList = null;
-
-      renderEmpty(scroll);
+      showFilteredEmpty();
 
       return;
 
@@ -298,13 +328,14 @@ export function mountCardDetailSurface(
 
 
 
+    restoreFilteredList();
     ensureVirtualList().refresh();
-
+    applySearchHighlights();
   }
 
 
 
-  const unsubscribe = store.subscribe(paint);
+  const unsubscribe = store.subscribeRendered(paint);
 
   paint();
 
@@ -343,6 +374,11 @@ export function mountCardDetailSurface(
     },
 
     refresh: paint,
+
+    setSearchHighlight(highlight: FinanceSearchHighlight | null): void {
+      searchHighlight = highlight;
+      applySearchHighlights();
+    },
 
     async animateCommitRemovals(ids: string[]) {
 

@@ -1,0 +1,81 @@
+.orbita-date-range-picker {
+  min-width: 0;
+}
+
+.orbita-date-range-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: var(--finance-control-radius, 8px);
+  background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
+  color: var(--ledger-text);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.orbita-date-range-picker-btn:hover,
+.orbita-date-range-picker-btn.is-open {
+  border-color: var(--ledger-accent, #2563eb);
+  background-color: var(--ledger-hover);
+}
+
+.orbita-date-range-picker-label.is-placeholder {
+  color: var(--ledger-muted);
+}
+
+.orbita-date-range-picker-chevron svg {
+  width: 16px;
+  height: 16px;
+  color: var(--ledger-muted);
+  flex-shrink: 0;
+}
+
+.orbita-date-range-picker-btn.is-open .orbita-date-range-picker-chevron svg {
+  transform: rotate(180deg);
+}
+
+.orbita-date-range-picker-menu {
+  position: fixed;
+  z-index: var(--orbita-popover-z, 205);
+  min-width: 280px;
+  max-width: calc(100vw - 16px);
+  background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
+  border: 1px solid color-mix(in srgb, var(--ledger-border) 70%, transparent);
+  border-radius: var(--finance-control-radius, 8px);
+  box-shadow: var(--finance-popover-shadow, 0 2px 8px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.12));
+  padding: 0;
+  overflow: hidden;
+}
+
+.orbita-date-range-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--ledger-border, #e5e7eb);
+}
+
+.orbita-date-range-shortcut {
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  background: var(--ledger-surface, #fff);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.orbita-date-range-shortcut:hover {
+  background: var(--ledger-hover);
+}
+
+.orbita-date-range-panel .orbita-mini-cal {
+  padding: 8px;
+}

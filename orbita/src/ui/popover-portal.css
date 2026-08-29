@@ -1,0 +1,5 @@
+.orbita-popover-portal-item {
+  position: fixed;
+  z-index: var(--orbita-popover-z, 205);
+  pointer-events: auto;
+}

@@ -3,6 +3,7 @@ import type { DetailItem, Entry } from "../types";
 import { CARD_DETAIL_FIXTURES } from "./fixtures";
 import { cloneFrozenDetailItems } from "./snapshot-freeze";
 import { createCardDetailSnapshotStore } from "./snapshot-store";
+import { __testFlushFilterDerive } from "./ledger-card-store";
 
 function snapshotFixtureFingerprint(): string {
   return JSON.stringify(CARD_DETAIL_FIXTURES);
@@ -23,6 +24,7 @@ describe("CardDetail snapshot store (Phase A fixtures)", () => {
   it("filters by stripe kind via dispatch without mutating fixtures", () => {
     const store = createCardDetailSnapshotStore();
     store.dispatch({ type: "toggle-type", stripeKind: "expense" });
+    __testFlushFilterDerive(store);
     const filtered = store.getSnapshot().items;
     expect(
       filtered.every(

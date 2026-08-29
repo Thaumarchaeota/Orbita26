@@ -1,34 +1,46 @@
+import type { MotionTrigger } from "../../../ui/motion";
 import type { CardDetailStore } from "./types";
-import { mountBalanceAuditShell } from "./balance-audit-shell";
-import { mountCdsComposer } from "./cds-composer";
+import { mountFinanceRailAdd } from "./finance-rail-add";
+import { mountFinanceRailAudit } from "./finance-rail-audit";
 import "./finance-rail.css";
+
+export type FinanceRailOptions = {
+  store: CardDetailStore;
+  renderFilters?: (filterRoot: HTMLElement) => void;
+  onImport: (trigger?: MotionTrigger) => void;
+  onAddEntry: (trigger?: MotionTrigger) => void;
+};
 
 export function mountFinanceRail(
   container: HTMLElement,
   signal: AbortSignal,
-  store: CardDetailStore,
+  options: FinanceRailOptions,
 ): { dispose: () => void; getScrollEl: () => HTMLElement } {
+  const { store, renderFilters, onImport, onAddEntry } = options;
+
   const scroll = document.createElement("div");
   scroll.className = "finance-rail-scroll";
   scroll.setAttribute("data-role", "finance-rail-scroll");
 
-  const composerMount = document.createElement("div");
-  composerMount.className = "finance-rail-composer";
-  composerMount.setAttribute("data-role", "composer-mount");
+  const filterMount = document.createElement("div");
+  filterMount.className = "finance-rail-filter-mount";
+  filterMount.setAttribute("data-role", "finance-rail-filter-mount");
+
+  const addMount = document.createElement("div");
+  addMount.className = "finance-rail-add-mount";
+  addMount.setAttribute("data-role", "finance-rail-add-mount");
 
   const auditMount = document.createElement("div");
   auditMount.className = "finance-rail-audit";
   auditMount.setAttribute("data-role", "balance-audit-mount");
 
-  scroll.append(composerMount, auditMount);
+  scroll.append(filterMount, addMount, auditMount);
   container.replaceChildren(scroll);
 
-  const disposeComposer = mountCdsComposer(composerMount, store, signal);
-  const disposeAudit = mountBalanceAuditShell(auditMount, signal, {
-    getAudit: () => store.getSnapshot().balanceAudit,
-    isDirty: () => store.getSnapshot().isDirty,
-    subscribe: (fn) => store.subscribe(fn),
-  });
+  renderFilters?.(filterMount);
+
+  const disposeAdd = mountFinanceRailAdd(addMount, signal, { onImport, onAddEntry });
+  const disposeAudit = mountFinanceRailAudit(auditMount, signal, store);
 
   const onAbort = () => container.replaceChildren();
   signal.addEventListener("abort", onAbort);
@@ -37,7 +49,7 @@ export function mountFinanceRail(
     getScrollEl: () => scroll,
     dispose: () => {
       signal.removeEventListener("abort", onAbort);
-      disposeComposer();
+      disposeAdd();
       disposeAudit();
       container.replaceChildren();
     },

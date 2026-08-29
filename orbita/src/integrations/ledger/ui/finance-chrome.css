@@ -26,9 +26,26 @@
   overflow: hidden;
 }
 
+.admin-content:has(.ledger-page.is-finance-detail) .ledger-app {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+
 .ledger-page.is-finance-detail > .finance-chrome-topbar,
 .ledger-page.is-finance-detail > .ledger-page-topbar {
-  --finance-topbar-tail: 14px;
+  padding-left: 0;
+}
+
+.ledger-page.is-finance-detail > .ledger-page-stage {
+  max-width: var(--ledger-page-max, 1280px);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ledger-page.is-finance-detail > .finance-chrome-topbar,
+.ledger-page.is-finance-detail > .ledger-page-topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -39,7 +56,7 @@
   border: none;
   border-radius: 0;
   background: var(--ledger-bg);
-  padding: 8px 12px 0;
+  padding: 8px 12px;
   margin-bottom: 0;
   gap: 8px;
   overflow: visible;
@@ -56,51 +73,14 @@
   color: var(--ledger-text);
 }
 
-.ledger-page.is-finance-detail > .finance-chrome-topbar::after,
-.ledger-page.is-finance-detail > .ledger-page-topbar::after {
-  content: "";
-  display: block;
-  flex: 0 0 100%;
-  width: 100%;
-  height: var(--finance-topbar-tail);
-  margin-top: 8px;
-  order: 100;
-  background: var(--ledger-bg);
-  box-shadow: inset 0 1px 0 var(--ledger-border);
-}
-
 .finance-topbar-filters {
-  display: flex;
-  align-items: center;
-  flex: 1 1 auto;
-  min-width: 0;
-  justify-content: center;
-  padding-right: clamp(48px, 9%, 120px);
-}
-
-.ledger-page.is-finance-detail .ledger-page-title {
-  flex: 0 1 auto;
-  display: flex;
-  align-items: center;
-  height: 32px;
-  margin: 0;
-  padding: 0;
-  font-family: var(--font-finance-chrome, var(--font-finance, var(--font-base)));
-  font-weight: var(--font-finance-chrome-weight, 700);
-  font-size: inherit;
-  line-height: 1.2;
-  color: var(--ledger-text);
+  display: none;
 }
 
 .ledger-page.is-finance-detail .ledger-page-back,
-.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-btn,
-.ledger-page.is-finance-detail .finance-chrome-filter-inner .finance-type-filter-trigger,
-.ledger-page.is-finance-detail .finance-filter-clear-btn,
+.ledger-page.is-finance-detail .finance-topbar-title-btn,
 .ledger-page.is-finance-detail .ledger-page-topbar-actions :is(
-  .ledger-page-filter-btn,
-  .ledger-page-import-btn,
-  .ledger-page-save,
-  .save-btn,
+  .save-btn.save-unedited,
   .ledger-page-rail-toggle
 ) {
   box-sizing: border-box;
@@ -108,8 +88,8 @@
   min-height: 32px;
   border: none;
   border-radius: var(--finance-control-radius, 8px);
-  background: var(--finance-topbar-tab-bg);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: transparent;
+  box-shadow: none;
   color: var(--ledger-text);
   font: inherit;
 }
@@ -121,24 +101,143 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: var(--ledger-muted);
+}
+
+.ledger-page.is-finance-detail .finance-topbar-title-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  font-family: var(--font-finance-chrome, var(--font-finance, var(--font-base)));
+  font-weight: var(--font-finance-chrome-weight, 700);
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .save-btn.save-unedited,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn:not(.is-active),
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle {
+  color: var(--ledger-muted);
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-height: 32px;
+  min-width: 88px;
+  margin-right: 6px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--finance-control-radius, 8px);
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--ledger-muted);
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn:disabled {
+  cursor: default;
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn.is-active {
+  background: #e5e7eb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  color: var(--ledger-text);
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn.is-active:hover:not(:disabled),
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn.is-active:focus-visible {
+  background: #d1d5db;
+  color: var(--ledger-text);
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle {
+  box-sizing: border-box;
+  flex: 0 0 32px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  margin-right: 10px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* An outlined glyph reads darker than the adjacent disabled save label. Blend it
+     toward the chrome so both controls have the same idle visual weight. */
+  color: color-mix(in srgb, var(--ledger-muted) 72%, var(--ledger-surface-opaque, #fff));
+}
+
+.ledger-page.is-finance-detail .ledger-page-rail-toggle svg,
+.ledger-page.is-finance-detail.is-rail-collapsed .ledger-page-rail-toggle svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  /* Keep this structural control at the same quiet visual level as “保存”. */
+  color: #7b8493;
+  transform: translateY(1px);
+  transition: none;
 }
 
 .ledger-page.is-finance-detail .ledger-page-back:hover,
-.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-btn:hover,
-.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-btn.is-open,
+.ledger-page.is-finance-detail .ledger-page-back:focus-visible,
+.ledger-page.is-finance-detail .finance-topbar-title-btn:hover,
+.ledger-page.is-finance-detail .finance-topbar-title-btn:focus-visible,
+.ledger-page.is-finance-detail .finance-topbar-title-btn.is-search-open,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .save-btn.save-unedited:hover:not(:disabled),
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .save-btn.save-unedited:focus-visible,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle:hover,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle:focus-visible {
+  background: var(--ledger-hover);
+  box-shadow: none;
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn.is-active:hover:not(:disabled),
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn.is-active:focus-visible {
+  background: #d1d5db;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.ledger-page.is-finance-detail .ledger-page-back:hover,
+.ledger-page.is-finance-detail .ledger-page-back:focus-visible,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .save-btn.save-unedited:hover:not(:disabled),
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .save-btn.save-unedited:focus-visible,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn.is-active:hover:not(:disabled),
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .finance-detail-discard-btn.is-active:focus-visible,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle:hover,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle:focus-visible {
+  color: var(--ledger-text);
+}
+
+/* Keep the rail control visibly interactive even though the general topbar
+   hover rule is intentionally shared with the unedited save label. */
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle[aria-expanded="true"] {
+  background-color: #e8edf3;
+}
+
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle:hover,
+.ledger-page.is-finance-detail .ledger-page-topbar-actions .ledger-page-rail-toggle:focus-visible {
+  background-color: #eef2f6;
+}
+
+.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-trigger:hover,
+.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-trigger.is-open,
 .ledger-page.is-finance-detail .finance-chrome-filter-inner .finance-type-filter-trigger:hover,
 .ledger-page.is-finance-detail .finance-chrome-filter-inner .finance-type-filter-trigger.is-open,
-.ledger-page.is-finance-detail .finance-filter-clear-btn:hover,
-.ledger-page.is-finance-detail .ledger-page-topbar-actions :is(
-  .ledger-page-filter-btn,
-  .ledger-page-import-btn,
-  .ledger-page-rail-toggle
-):hover {
+.ledger-page.is-finance-detail .finance-filter-clear-btn:hover {
   background: var(--ledger-hover);
 }
 
 .ledger-page.is-finance-detail .ledger-page-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .finance-topbar-filters .finance-chrome-filter-inner {
@@ -168,14 +267,14 @@
   color: var(--ledger-muted);
 }
 
-.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-btn,
+.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-trigger,
 .ledger-page.is-finance-detail .finance-chrome-filter-inner .finance-type-filter-trigger {
   display: inline-flex;
   align-items: center;
   padding: 0 10px;
 }
 
-.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker.is-compact .orbita-date-picker-btn {
+.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker.is-compact .orbita-date-picker-input {
   font-size: inherit;
 }
 
@@ -290,7 +389,7 @@
   background-color: transparent;
 }
 
-.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-btn.is-open {
+.ledger-page.is-finance-detail .finance-chrome-filter-inner .orbita-date-picker-trigger.is-open {
   background-color: var(--ledger-hover);
 }
 

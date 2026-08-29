@@ -31,7 +31,9 @@ mod zotero;
 fn show_main_window(app: &tauri::AppHandle) {
     if let Some(win) = app.get_webview_window("main") {
         window_shell::attach_to_taskbar(&win);
-        let _ = window_shell::repair_window(&win, true);
+        if let Err(err) = window_shell::repair_window(&win, true) {
+            eprintln!("[orbita window] repair_window on tray show failed: {err}");
+        }
     }
 }
 
@@ -52,7 +54,9 @@ pub fn run() {
             tauri_plugin_frame::FramePluginBuilder::new()
                 .titlebar_height(32)
                 .button_width(46)
-                .snap_overlay(true)
+                .snap_overlay(false)
+                .button_hover_bg("#eef0f4")
+                .close_hover_bg("#dc2626")
                 .build(),
         )
         .setup(|app| {
@@ -63,15 +67,8 @@ pub fn run() {
             let _ = win.set_background_color(Some(Color(0, 0, 0, 0)));
             let _ = win.set_skip_taskbar(false);
             let _ = win.set_decorations(false);
-            window_shell::fit_work_area(&win)?;
             window_shell::fix_transparent_chrome(&win);
             window_shell::bring_to_front(&win);
-            let win_chrome = win.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(std::time::Duration::from_millis(200));
-                let _ = window_shell::fit_work_area(&win_chrome);
-                window_shell::fix_transparent_chrome(&win_chrome);
-            });
             let show_item = MenuItem::with_id(app, "tray-show", "显示 Orbita", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "tray-quit", "退出", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&show_item, &quit_item])?;
@@ -118,7 +115,9 @@ pub fn run() {
                             .unwrap()
                             .map(|t| t.elapsed() >= Duration::from_secs(180))
                             .unwrap_or(false);
-                        let _ = window_shell::repair_window(&win_for_focus, reload);
+                        if let Err(err) = window_shell::repair_window(&win_for_focus, reload) {
+                            eprintln!("[orbita window] repair_window on focus failed: {err}");
+                        }
                         *blur_at.lock().unwrap() = None;
                     }
                     _ => {}
@@ -210,7 +209,12 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run(|_app, event| {
+        .run(|app, event| {
+            if matches!(event, RunEvent::Ready) {
+                if let Some(win) = app.get_webview_window("main") {
+                    window_shell::schedule_deferred_fit_work_area(win);
+                }
+            }
             if matches!(event, RunEvent::Exit) {
                 ledger_sidecar::stop_sidecar();
             }

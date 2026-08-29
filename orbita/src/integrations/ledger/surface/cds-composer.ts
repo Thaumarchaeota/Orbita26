@@ -1,12 +1,4 @@
 import {
-  ACTION_SUCCESS_MS,
-  clearActionMotion,
-  ensureActionButton,
-  playActionError,
-  playActionSuccess,
-  withActionPending,
-} from "../../../ui/action-motion";
-import {
   DEFAULT_CURRENCY,
   REMARK_MAX_LENGTH,
 } from "../constants";
@@ -19,14 +11,14 @@ import {
 } from "../domain/account-validate";
 import { buildPostingsFromSimple } from "../domain/entry";
 import { mountDatePicker, type DatePickerHandle } from "../../../ui/date-picker";
-import { mountAccountPicker, type AccountPickerHandle } from "../ui/account-picker";
+import { mountTimePicker, type TimePickerHandle } from "../../../ui/time-picker";
+import { mountAccountSelect, type AccountSelectHandle } from "../ui/account-select";
 import { mountCdsAdvancedComposer } from "./cds-composer-advanced";
 import { getTagsFromBox, initTagInput, setTagsInBox } from "./cds-tag-input";
 import { parseDecimalInput } from "../domain/field-validate";
 import { upsertTxnTimeMetadata, validateTxnTimeInput } from "../domain/txn-time";
-import { createTxnTimeInput } from "./cds-editing";
 import type { AccountGroup, Entry } from "../types";
-import { formatTags, sleep, todayIso } from "../utils";
+import { formatTags } from "../utils";
 import type { CardDetailStore } from "./types";
 import "./composer-shell.css";
 
@@ -68,6 +60,16 @@ const TYPE_CONFIG: Record<
   },
 };
 
+export type CdsComposerFormHandle = {
+  isDirty: () => boolean;
+  setPrefillDate: (date: string) => void;
+  submit: () => Promise<"ok" | "error">;
+  resetForContinue: () => void;
+  resetAll: () => void;
+  focus: () => void;
+  dispose: () => void;
+};
+
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className?: string,
@@ -85,21 +87,18 @@ function field(labelText: string, control: HTMLElement, extraClass = ""): HTMLEl
   return wrap;
 }
 
-/** Phase C Composer — dispatches create-transaction only; never writes bean. */
-export function mountCdsComposer(
+/** Phase C Composer form — dispatches create-transaction only; never writes bean. */
+export function mountCdsComposerForm(
   container: HTMLElement,
   store: CardDetailStore,
   signal: AbortSignal,
-): () => void {
+): CdsComposerFormHandle {
   let activeType: EntryType = "expense";
   let activeTab: ComposerTab = "expense";
-  let submitAnimating = false;
+  let dirty = false;
 
   const root = el("div", "cds-composer");
   root.setAttribute("data-role", "composer-shell");
-
-  const title = el("h2", "cds-composer-title");
-  title.textContent = "记一笔";
 
   const typeSwitch = el("div", "cds-composer-type-switch");
   typeSwitch.setAttribute("data-role", "composer-type-switch");
@@ -149,9 +148,9 @@ export function mountCdsComposer(
   amountWrap.append(amountInput, currencyInput);
 
   const dateMount = el("div", "cds-composer-picker cds-composer-date-mount");
-  const timeInput = createTxnTimeInput("", "cds-composer-input cds-composer-time");
+  const timeMount = el("div", "cds-composer-time-mount");
   const dateTimeWrap = el("div", "cds-composer-date-time");
-  dateTimeWrap.append(dateMount, timeInput);
+  dateTimeWrap.append(dateMount, timeMount);
 
   amountDateRow.append(
     field("金额", amountWrap, "cds-composer-field-amount"),
@@ -186,18 +185,23 @@ export function mountCdsComposer(
   const errorEl = el("p", "cds-composer-error");
   errorEl.hidden = true;
 
-  const submit = el("button", "cds-composer-submit orbita-action-btn");
-  submit.type = "button";
-  submit.textContent = "记录";
-
-  root.append(title, typeSwitch, simpleSection, advancedSection, errorEl, submit);
+  root.append(typeSwitch, simpleSection, advancedSection, errorEl);
   container.replaceChildren(root);
 
-  let categoryPicker: AccountPickerHandle;
-  let accountPicker: AccountPickerHandle;
+  let categoryPicker: AccountSelectHandle;
+  let accountPicker: AccountSelectHandle;
   let datePicker: DatePickerHandle;
+  let timePicker: TimePickerHandle;
   const advancedComposer = mountCdsAdvancedComposer(advancedMount, signal);
   initTagInput(tagField, tagBox, signal);
+
+  function markDirty(): void {
+    dirty = true;
+  }
+
+  function clearDirty(): void {
+    dirty = false;
+  }
 
   function updateTypeSlider(): void {
     const index = TAB_ORDER.indexOf(activeTab);
@@ -212,13 +216,6 @@ export function mountCdsComposer(
   function clearError(): void {
     errorEl.hidden = true;
     errorEl.textContent = "";
-  }
-
-  function resetSubmitBtn(): void {
-    clearActionMotion(submit);
-    submit.textContent = "记录";
-    submitAnimating = false;
-    submit.disabled = false;
   }
 
   function syncAdvancedGuide(): void {
@@ -263,7 +260,6 @@ export function mountCdsComposer(
     if (tab === "advanced") {
       setSectionVisible(simpleSection, false);
       setSectionVisible(advancedSection, true);
-      title.textContent = "高级记账";
       syncAdvancedGuide();
       return;
     }
@@ -271,17 +267,15 @@ export function mountCdsComposer(
     setSectionVisible(advancedSection, false);
     activeType = tab;
     switchType(tab);
-    title.textContent = TYPE_CONFIG[tab].title;
     syncAdvancedGuide();
   }
 
   function switchType(type: EntryType): void {
     activeType = type;
     const cfg = TYPE_CONFIG[type];
-    if (activeTab !== "advanced") title.textContent = cfg.title;
     categoryLabel.textContent = cfg.label1;
     accountLabel.textContent = cfg.label2;
-    categoryPicker.setGroups(cfg.categoryGroup);
+    categoryPicker.setGroups([cfg.categoryGroup]);
     categoryPicker.setValue("");
     const accountGroups =
       type === "transfer"
@@ -292,113 +286,132 @@ export function mountCdsComposer(
     syncAdvancedGuide();
   }
 
-  categoryPicker = mountAccountPicker(categoryMount, {
-    groups: TYPE_CONFIG.expense.categoryGroup,
+  categoryPicker = mountAccountSelect(categoryMount, {
+    groups: [TYPE_CONFIG.expense.categoryGroup],
+    displayMode: "default",
     placeholder: "请选择",
-    onChange: syncSimpleCurrency,
+    onChange: () => {
+      markDirty();
+      syncSimpleCurrency();
+    },
   });
-  accountPicker = mountAccountPicker(accountMount, {
+  accountPicker = mountAccountSelect(accountMount, {
     groups: TYPE_CONFIG.expense.accountGroup,
+    displayMode: "default",
     placeholder: "请选择",
-    onChange: syncSimpleCurrency,
+    onChange: () => {
+      markDirty();
+      syncSimpleCurrency();
+    },
   });
-  datePicker = mountDatePicker(dateMount, { value: todayIso(), compact: true });
+  datePicker = mountDatePicker(dateMount, { value: "", compact: true, onChange: markDirty });
+  timePicker = mountTimePicker(timeMount, { placeholder: "时间", onChange: markDirty });
 
   for (const [tab, btn] of tabBtns) {
-    btn.addEventListener("click", () => switchTab(tab), { signal });
+    btn.addEventListener(
+      "click",
+      () => {
+        markDirty();
+        switchTab(tab);
+      },
+      { signal },
+    );
   }
-  guideBtn.addEventListener("click", () => switchTab("advanced"), { signal });
+  guideBtn.addEventListener(
+    "click",
+    () => {
+      markDirty();
+      switchTab("advanced");
+    },
+    { signal },
+  );
 
-  async function handleSubmit(): Promise<void> {
-    if (submitAnimating) return;
+  for (const input of [amountInput, currencyInput, remarkInput]) {
+    input.addEventListener("input", markDirty, { signal });
+  }
+  tagField.addEventListener("input", markDirty, { signal });
+  tagBox.addEventListener("click", markDirty, { signal });
+
+  async function submit(): Promise<"ok" | "error"> {
     const phase = store.getSnapshot().savePhase;
-    if (phase === "checking" || phase === "submitting") return;
+    if (phase === "checking" || phase === "submitting") return "error";
     clearError();
 
     if (activeTab === "advanced") {
       const err = advancedComposer.validate();
       if (err) {
         showError(err);
-        return;
+        return "error";
       }
       const draft = advancedComposer.getDraft();
-      submitAnimating = true;
-      const start = Date.now();
       try {
-        await withActionPending(submit, { label: "记录中…" }, () => {
-          store.dispatch({
-            type: "create-transaction",
-            draft: {
-              type: (draft.type || "") as Entry["type"],
-              date: draft.date,
-              flag: draft.flag,
-              payee: draft.payee,
-              remark: draft.remark,
-              tags: formatTags(draft.tags),
-              postings: draft.postings,
-              metadata: upsertTxnTimeMetadata([], draft.date, draft.time),
-            },
-          });
-          advancedComposer.reset();
+        store.dispatch({
+          type: "create-transaction",
+          draft: {
+            type: (draft.type || "") as Entry["type"],
+            date: draft.date,
+            flag: draft.flag,
+            payee: draft.payee,
+            remark: draft.remark,
+            tags: formatTags(draft.tags),
+            postings: draft.postings,
+            metadata: upsertTxnTimeMetadata([], draft.date, draft.time),
+          },
         });
-        await playActionSuccess(submit, {
-          minMs: Math.max(0, ACTION_SUCCESS_MS - (Date.now() - start)),
-          onDone: () => resetSubmitBtn(),
-        });
+        return "ok";
       } catch (err) {
         showError(err instanceof Error ? err.message : "记录失败");
-        await playActionError(submit);
-        resetSubmitBtn();
+        return "error";
       }
-      return;
     }
 
     const dateValue = datePicker.getValue();
     if (!dateValue) {
       showError("请填写日期");
-      return;
+      return "error";
     }
-    const timeErr = validateTxnTimeInput(timeInput.value);
+    const timeValue = timePicker.getValue();
+    const timeErr = validateTxnTimeInput(timeValue);
     if (timeErr) {
       showError(timeErr);
-      return;
+      return "error";
     }
     const raw = amountInput.value.trim();
     if (!raw) {
       showError("请填写金额");
-      return;
+      return "error";
     }
     const amountParsed = parseDecimalInput(raw);
     if (!amountParsed.ok) {
       showError(amountParsed.message);
-      return;
+      return "error";
     }
     if (amountParsed.value <= 0) {
       showError("金额必须大于 0");
-      return;
+      return "error";
     }
     const amount = amountParsed.value;
     const selectedCategory = categoryPicker.getValue();
     if (!selectedCategory) {
       showError(`请选择${TYPE_CONFIG[activeType].label1}`);
-      return;
+      return "error";
     }
     const accountValue = accountPicker.getValue();
     if (!accountValue) {
       showError(`请选择${TYPE_CONFIG[activeType].label2}`);
-      return;
+      return "error";
     }
     if (activeType !== "transfer" && selectedCategory === accountValue) {
       showError("分类与账户不能相同");
-      return;
+      return "error";
     }
     if (activeType === "transfer" && selectedCategory === accountValue) {
       showError("发起账户与接收账户不能相同");
-      return;
+      return "error";
     }
     if (simpleModeNeedsAdvanced(selectedCategory, accountValue)) {
       showError("所选账户无共同币种，请切换到高级");
-      return;
+      return "error";
     }
 
     const currency = currencyInput.value.trim() || DEFAULT_CURRENCY;
@@ -406,12 +419,12 @@ export function mountCdsComposer(
     const e1 = validateOpenCurrency(index.findRecord(selectedCategory), currency);
     if (e1) {
       showError(e1);
-      return;
+      return "error";
     }
     const e2 = validateOpenCurrency(index.findRecord(accountValue), currency);
     if (e2) {
       showError(e2);
-      return;
+      return "error";
     }
 
     const remark = remarkInput.value.trim().slice(0, REMARK_MAX_LENGTH);
@@ -424,40 +437,52 @@ export function mountCdsComposer(
       currency,
     );
 
-    submitAnimating = true;
-    const start = Date.now();
     try {
-      await withActionPending(submit, { label: "记录中…" }, () => {
-        store.dispatch({
-          type: "create-transaction",
-            draft: {
-              type: activeType,
-              date: dateValue,
-              flag: "*",
-              payee: "",
-              remark,
-              tags,
-              postings,
-              metadata: upsertTxnTimeMetadata([], dateValue, timeInput.value),
-            },
-        });
-        amountInput.value = "";
-        remarkInput.value = "";
-        timeInput.value = "";
-        setTagsInBox(tagBox, tagField, []);
+      store.dispatch({
+        type: "create-transaction",
+        draft: {
+          type: activeType,
+          date: dateValue,
+          flag: "*",
+          payee: "",
+          remark,
+          tags,
+          postings,
+          metadata: upsertTxnTimeMetadata([], dateValue, timeValue),
+        },
       });
-      await playActionSuccess(submit, {
-        minMs: Math.max(0, ACTION_SUCCESS_MS - (Date.now() - start)),
-        onDone: () => resetSubmitBtn(),
-      });
+      return "ok";
     } catch (err) {
       showError(err instanceof Error ? err.message : "记录失败");
-      await playActionError(submit);
-      resetSubmitBtn();
+      return "error";
     }
   }
 
-  submit.addEventListener("click", () => void handleSubmit(), { signal });
+  function resetForContinue(): void {
+    clearError();
+    if (activeTab === "advanced") {
+      advancedComposer.resetForContinue();
+    } else {
+      amountInput.value = "";
+      remarkInput.value = "";
+      setTagsInBox(tagBox, tagField, []);
+    }
+    clearDirty();
+  }
+
+  function resetAll(): void {
+    clearError();
+    switchTab("expense");
+    amountInput.value = "";
+    remarkInput.value = "";
+    currencyInput.value = DEFAULT_CURRENCY;
+    timePicker.setValue("");
+    setTagsInBox(tagBox, tagField, []);
+    categoryPicker.setValue("");
+    accountPicker.setValue("");
+    advancedComposer.reset();
+    clearDirty();
+  }
 
   switchTab("expense");
   updateTypeSlider();
@@ -465,8 +490,20 @@ export function mountCdsComposer(
   const onAbort = () => container.replaceChildren();
   signal.addEventListener("abort", onAbort);
 
-  return () => {
-    signal.removeEventListener("abort", onAbort);
-    container.replaceChildren();
+  return {
+    isDirty: () => dirty,
+    setPrefillDate: (date) => {
+      datePicker.setValue(date);
+      advancedComposer.setDate(date);
+    },
+    submit,
+    resetForContinue,
+    resetAll,
+    focus: () => amountInput.focus(),
+    dispose: () => {
+      signal.removeEventListener("abort", onAbort);
+      timePicker.dispose();
+      container.replaceChildren();
+    },
   };
 }

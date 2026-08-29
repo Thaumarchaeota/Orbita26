@@ -325,6 +325,24 @@ export function isLedgerDirty(): boolean {
   return !ledgerStateEqual(getDetailEntries(), baseline);
 }
 
+export function revertDetailToBaseline(): StoreMutationResult {
+  const blocked = rejectIfBlocked();
+  if (blocked) return blocked;
+  if (!isLedgerDirty()) return { ok: true };
+
+  const staticItems = detailItems.filter((item) => !isTransactionItem(item));
+  detailItems = [...staticItems, ...cloneEntries(baseline)];
+  sortDetailEntries(detailItems);
+  confirmSnapshot = null;
+  clearValidationSession();
+  postCommitRefreshFailed = false;
+  bumpWorkGeneration();
+  savePhase = "unedited";
+  notifyMutated();
+  notifySavePhase();
+  return { ok: true };
+}
+
 export function needsMore(
   resp: EntriesResponse,
   dateFrom: string,

@@ -88,7 +88,7 @@ export function mountFinancePage(
             ${options.showImport ? `<button type="button" class="ledger-page-import-btn" id="ledger-page-import-btn">导入</button>` : ""}
             ${options.showGlobalSave ? `<button type="button" id="save-btn" class="save-btn save-unedited ledger-page-save orbita-action-btn" disabled>保存</button>` : ""}
             ${options.showRail ? `<button type="button" class="ledger-page-rail-toggle" id="ledger-page-rail-toggle" aria-label="收起侧边栏" aria-expanded="true">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3" width="19" height="18" rx="1.5"/><path d="M15.5 3v18"/></svg>
             </button>` : ""}
           </div>
         </header>
@@ -108,7 +108,7 @@ export function mountFinancePage(
             ${options.showImport ? `<button type="button" class="ledger-page-import-btn" id="ledger-page-import-btn">导入</button>` : ""}
             ${options.showGlobalSave ? `<button type="button" id="save-btn" class="save-btn save-unedited ledger-page-save orbita-action-btn" disabled>保存</button>` : ""}
             ${options.showRail ? `<button type="button" class="ledger-page-rail-toggle" id="ledger-page-rail-toggle" aria-label="收起侧边栏" aria-expanded="true">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="3" width="19" height="18" rx="1.5"/><path d="M15.5 3v18"/></svg>
             </button>` : ""}
           </div>
         </header>

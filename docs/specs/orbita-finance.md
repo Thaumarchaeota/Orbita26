@@ -155,6 +155,12 @@ edited → checking (POST /api/validate) → confirming
 
 分类只能修改 Expenses / Income 的 `name` 与 `label` 注释；`label_path`、`brief` 为派生显示，不能新增 / 删除 open 行。账户只读展示 Assets / Liabilities，过滤 Equity。CSV 固定 10 列英文表头（含可选 `time`），逐行报错并校验账户；合法内容仅作为内存 Entry staging，必须交给同一 Finance Commit，不得直接写 bean。其 `time` 与 `seq` 排序契约同整理页；真实 Tauri 导入→保存→重开验收仍待完成。
 
+### 工作台、筛选与校验边界
+
+整理页使用共同顶栏与占位式 360px 右栏；右栏自上而下为筛选、添加和校验，独立滚动且不以覆盖主列代替布局。不同筛选维度取 AND；账户与标签各自在 OR / AND 模式下计算。类型可全部取消并显示真实空结果；日期范围首击即时成为单日、反向第二击重定起点。搜索只在当前筛选结果上查找业务字段与币种，不改变集合、排序或滚动，也不搜索 Beancount 语法、内部 metadata、日期或时间。
+
+校验使用精确单选的真实账户目标；无日期显示当前余额，有日期显示期初、流入、流出、净变动、期末与笔数。多币种不推算汇率；`@@` 使用其明确金额，缺 `@@` 保留原币。Composer 仅改变入口，仍经 Candidate → Commit；所有关闭路径保持草稿保护。预设只保存筛选状态，不写 `.bean`，且需要原子写入、revision/ETag 冲突保护与未知 schema 防覆盖。
+
 ## 4. Finance Service API 与模型
 
 Service 是 FastAPI loopback API，不提供旧静态站根路由。

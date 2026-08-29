@@ -1,0 +1,52 @@
+.orbita-tag-picker-trigger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--ledger-surface, #fff);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.orbita-tag-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.orbita-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--ledger-hover, #f3f4f6);
+  font-size: 12px;
+}
+
+.orbita-tag-chip-remove {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ledger-muted, #6b7280);
+}
+
+.orbita-tag-chip-more,
+.orbita-tag-picker-placeholder {
+  color: var(--ledger-muted, #6b7280);
+  font-size: 13px;
+}
+
+.orbita-tag-picker-placeholder[hidden] {
+  display: none;
+}

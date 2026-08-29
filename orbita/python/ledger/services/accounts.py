@@ -1,7 +1,7 @@
 ﻿from ledger.config import ACCOUNT_FILE, CATEGORY_FILE
 from ledger.services.open_line import OPEN_RE, group_for_name, parse_open_line
 
-GROUP_KEYS = ("expenses", "income", "assets", "liabilities")
+GROUP_KEYS = ("expenses", "income", "assets", "liabilities", "equity")
 
 
 def _read_file_opens(path, source_file: str) -> list[dict]:

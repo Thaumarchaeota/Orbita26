@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Entry } from "../types";
 import { parseDecimalInput, validateInlinePatch, buildValidatedPatch } from "./field-validate";
+import { setAccounts } from "../state/accounts";
 
 function balancedEntry(): Entry {
   return {
@@ -54,6 +55,18 @@ describe("validateInlinePatch", () => {
     const entry = balancedEntry();
     const patch = { field: "account" as const, postingIndex: 0, value: "No:Such" };
     expect(validateInlinePatch(entry, patch)).toMatch(/不存在/);
+  });
+
+  it("accepts a declared Equity account in an inline posting edit", () => {
+    setAccounts({
+      assets: [], liabilities: [], expenses: [], income: [],
+      equity: [{
+        name: "Equity:Opening", label: "期初", label_path: ["Equity", "Opening"], brief: "",
+        open_date: "", extra: "", id: "equity-1", source_file: "account.bean", source_line: 1,
+      }],
+    });
+    const entry = balancedEntry();
+    expect(validateInlinePatch(entry, { field: "account", postingIndex: 1, value: "Equity:Opening" })).toBeNull();
   });
 
   it("rejects illegal time and accepts empty or HH:mm", () => {

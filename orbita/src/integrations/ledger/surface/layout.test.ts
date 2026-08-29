@@ -11,7 +11,7 @@ const surfaceDir = dirname(fileURLToPath(import.meta.url));
 const STYLE_FILES = [
   "card-detail-surface.css",
   "composer-shell.css",
-  "balance-audit-shell.css",
+  "finance-rail-audit.css",
   "finance-rail.css",
 ];
 

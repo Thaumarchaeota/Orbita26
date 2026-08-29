@@ -35,6 +35,31 @@ pub fn fit_work_area(window: &WebviewWindow) -> Result<(), String> {
     Ok(())
 }
 
+const DEFERRED_FIT_DELAYS_MS: [u64; 2] = [150, 400];
+
+/// After the webview is ready, try fitting to the work area without blocking startup.
+pub fn schedule_deferred_fit_work_area(window: WebviewWindow) {
+    std::thread::spawn(move || {
+        for (attempt, delay_ms) in DEFERRED_FIT_DELAYS_MS.iter().enumerate() {
+            std::thread::sleep(Duration::from_millis(*delay_ms));
+            match fit_work_area(&window) {
+                Ok(()) => {
+                    fix_transparent_chrome(&window);
+                    return;
+                }
+                Err(err) => eprintln!(
+                    "[orbita window] deferred fit_work_area attempt {} failed: {}",
+                    attempt + 1,
+                    err
+                ),
+            }
+        }
+        eprintln!(
+            "[orbita window] deferred fit_work_area gave up; keeping configured window size"
+        );
+    });
+}
+
 pub fn attach_to_taskbar(window: &WebviewWindow) {
     let _ = window.set_skip_taskbar(false);
 }
@@ -47,9 +72,10 @@ pub fn detach_from_taskbar(window: &WebviewWindow) {
 pub fn repair_window_show(window: &WebviewWindow) -> Result<(), String> {
     let _ = window.unminimize();
     let _ = window.show();
-    let _ = fit_work_area(window);
     fix_transparent_chrome(window);
     bring_to_front(window);
+    // Monitor queries can fail while a restored WebView is becoming ready; keep recovery non-fatal.
+    schedule_deferred_fit_work_area(window.clone());
     Ok(())
 }
 

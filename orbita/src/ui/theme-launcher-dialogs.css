@@ -8,6 +8,18 @@
   --orbita-popover-z: 205;
   --admin-radius-sm: 6px;
   --finance-control-radius: 8px;
+  --admin-accent: #5b96d1;
+  --admin-accent-hover: #4a84bf;
+  --admin-accent-bg: #ecf4fa;
+  --ledger-accent: var(--admin-accent);
+  --ledger-accent-hover: var(--admin-accent-hover);
+  --ledger-accent-bg: var(--admin-accent-bg);
+  --ledger-text: #374151;
+  --ledger-muted: #6b7280;
+  --ledger-hover: #f3f4f6;
+  --ledger-border: #d1d5db;
+  --ledger-surface: #fff;
+  --ledger-surface-opaque: #fff;
   pointer-events: none;
 }
 #orbita-modal-root > .dialog-backdrop.is-open {

@@ -59,23 +59,55 @@
   margin-bottom: 0;
 }
 
-.cds-date-pin {
+.cds-date-pin-row {
   --cds-date-pin-fade-height: 14px;
   --cds-date-pin-bg: var(--ledger-bg, var(--admin-bg, var(--admin-chrome, #f8f9fb)));
   position: sticky;
   top: 0;
   z-index: var(--finance-layer-sticky-pin);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   box-sizing: border-box;
   width: 100%;
-  margin: 0;
-  padding: 6px var(--cds-gutter);
-  line-height: 1.3;
-  text-align: left;
-  color: var(--ledger-text);
+  padding: 6px var(--cds-gutter) 0;
   background-color: var(--cds-date-pin-bg);
 }
 
-.cds-date-pin::after {
+.cds-date-pin {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 0 6px;
+  line-height: 1.3;
+  text-align: left;
+  color: var(--ledger-text);
+}
+
+.cds-date-add {
+  flex: 0 0 auto;
+  width: auto;
+  height: auto;
+  margin: 0 0 6px;
+  padding: 0 2px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--ledger-muted) 72%, transparent);
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cds-date-add:hover {
+  border: none;
+  background: transparent;
+  color: var(--ledger-muted);
+}
+
+.cds-date-pin-row::after {
   content: "";
   position: absolute;
   left: 0;
@@ -304,7 +336,6 @@
 
 .cds-datetime-popover.orbita-popover-portal-item {
   position: fixed;
-  z-index: var(--orbita-popover-z, 10105);
 }
 
 .cds-datetime-popover-row {
@@ -319,38 +350,53 @@
   color: var(--ledger-muted);
 }
 
-.cds-datetime-popover-date-input,
-.cds-datetime-popover-time {
-  width: 100%;
+.cds-datetime-popover-date-mount {
+  min-width: 0;
+}
+
+.cds-datetime-popover-date-mount .orbita-date-picker-trigger {
   height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--cds-empty-border);
+  border: 1px solid var(--ledger-border, #e5e7eb);
   border-radius: var(--finance-control-radius, 8px);
   background: var(--ledger-bg);
-  color: var(--ledger-text);
-  font: inherit;
+}
+
+.cds-datetime-popover-date-mount .orbita-date-picker-input {
+  height: 100%;
+  padding: 0 8px;
   font-size: 13px;
+}
+
+.cds-datetime-popover-time-mount {
+  min-width: 0;
+}
+
+.cds-datetime-popover-time-mount .orbita-time-picker,
+.cds-datetime-popover-time-mount .orbita-time-picker-trigger {
+  width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
-.cds-datetime-popover-date-input:hover,
-.cds-datetime-popover-date-input:focus,
-.cds-datetime-popover-date-input:focus-visible,
-.cds-datetime-popover-time:hover,
-.cds-datetime-popover-time:focus,
-.cds-datetime-popover-time:focus-visible {
-  border-color: color-mix(in srgb, var(--ledger-border) 92%, var(--ledger-text));
-  background: var(--ledger-hover);
-  outline: none;
+.cds-datetime-popover-time-mount .orbita-time-picker-trigger {
+  height: 32px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: var(--finance-control-radius, 8px);
+  background: var(--ledger-bg);
 }
 
-.cds-datetime-popover-time::-webkit-calendar-picker-indicator {
-  opacity: 0.55;
+.cds-datetime-popover-time-mount .orbita-time-picker-input {
+  height: 100%;
+  padding: 0 8px;
+  font-size: 13px;
+  color: var(--ledger-text);
 }
 
-.cds-datetime-popover-time-label {
-  font-size: 12px;
-  color: var(--ledger-muted);
+.cds-datetime-popover-time-mount .orbita-time-picker-chevron-btn {
+  height: 100%;
+  width: 30px;
+  min-height: 0;
+  border-radius: 0 var(--finance-control-radius, 8px) var(--finance-control-radius, 8px) 0;
 }
 
 .cds-datetime-popover-error {
@@ -544,7 +590,6 @@
     min-width 0.25s ease,
     padding 0.25s ease,
     background-color 0.2s ease,
-    color 0.2s ease,
     font-size 0.2s ease;
 }
 
@@ -577,10 +622,22 @@
   outline-color: #c06060;
 }
 
-.cds-field.is-editing,
-.cds-posting-account.is-editing {
+.cds-field.is-editing {
   border-color: var(--ledger-accent);
   background: var(--ledger-bg);
+}
+
+.cds-posting-account.is-editing {
+  border-color: transparent;
+  background: transparent;
+  padding: 0;
+  overflow: visible;
+}
+
+.cds-posting-account.is-editing .cds-edit-account-mount,
+.cds-posting-account.is-editing .orbita-account-select {
+  width: 100%;
+  min-width: 0;
 }
 
 .cds-edit-input,

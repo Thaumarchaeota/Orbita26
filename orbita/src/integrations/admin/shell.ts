@@ -5,7 +5,7 @@ import {
   runSidebarStripMotion,
 } from "../../ui/layout-flip";
 import { getSettings } from "../../core/settings";
-// Insight Host：cached destination 生命周期契约见 docs/plans/v0.0.17-insight-spec.md §4
+// Insight Host：cached destination 生命周期契约见 docs/SYSTEM.md「Insight Host」。
 import {
   DEFAULT_DESTINATION,
   loadPersistedDestination,

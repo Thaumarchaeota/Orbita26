@@ -1,7 +1,7 @@
 import type { AccountGroup, AccountRecord } from "../types";
 import { getAccountRecords, getAllAccountList } from "../state/accounts";
 
-const GROUP_KEYS: AccountGroup[] = ["expenses", "income", "assets", "liabilities"];
+const GROUP_KEYS: AccountGroup[] = ["expenses", "income", "assets", "liabilities", "equity"];
 
 export type AccountIndex = {
   allNames: Set<string>;
@@ -28,6 +28,7 @@ export function accountRootKind(name: string): AccountGroup | null {
   if (name.startsWith("Income:")) return "income";
   if (name.startsWith("Assets:")) return "assets";
   if (name.startsWith("Liabilities:")) return "liabilities";
+  if (name.startsWith("Equity:")) return "equity";
   return null;
 }
 

@@ -3,18 +3,18 @@ import { validateComposerPostings } from "../domain/composer-validate";
 import { parseDecimalInput, parseOptionalDecimalInput } from "../domain/field-validate";
 import type { Entry, Posting } from "../types";
 import { todayIso } from "../utils";
-import { mountAccountPicker, type AccountPickerHandle } from "../ui/account-picker";
+import { mountAccountSelect, type AccountSelectHandle } from "../ui/account-select";
 import { mountDatePicker, type DatePickerHandle } from "../../../ui/date-picker";
+import { mountTimePicker, type TimePickerHandle } from "../../../ui/time-picker";
 import { getTagsFromBox, initTagInput, setTagsInBox } from "./cds-tag-input";
-import { createTxnTimeInput } from "./cds-editing";
 import { validateTxnTimeInput } from "../domain/txn-time";
 
-const ALL_GROUPS = ["expenses", "income", "assets", "liabilities"] as const;
+const ALL_GROUPS = ["expenses", "income", "assets", "liabilities", "equity"] as const;
 const MIN_ROWS = 2;
 
 type PostingRow = {
   root: HTMLElement;
-  accountPicker: AccountPickerHandle;
+  accountPicker: AccountSelectHandle;
   amountEl: HTMLInputElement;
   currencyEl: HTMLInputElement;
   costAmountEl: HTMLInputElement;
@@ -37,6 +37,8 @@ export type AdvancedComposerHandle = {
   validate: () => string | null;
   getDraft: () => AdvancedDraft;
   reset: () => void;
+  resetForContinue: () => void;
+  setDate: (date: string) => void;
 };
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -92,9 +94,9 @@ export function mountCdsAdvancedComposer(
   flagTypeRow.append(labeledField("标记", flagEl), labeledField("类型", typeEl));
 
   const dateMount = el("div", "cds-composer-adv-date-mount");
-  const timeEl = createTxnTimeInput("", "cds-composer-adv-time");
+  const timeMount = el("div", "cds-composer-adv-time-mount");
   const dateTimeRow = el("div", "composer-adv-field-row");
-  dateTimeRow.append(labeledField("日期", dateMount), labeledField("时间", timeEl));
+  dateTimeRow.append(labeledField("日期", dateMount), labeledField("时间", timeMount));
 
   const remarkEl = el("input") as HTMLInputElement;
   remarkEl.maxLength = REMARK_MAX_LENGTH;
@@ -121,6 +123,7 @@ export function mountCdsAdvancedComposer(
   container.replaceChildren(form);
 
   const datePicker: DatePickerHandle = mountDatePicker(dateMount, { compact: true });
+  const timePicker: TimePickerHandle = mountTimePicker(timeMount, { placeholder: "时间" });
   initTagInput(tagField, tagBox, signal);
 
   const rows: PostingRow[] = [];
@@ -174,8 +177,9 @@ export function mountCdsAdvancedComposer(
     line.append(values, costs);
     root.append(top, line);
 
-    const accountPicker = mountAccountPicker(accountMount, {
+    const accountPicker = mountAccountSelect(accountMount, {
       groups: [...ALL_GROUPS],
+      displayMode: "admin",
       placeholder: "账户",
     });
 
@@ -249,7 +253,7 @@ export function mountCdsAdvancedComposer(
     validate(): string | null {
       const date = datePicker.getValue();
       if (!date) return "请填写日期";
-      const timeErr = validateTxnTimeInput(timeEl.value);
+      const timeErr = validateTxnTimeInput(timePicker.getValue());
       if (timeErr) return timeErr;
       const collected = collectPostings();
       if ("error" in collected) return collected.error;
@@ -262,7 +266,7 @@ export function mountCdsAdvancedComposer(
       const postings = "error" in collected ? [] : collected;
       return {
         date: datePicker.getValue(),
-        time: timeEl.value,
+        time: timePicker.getValue(),
         payee: payeeEl.value.trim(),
         remark: remarkEl.value.trim().slice(0, REMARK_MAX_LENGTH),
         flag: flagEl.value || "*",
@@ -278,7 +282,7 @@ export function mountCdsAdvancedComposer(
       remarkEl.value = "";
       setTagsInBox(tagBox, tagField, []);
       datePicker.setValue(todayIso());
-      timeEl.value = "";
+      timePicker.setValue("");
       while (rows.length > MIN_ROWS) {
         rows.pop()!.root.remove();
       }
@@ -291,6 +295,19 @@ export function mountCdsAdvancedComposer(
       }
       syncRemoveBtns();
       syncAddBtn();
+    },
+    resetForContinue(): void {
+      payeeEl.value = "";
+      remarkEl.value = "";
+      setTagsInBox(tagBox, tagField, []);
+      for (const row of rows) {
+        row.amountEl.value = "";
+        row.costAmountEl.value = "";
+        row.costCurrencyEl.value = "";
+      }
+    },
+    setDate(date: string): void {
+      datePicker.setValue(date);
     },
   };
 }

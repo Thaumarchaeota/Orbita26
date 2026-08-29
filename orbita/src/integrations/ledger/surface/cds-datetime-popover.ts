@@ -1,25 +1,10 @@
+import { mountDatePicker, type DatePickerHandle } from "../../../ui/date-picker";
 import { mountPopoverPortal } from "../../../ui/popover-portal";
+import { mountTimePicker, normalizeHhMm, type TimePickerHandle } from "../../../ui/time-picker";
 import { buildValidatedPatch } from "../domain/field-validate";
 import { displayTxnTime, normalizeTimeInput, validateTxnTimeInput } from "../domain/txn-time";
 import type { Entry } from "../types";
 import type { CardDetailStore } from "./types";
-
-function createTxnDateInput(value: string): HTMLInputElement {
-  const input = document.createElement("input");
-  input.type = "date";
-  input.className = "cds-datetime-popover-date-input";
-  if (value) input.value = value;
-  return input;
-}
-
-function createTxnTimeInput(value = ""): HTMLInputElement {
-  const input = document.createElement("input");
-  input.type = "time";
-  input.step = "60";
-  input.value = value;
-  input.className = "cds-datetime-popover-time";
-  return input;
-}
 
 export type TxnDateTimePopoverHandle = {
   commit: () => boolean;
@@ -31,6 +16,12 @@ function findEntry(store: CardDetailStore, id: string): Entry | undefined {
   const item = store.getSnapshot().items.find((e) => e.id === id);
   if (!item || item.kind === "pad" || item.kind === "balance") return undefined;
   return item as Entry;
+}
+
+function readTimePickerRaw(timePicker: TimePickerHandle): string {
+  const inputEl = timePicker.root.querySelector<HTMLInputElement>(".orbita-time-picker-input");
+  if (inputEl) return inputEl.value.trim();
+  return timePicker.getValue();
 }
 
 export function mountTxnDateTimePopover(options: {
@@ -56,16 +47,25 @@ export function mountTxnDateTimePopover(options: {
   const dateLabel = document.createElement("span");
   dateLabel.className = "cds-datetime-popover-label";
   dateLabel.textContent = "日期";
-  const dateInput = createTxnDateInput(entry.date);
-  dateRow.append(dateLabel, dateInput);
+  const dateMount = document.createElement("div");
+  dateMount.className = "cds-datetime-popover-date-mount";
+  const datePicker: DatePickerHandle = mountDatePicker(dateMount, {
+    value: entry.date,
+    compact: true,
+  });
+  dateRow.append(dateLabel, dateMount);
 
   const timeRow = document.createElement("div");
   timeRow.className = "cds-datetime-popover-row";
   const timeLabel = document.createElement("span");
   timeLabel.className = "cds-datetime-popover-label";
   timeLabel.textContent = "时间";
-  const timeInput = createTxnTimeInput(displayTxnTime(entry.metadata, entry.date));
-  timeRow.append(timeLabel, timeInput);
+  const timeMount = document.createElement("div");
+  timeMount.className = "cds-datetime-popover-time-mount";
+  const timePicker = mountTimePicker(timeMount, {
+    value: displayTxnTime(entry.metadata, entry.date),
+  });
+  timeRow.append(timeLabel, timeMount);
 
   const errorEl = document.createElement("p");
   errorEl.className = "cds-datetime-popover-error";
@@ -98,13 +98,15 @@ export function mountTxnDateTimePopover(options: {
     const current = findEntry(store, entryId);
     if (!current) return true;
 
-    const dateVal = dateInput.value.trim();
+    const dateVal = datePicker.getValue().trim();
     if (!dateVal) {
       showError("请选择日期");
       return false;
     }
 
-    const timeVal = normalizeTimeInput(timeInput.value);
+    const raw = readTimePickerRaw(timePicker);
+    const normalized = normalizeHhMm(raw);
+    const timeVal = normalized || (raw ? normalizeTimeInput(raw) : "");
     const timeErr = validateTxnTimeInput(timeVal);
     if (timeErr) {
       showError(timeErr);
@@ -144,6 +146,9 @@ export function mountTxnDateTimePopover(options: {
   const onFieldKeydown = (e: KeyboardEvent): void => {
     if (e.key === "Enter") {
       e.preventDefault();
+      // The shared picker otherwise normalizes/reverts invalid draft text before
+      // Finance can report its field-level validation error.
+      e.stopImmediatePropagation();
       commit();
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -151,8 +156,8 @@ export function mountTxnDateTimePopover(options: {
     }
   };
 
-  dateInput.addEventListener("keydown", onFieldKeydown, { signal });
-  timeInput.addEventListener("keydown", onFieldKeydown, { signal });
+  const timeInput = timePicker.root.querySelector<HTMLInputElement>(".orbita-time-picker-input")!;
+  timeInput.addEventListener("keydown", onFieldKeydown, { capture: true, signal });
 
   void portal.open();
   timeInput.focus();
@@ -163,6 +168,8 @@ export function mountTxnDateTimePopover(options: {
     dispose() {
       if (disposed) return;
       disposed = true;
+      datePicker.dispose();
+      timePicker.dispose();
       portal.dispose();
       anchor.classList.remove("is-datetime-open");
     },

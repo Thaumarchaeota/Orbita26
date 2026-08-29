@@ -13,6 +13,10 @@ Orbita 是一个 Tauri 桌面应用、一个可执行文件、两个界面：
 
 Panel 与 Insight 共享应用和数据，但不是彼此的加载入口。Insight 关闭的语义是隐藏并复用；新窗口、frame 或启动逻辑须遵循 `decisions/surfaces.md`。
 
+### Insight Host
+
+Insight Host 只拥有核心领域导航、缓存的领域 root、共享 chrome / modal 与生命周期；它不拥有领域数据或业务状态。当前 destination 固定为 Health、Journal、Finance、Work：普通切换只保存可恢复状态并 activate/deactivate、hide/show，保留 root；只有受控的 `dataDir` 切换才在领域 guard 通过后 dispose 并重建。Finance 仍独立拥有 Store、Commit、Service 连接和内部 keep-alive；Health、Journal、Work 目前仍是 placeholder。Insight 的显示不得等待 Finance Service。
+
 ## 2. 数据边界
 
 当前 `dataDir` 是实际数据根，同时包含：

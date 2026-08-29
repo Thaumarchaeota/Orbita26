@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test": "vitest run && node scripts/cds-scroll-chromium.mjs && node scripts/cds-motion-evidence.mjs",
+    "test": "powershell -NoProfile -ExecutionPolicy Bypass -File ..\\scripts\\test-session.ps1",
+    "test:run": "vitest run && node scripts/cds-scroll-chromium.mjs && node scripts/cds-motion-evidence.mjs",
     "test:chromium-scroll": "node scripts/cds-scroll-chromium.mjs"
   },
   "devDependencies": {

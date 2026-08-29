@@ -1,9 +1,6 @@
 import type { StripeKind } from "./stripe-kind";
 
-export type FilterableStripeKind = Exclude<
-  StripeKind,
-  "pad" | "balance"
->;
+export type FilterableStripeKind = StripeKind;
 
 export const ALL_FILTERABLE_STRIPE_KINDS: readonly FilterableStripeKind[] = [
   "expense",
@@ -12,6 +9,8 @@ export const ALL_FILTERABLE_STRIPE_KINDS: readonly FilterableStripeKind[] = [
   "transfer",
   "repayment",
   "unknown",
+  "pad",
+  "balance",
 ];
 
 export function isFilterableStripeKind(value: string): value is FilterableStripeKind {

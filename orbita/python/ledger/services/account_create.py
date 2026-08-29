@@ -66,6 +66,16 @@ def create_account(
     declared = set(all_declared_account_names())
     if account in declared:
         raise ValueError("账户已存在")
+    # ADR 0004 leaves historical parent opens readable, but a new open must not
+    # create or preserve a selectable parent account for future account management.
+    if any(name.startswith(f"{account}:") for name in declared):
+        raise ValueError("账户已有子账户，不能创建为 open 父账户")
+    ancestors = [
+        ":".join(account.split(":")[:depth])
+        for depth in range(1, len(account.split(":")))
+    ]
+    if any(parent in declared for parent in ancestors):
+        raise ValueError("父账户已 open，不能在其下创建子账户")
 
     refs = _scan_earlier_references(account, open_date)
     earlier = [r for r in refs if r["before_open"]]

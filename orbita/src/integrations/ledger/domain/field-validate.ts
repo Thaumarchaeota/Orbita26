@@ -95,7 +95,6 @@ export function validateInlinePatch(entry: Entry, patch: EntryFieldPatch): strin
     const account = patch.value.trim();
     if (!account) return "须选择账户";
     if (!index.allNames.has(account)) return `账户不存在: ${account}`;
-    if (account.startsWith("Equity:")) return "普通交易不可使用 Equity 账户";
     const cur = postingCurrency(entry.postings[patch.postingIndex]!);
     const curErr = validateOpenCurrency(index.findRecord(account), cur);
     if (curErr) return curErr;

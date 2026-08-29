@@ -11,7 +11,6 @@ export function validateComposerPostings(postings: Posting[]): string | null {
     const account = (p.account || "").trim();
     if (!account) return `第 ${i + 1} 行须选择账户`;
     if (!index.allNames.has(account)) return `账户不存在: ${account}`;
-    if (account.startsWith("Equity:")) return "普通交易不可使用 Equity 账户";
     if (p.amount != null) {
       const cur = (p.currency || "").trim() || "CNY";
       const curErr = validateOpenCurrency(index.findRecord(account), cur);

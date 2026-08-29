@@ -96,6 +96,35 @@ describe("CardDetailSurface lifecycle (Phase B)", () => {
     store.dispose();
   });
 
+  it("keeps the list DOM and scroll position through an empty filter", async () => {
+    setDetailEntries(Array.from({ length: 20 }, (_, index) => makeEntry(`e${index}`)));
+    const store = createLedgerCardStore();
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const surface = mountCardDetailSurface(host, { store });
+    const scroll = host.querySelector<HTMLElement>("[data-role='card-detail-scroll']")!;
+    await rafTwice();
+
+    const retainedList = scroll.firstElementChild as HTMLElement;
+    scroll.scrollTop = 120;
+    store.dispatch({ type: "set-date-from", value: "2099-01-01" });
+    await rafTwice();
+
+    expect(scroll.querySelector("[data-role='card-detail-empty']")).not.toBeNull();
+    expect(scroll.contains(retainedList)).toBe(true);
+    expect(retainedList.hidden).toBe(true);
+
+    store.dispatch({ type: "set-date-from", value: null });
+    await rafTwice();
+
+    expect(scroll.querySelector("[data-role='card-detail-empty']")).toBeNull();
+    expect(scroll.firstElementChild).toBe(retainedList);
+    expect(retainedList.hidden).toBe(false);
+    expect(scroll.scrollTop).toBe(120);
+    surface.dispose();
+    store.dispose();
+  });
+
   it("ledger onDetailMutated does not reach disposed card store", () => {
     setDetailEntries([makeEntry("e1")]);
     const store = createLedgerCardStore();

@@ -21,7 +21,7 @@ def _split_brief(label_path: list[str]) -> tuple[list[str], str]:
 
 def group_for_name(name: str) -> str | None:
     if name.startswith("Equity:"):
-        return None
+        return "equity"
     if name.startswith("Expenses:"):
         return "expenses"
     if name.startswith("Income:"):

@@ -14,6 +14,27 @@
 `dev-web.bat` 仅用于中途快速预览，不能替代这项验证。未经用户明确要求，不运行
 `cargo check`、`npm run build`、`tauri build` 或其他 build 命令。
 
+## Vitest / Tinypool 占用异常
+
+Vitest 默认会按可用 CPU 创建多个 fork；本机曾一次创建 13 个 Tinypool worker，若测试根进程
+被中断或重复启动，残留 worker 会持续占用 CPU。项目配置现限制为最多两个隔离 fork，且同一
+工作区同时只能有一个 `vitest run`：后来的命令在配置加载时失败，不得再派生另一组 worker。
+`npm test` 必须通过 `scripts/test-session.ps1` 启动，该脚本用 Windows Job Object 托管
+`npm run test:run` 的完整子树，异常退出时回收 worker。不要把 `npm test` 改回直接执行 Vitest，
+不要移除运行锁，也不要提高默认 fork 数来换取短暂速度。
+
+排查时先确认没有残留，再启动下一轮测试：
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+  Where-Object { $_.CommandLine -match 'vitest|tinypool' } |
+  Select-Object ProcessId, ParentProcessId, CommandLine
+```
+
+直接 `npx vitest run <file>` 虽不经过 Job Object，但仍受两 worker 与单运行锁约束；用于短小的
+定向回归后必须等进程退出。Popover/picker 测试要显式 `dispose()` handle，不能只
+`replaceChildren()`，否则 Happy DOM 的 observer 和定时器会跨测试保留。
+
 `dev.bat` 是单会话入口：它以 Windows named mutex 覆盖清理、Vite/Tauri 启动及异常重试。
 第二次启动会立即退出，且**不会**调用 `dev-clean`、结束端口或干扰已有会话；请回到第一个终端
 停止会话后再重试。这样避免两个开发终端在 1420 的端口检查与 Vite bind 之间互相清理、抢占和重启。
@@ -67,14 +88,14 @@ ID），赋值会触发 `VariableNotWritable`，导致清理失败、端口仍�
 
 ## dev 异常退出（`exit code 0xffffffff`）
 
-`dev.bat` 在 `orbita.exe` 非零退出时会 5 秒后自动重启。若主进程被 WebView/系统强杀（终端常见
-`exit code: 0xffffffff`，**无 Rust panic 栈**），可能进入重启循环并留下孤儿进程，最终表现为
+`dev.bat` 在 `orbita.exe` 非零退出时最多重试三次（等待 5 秒、10 秒；第三次失败即停止并保留首个排查入口）。每轮 `npm run tauri dev` 由专属 Windows Job Object 托管；即使 npm 根进程先退出，也会回收该轮 Cargo/Vite/Node 子树。若主进程被 WebView/系统强杀（终端常见
+`exit code: 0xffffffff`，**无 Rust panic 栈**），仍可能留下服务端口占用，最终表现为
 `dev-clean` 报 `Port 1420 still in use` 或 Finance 连不上。
 
 ### 典型链路
 
 1. `orbita.exe` 异常退出（开发中曾见于 Finance 模块频繁 HMR 之后；根因未完全定位）。
-2. `dev.bat` 自动重启，但旧 Vite / `orbita` 未完全释放 → **1420 被占**。
+2. `dev.bat` 在有限重试期间启动下一轮前会回收上一轮 Job；若端口仍被外部残留占用，清理失败会停止启动并报告 PID。
 3. 主进程退出时若未走到 `stop_sidecar`，**ledger uvicorn 子进程残留** → 多次重启后 **8000–8010 被占满**（`%TEMP%/orbita-ledger.log` 可见连续 spawn 记录，日志本身通常无 Python 异常）。
 
 ### 恢复（首选）

@@ -37,6 +37,7 @@ export type CdsVirtualListDeps = {
   getLoadState: () => "loading" | "partial" | "ready";
   getRenderContext?: () => RenderCardContext;
   loadOlder?: () => Promise<void>;
+  onAddEntry?: (date: string, trigger: HTMLElement) => void;
 };
 
 export type CdsVirtualListHandle = {
@@ -374,15 +375,30 @@ export function createCdsVirtualList(
     groupEl.setAttribute("data-role", "date-group");
     groupEl.dataset.date = group.date;
 
+    const pinRow = document.createElement("div");
+    pinRow.className = "cds-date-pin-row";
+    pinRow.setAttribute("data-role", "date-pin-row");
+
     const pin = document.createElement("div");
     pin.className = "cds-date-pin";
     pin.setAttribute("data-role", "date-pin");
     pin.textContent = formatDatePinLabel(group.date);
 
+    pinRow.appendChild(pin);
+    if (deps.onAddEntry) {
+      const addBtn = document.createElement("button");
+      addBtn.className = "cds-date-add";
+      addBtn.type = "button";
+      addBtn.setAttribute("aria-label", `在 ${group.date} 记一笔`);
+      addBtn.textContent = "+";
+      addBtn.addEventListener("click", () => deps.onAddEntry!(group.date, addBtn));
+      pinRow.appendChild(addBtn);
+    }
+
     const itemsEl = document.createElement("div");
     itemsEl.className = "cds-date-items";
     itemsEl.setAttribute("data-role", "date-group-items");
-    groupEl.append(pin, itemsEl);
+    groupEl.append(pinRow, itemsEl);
     return groupEl;
   }
 

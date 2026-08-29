@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Entry } from "../types";
+import { setAccounts } from "../state/accounts";
 import { __testResetLedgerStore, setDetailEntries, __testEstablishBaseline } from "../state/ledger-store";
 import { mountCdsEditing } from "./cds-editing";
 import { patchTransactionCard, renderDetailItemCard } from "./render-cards";
@@ -201,7 +202,7 @@ describe("cds-editing", () => {
     await Promise.resolve();
     const popover = document.querySelector<HTMLElement>(".cds-datetime-popover")!;
     expect(popover).toBeTruthy();
-    const input = popover.querySelector<HTMLInputElement>("input[type='time']")!;
+    const input = popover.querySelector<HTMLInputElement>(".orbita-time-picker-input")!;
     input.value = "08:05";
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await Promise.resolve();
@@ -212,7 +213,7 @@ describe("cds-editing", () => {
 
     time.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();
-    const input2 = document.querySelector<HTMLElement>(".cds-datetime-popover")!.querySelector<HTMLInputElement>("input[type='time']")!;
+    const input2 = document.querySelector<HTMLElement>(".cds-datetime-popover")!.querySelector<HTMLInputElement>(".orbita-time-picker-input")!;
     input2.value = "18:20";
     input2.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await Promise.resolve();
@@ -222,13 +223,127 @@ describe("cds-editing", () => {
 
     time.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();
-    const input3 = document.querySelector<HTMLElement>(".cds-datetime-popover")!.querySelector<HTMLInputElement>("input[type='time']")!;
+    const input3 = document.querySelector<HTMLElement>(".cds-datetime-popover")!.querySelector<HTMLInputElement>(".orbita-time-picker-input")!;
     input3.value = "";
     input3.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await Promise.resolve();
     expect((store.getSnapshot().items[0] as Entry).metadata?.some((m) => m.key === "time")).toBe(false);
     expect(time.classList.contains("is-empty")).toBe(true);
 
+    editing.dispose();
+    store.dispose();
+  });
+
+  it("updates posting account from portaled AccountSelect without outside-click abort", async () => {
+    setAccounts({
+      assets: [
+        {
+          name: "Assets:Cash",
+          label: "资产:现金",
+          label_path: ["资产", "现金"],
+          brief: "",
+          open_date: "",
+          extra: "",
+          id: "Assets:Cash",
+          source_file: "a.bean",
+          source_line: 1,
+        },
+        {
+          name: "Assets:Bank:Checking",
+          label: "资产:银行:活期",
+          label_path: ["资产", "银行", "活期"],
+          brief: "",
+          open_date: "",
+          extra: "",
+          id: "Assets:Bank:Checking",
+          source_file: "a.bean",
+          source_line: 1,
+        },
+      ],
+      liabilities: [],
+      equity: [],
+      expenses: [],
+      income: [],
+    });
+    const entry = makeEntry("e1");
+    setDetailEntries([entry]);
+    __testEstablishBaseline([entry]);
+    const store = createLedgerCardStore();
+    const scroll = document.createElement("div");
+    document.body.appendChild(scroll);
+    const editing = mountCdsEditing(scroll, store);
+    const wrap = renderDetailItemCard(entry);
+    scroll.appendChild(wrap);
+    const account = wrap.querySelector<HTMLElement>("[data-editable='account']")!;
+    account.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    const search = wrap.querySelector<HTMLInputElement>(".orbita-account-select-trigger-search")!;
+    search.value = "Assets:Bank:Checking";
+    search.dispatchEvent(new Event("input"));
+    const option = document.querySelector<HTMLButtonElement>("[data-name='Assets:Bank:Checking']")!;
+    expect(option).toBeTruthy();
+    option!.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    option!.click();
+    await Promise.resolve();
+    expect(account.classList.contains("is-editing")).toBe(false);
+    const updated = store.getSnapshot().items[0] as Entry;
+    expect(updated.postings[0]!.account).toBe("Assets:Bank:Checking");
+    expect(account.textContent).toBe("Assets:Bank:Checking");
+    editing.dispose();
+    store.dispose();
+  });
+
+  it("cancels posting account edit when trigger search is dismissed without selection", async () => {
+    setAccounts({
+      assets: [
+        {
+          name: "Assets:Cash",
+          label: "资产:现金",
+          label_path: ["资产", "现金"],
+          brief: "",
+          open_date: "",
+          extra: "",
+          id: "Assets:Cash",
+          source_file: "a.bean",
+          source_line: 1,
+        },
+        {
+          name: "Assets:Bank:Checking",
+          label: "资产:银行:活期",
+          label_path: ["资产", "银行", "活期"],
+          brief: "",
+          open_date: "",
+          extra: "",
+          id: "Assets:Bank:Checking",
+          source_file: "a.bean",
+          source_line: 1,
+        },
+      ],
+      liabilities: [],
+      equity: [],
+      expenses: [],
+      income: [],
+    });
+    const entry = makeEntry("e1");
+    setDetailEntries([entry]);
+    const store = createLedgerCardStore();
+    const scroll = document.createElement("div");
+    document.body.appendChild(scroll);
+    const editing = mountCdsEditing(scroll, store);
+    const wrap = renderDetailItemCard(entry);
+    scroll.appendChild(wrap);
+    const account = wrap.querySelector<HTMLElement>("[data-editable='account']")!;
+    account.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    const search = wrap.querySelector<HTMLInputElement>(".orbita-account-select-trigger-search")!;
+    search.value = "Assets:Bank:Checking";
+    search.dispatchEvent(new Event("input"));
+    document.body.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    await Promise.resolve();
+    expect(account.classList.contains("is-editing")).toBe(false);
+    expect((store.getSnapshot().items[0] as Entry).postings[0]!.account).toBe("Expenses:Food");
     editing.dispose();
     store.dispose();
   });
@@ -244,12 +359,8 @@ describe("cds-editing", () => {
     const time = wrap.querySelector<HTMLElement>("[data-editable='datetime']")!;
     time.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await Promise.resolve();
-    const input = document.querySelector<HTMLElement>(".cds-datetime-popover")!.querySelector<HTMLInputElement>("input[type='time']")!;
-    Object.defineProperty(input, "value", {
-      configurable: true,
-      get: () => "24:00",
-      set: () => undefined,
-    });
+    const input = document.querySelector<HTMLElement>(".cds-datetime-popover")!.querySelector<HTMLInputElement>(".orbita-time-picker-input")!;
+    input.value = "24:00";
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await Promise.resolve();
     expect((store.getSnapshot().items[0] as Entry).metadata?.some((m) => m.key === "time")).toBeFalsy();

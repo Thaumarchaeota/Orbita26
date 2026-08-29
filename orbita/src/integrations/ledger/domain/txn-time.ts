@@ -1,4 +1,4 @@
-/** Transaction-level `time` metadata: optional local HH:mm, stored as +08:00. See docs/plans/v0.0.17-finance-chronological-order.md */
+/** Transaction-level `time` metadata: optional local HH:mm, stored as +08:00. See docs/specs/orbita-finance.md and ADR 0002. */
 
 export const TXN_TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 

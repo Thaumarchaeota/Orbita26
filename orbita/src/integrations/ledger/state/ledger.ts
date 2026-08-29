@@ -33,6 +33,7 @@ export {
   onSavePhaseChanged,
   pushEntry,
   recomputeSavePhase,
+  revertDetailToBaseline,
   resetConfirmSnapshot,
   establishCommitBaseline,
   clearPostCommitRefreshFailed,

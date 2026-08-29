@@ -8,11 +8,14 @@ let accounts: AccountsResponse = {
   income: [],
   assets: [],
   liabilities: [],
+  equity: [],
 };
 
 let allAccountList: string[] = [];
 
-const GROUP_KEYS: AccountGroup[] = ["expenses", "income", "assets", "liabilities"];
+const GROUP_KEYS: AccountGroup[] = ["expenses", "income", "assets", "liabilities", "equity"];
+// Keep pre-Equity in-memory fixtures/loaders readable while the API always returns five groups.
+type AccountsInput = Omit<AccountsResponse, "equity"> & Partial<Pick<AccountsResponse, "equity">>;
 
 export function getAccounts(): AccountsResponse {
   return accounts;
@@ -30,12 +33,13 @@ export function getAccountNames(group: AccountGroup): string[] {
   return getAccountRecords(group).map((item) => item.name);
 }
 
-export function setAccounts(acc: AccountsResponse): void {
+export function setAccounts(acc: AccountsInput): void {
   accounts = {
     expenses: acc.expenses || [],
     income: acc.income || [],
     assets: acc.assets || [],
     liabilities: acc.liabilities || [],
+    equity: acc.equity || [],
   };
   allAccountList = GROUP_KEYS.flatMap((key) => getAccountRecords(key).map((item) => item.name)).sort();
 }

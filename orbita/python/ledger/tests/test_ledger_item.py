@@ -88,6 +88,12 @@ class LedgerItemTests(LedgerBillIsolationMixin, unittest.TestCase):
         self.assertEqual(diags, [])
         self.assertEqual(len(parsed), 1)
 
+    def test_allows_equity_posting_in_transaction(self):
+        item = _txn(item_id="ledger/2026.bean:12")
+        item["postings"][1]["account"] = "Equity:Opening"
+        _, diags = validate_ledger_items([item])
+        self.assertEqual(diags, [])
+
     def test_render_assigns_orbita_id_for_legacy(self):
         items_dict = [_txn(item_id="ledger/2026.bean:12")]
         parsed, diags = validate_ledger_items(items_dict)

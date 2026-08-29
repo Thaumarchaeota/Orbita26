@@ -45,12 +45,26 @@ class LedgerNotReadyError extends Error {
 
 const OVERWRITE_TOOLTIP = "目录已存在且不为空，确认后会覆写所有文件";
 
-async function retryLedger(connect: () => Promise<void>): Promise<void> {
-  if (isTauri()) {
-    resetLedgerApiBase();
-    await invoke("restart_ledger_sidecar");
+function retryErrorMessage(err: unknown): string {
+  const detail = err instanceof Error ? err.message : "未知错误";
+  return `重启财务服务失败：${detail}。请检查服务启动环境后重试。`;
+}
+
+async function retryLedger(
+  panel: HTMLElement,
+  ac: AbortController,
+  connect: () => Promise<void>,
+): Promise<void> {
+  try {
+    if (isTauri()) {
+      resetLedgerApiBase();
+      await invoke("restart_ledger_sidecar");
+    }
+    await connect();
+  } catch (err) {
+    // A failed sidecar restart must remain actionable in the Finance root; see specs/orbita-finance.md §2.
+    if (!ac.signal.aborted) showConnectErrorPanel(panel, ac, retryErrorMessage(err), connect);
   }
-  void connect();
 }
 
 async function showNotReadyPanel(
@@ -96,7 +110,7 @@ async function showNotReadyPanel(
   );
   panel.querySelector<HTMLButtonElement>("#ledger-retry")?.addEventListener(
     "click",
-    () => void retryLedger(connect),
+    () => void retryLedger(panel, ac, connect),
     { signal: ac.signal },
   );
 }
@@ -117,7 +131,7 @@ function showConnectErrorPanel(
     </div>`;
   panel.querySelector<HTMLButtonElement>("#ledger-retry")?.addEventListener(
     "click",
-    () => void retryLedger(connect),
+    () => void retryLedger(panel, ac, connect),
     { signal: ac.signal },
   );
 }
@@ -252,12 +266,6 @@ export function mountLedgerDestination(
       panel.innerHTML = "";
     },
   };
-}
-
-/** @deprecated use mountLedgerDestination via Insight Host */
-export function mountLedgerApp(panel: HTMLElement): () => void {
-  const handle = mountLedgerDestination(panel, { generation: 0, dataDirKey: "" });
-  return () => handle.dispose("host-dispose");
 }
 
 export type { LedgerView, LedgerRouter, LedgerViewHandle };

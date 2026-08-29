@@ -27,7 +27,7 @@ describe("cds-composer-advanced empty amount", () => {
     const draft = composer.getDraft();
     expect(draft.postings[1]?.amount).toBeNull();
 
-    const time = mount.querySelector<HTMLInputElement>("input[type='time']");
+    const time = mount.querySelector<HTMLInputElement>(".orbita-time-picker-input");
     expect(time).toBeTruthy();
     expect(time!.value).toBe("");
 

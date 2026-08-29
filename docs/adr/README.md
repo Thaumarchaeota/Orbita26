@@ -41,3 +41,8 @@ ADR 用来记录重要但尚可讨论的产品、架构和数据取舍：为什�
 | [0001](0001-finance-detail-render-threshold.md) | Superseded | Finance 明细渲染阈值。 |
 | [0002](0002-finance-chronological-order-without-drag.md) | Accepted | Finance 时间排序与移除拖拽。 |
 | [0003](0003-perceived-responsiveness-and-durable-completion.md) | Accepted | 全局感知流畅与可信完成反馈。 |
+| [0004](0004-finance-account-select-cascade-menu.md) | Accepted | Finance AccountSelect 级联菜单与全路径搜索。 |
+| [0005](0005-shared-worktree-agent-collaboration.md) | Accepted | 共享工作树的 agent 协作与风险分级。 |
+| [0006](0006-health-owned-meals-with-nutrition-envelope.md) | Accepted | Health 拥有 meals；nutrition 为可扩展属性（0.0.18 范围）。 |
+| [0007](0007-journal-note-as-a-first-class-record.md) | Accepted | Journal note 为一等记录（0.0.18 范围）。 |
+| [0008](0008-garmin-health-initial-fetch-catalog.md) | Accepted | Garmin Health 初始拉取目录（0.0.18 范围）。 |

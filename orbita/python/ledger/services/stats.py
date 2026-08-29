@@ -1,11 +1,13 @@
-import tempfile
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
 
-from ledger.config import DATA_DIR
 from ledger.services.accounts import list_accounts
-from ledger.services.settings import get_reporting_currency, get_write_target
+from ledger.services.committed_stats import (
+    CommittedLedgerLoadError,
+    compute_account_period_stats,
+    load_committed_beancount,
+)
+from ledger.services.settings import get_reporting_currency
 
 AssertionStatus = str  # "pass" | "fail" | "none"
 
@@ -34,35 +36,6 @@ def _inventory_to_balances(inventory) -> list[dict]:
             }
         )
     return out
-
-
-def _load_committed_beancount() -> tuple[list, list, dict]:
-    try:
-        from beancount import loader
-    except ImportError:
-        return [], [{"message": "Beancount 未安装"}], {}
-
-    write_target = get_write_target()
-    ledger_path = DATA_DIR / write_target
-    if not ledger_path.is_file():
-        return [], [], {}
-
-    with tempfile.TemporaryDirectory(prefix="orbita-stats-") as tmp:
-        tmp_root = Path(tmp)
-        for name in ("account.bean", "category.bean"):
-            src = DATA_DIR / name
-            if src.is_file():
-                (tmp_root / name).write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
-        rel_ledger = tmp_root / write_target
-        rel_ledger.parent.mkdir(parents=True, exist_ok=True)
-        rel_ledger.write_text(ledger_path.read_text(encoding="utf-8"), encoding="utf-8")
-        includes = [
-            f'include "{name}"' for name in ("account.bean", "category.bean") if (tmp_root / name).is_file()
-        ] + [f'include "{write_target}"']
-        main_bean = tmp_root / "main.bean"
-        main_bean.write_text("\n".join(includes) + "\n", encoding="utf-8")
-        entries, errors, options = loader.load_file(str(main_bean))
-        return entries, errors, options
 
 
 def _latest_balance_assertions(entries) -> dict[str, object]:
@@ -100,7 +73,11 @@ def compute_account_balances() -> dict:
     from beancount.core.interpolate import BalanceError
     from beancount.ops import balance as bc_balance
 
-    entries, load_errors, options = _load_committed_beancount()
+    try:
+        entries, load_errors, options = load_committed_beancount()
+    except CommittedLedgerLoadError as exc:
+        return {"ok": False, "error": exc.message, "accounts": []}
+
     fatal_errors = [err for err in load_errors if not isinstance(err, BalanceError)]
     if fatal_errors:
         msgs = [getattr(err, "message", None) or str(err) for err in fatal_errors]
@@ -171,9 +148,13 @@ def _compute_month_posting_stats(account_prefix: str, *, income: bool) -> dict:
 
     reporting = _reporting_currency()
     month_prefix = date.today().strftime("%Y-%m")
-    entries, load_errors, _options = _load_committed_beancount()
+    try:
+        entries, load_errors, _options = load_committed_beancount()
+    except CommittedLedgerLoadError:
+        return {"month_total": 0.0, "by_category": [], "load_failed": True}
+
     if load_errors:
-        return {"month_total": 0.0, "by_category": []}
+        return {"month_total": 0.0, "by_category": [], "load_failed": True}
 
     total = Decimal("0")
     by_account: dict[str, Decimal] = {}
@@ -232,6 +213,8 @@ def get_stats() -> dict:
         return balances
     expenses = compute_month_expense_stats()
     income = compute_month_income_stats()
+    if expenses.get("load_failed") or income.get("load_failed"):
+        return {"ok": False, "error": "账本读取或解析失败", "accounts": balances.get("accounts", [])}
     return {
         "ok": True,
         "reporting_currency": balances["reporting_currency"],
@@ -241,3 +224,12 @@ def get_stats() -> dict:
         "month_income_total": income["month_total"],
         "month_income_by_category": income["by_category"],
     }
+
+
+__all__ = [
+    "compute_account_balances",
+    "compute_account_period_stats",
+    "compute_month_expense_stats",
+    "compute_month_income_stats",
+    "get_stats",
+]

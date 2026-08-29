@@ -265,7 +265,7 @@ export function transactionDraftToEntry(txn: Transaction): Entry {
       cost_amount: null,
       cost_currency: "",
     })),
-    // CSV time and other transaction-level keys must survive staging. docs/plans/v0.0.17-finance-time-drag-repair.md
+    // CSV time and other transaction-level keys must survive staging. docs/specs/orbita-finance.md
     metadata: (txn.metadata ?? []).map((m) => ({ key: m.key, value: m.value })),
     seq: "",
     _is_new: true,

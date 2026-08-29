@@ -1,38 +1,14 @@
+import "./date-picker.css";
 import { escAttr } from "../core/html";
 import { CHEVRON_SVG } from "../integrations/ai/icons";
 import { mountPopoverPortal } from "./popover-portal";
+import {
+  buildMiniCalendarHtml,
+  formatDateValue,
+  parseDateValue,
+} from "./date-picker-core";
 
-const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
-
-function monthLabel(y: number, m: number): string {
-  return `${y}年${m + 1}月`;
-}
-
-function buildCalendarDays(year: number, month: number): (Date | null)[] {
-  const first = new Date(year, month, 1);
-  const startPad = (first.getDay() + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells: (Date | null)[] = Array.from({ length: startPad }, () => null);
-  for (let d = 1; d <= daysInMonth; d += 1) cells.push(new Date(year, month, d));
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
-}
-
-function formatDateValue(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function parseDateValue(value: string): Date | null {
-  const [y, m, d] = value.split("-").map(Number);
-  if (!y || !m || !d) return null;
-  return new Date(y, m - 1, d);
-}
-
-export function formatDateLabelZh(value: string): string {
-  const d = parseDateValue(value);
-  if (!d) return "选择日期";
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-}
+export { formatDateLabelZh } from "./date-picker-core";
 
 export type DatePickerOptions = {
   value?: string;
@@ -53,76 +29,99 @@ export function mountDatePicker(
   container: HTMLElement,
   options: DatePickerOptions = {},
 ): DatePickerHandle {
-  const placeholder = options.placeholder ?? "选择日期";
+  const placeholder = options.placeholder ?? "yyyy-mm-dd";
   let value = options.value ?? "";
+  let draft = value;
   container.innerHTML = `
     <div class="orbita-date-picker${options.compact ? " is-compact" : ""}">
-      <button type="button" class="orbita-date-picker-btn">
-        <span class="orbita-date-picker-label"></span>
-        <span class="orbita-date-picker-chevron">${CHEVRON_SVG}</span>
-      </button>
+      <div class="orbita-date-picker-trigger">
+        <input type="text" class="orbita-date-picker-input" placeholder="${escAttr(placeholder)}" autocomplete="off" />
+        <button type="button" class="orbita-date-picker-chevron-btn" aria-label="打开日历">
+          ${CHEVRON_SVG}
+        </button>
+      </div>
       <div class="orbita-date-picker-menu scroll-slim motion-popover"></div>
     </div>`;
 
   const root = container.querySelector<HTMLElement>(".orbita-date-picker")!;
-  const btn = root.querySelector<HTMLButtonElement>(".orbita-date-picker-btn")!;
-  const labelEl = root.querySelector<HTMLElement>(".orbita-date-picker-label")!;
+  const trigger = root.querySelector<HTMLElement>(".orbita-date-picker-trigger")!;
+  const input = root.querySelector<HTMLInputElement>(".orbita-date-picker-input")!;
+  const chevronBtn = root.querySelector<HTMLButtonElement>(".orbita-date-picker-chevron-btn")!;
   const menu = root.querySelector<HTMLElement>(".orbita-date-picker-menu")!;
+  input.readOnly = true;
   const portal = mountPopoverPortal({
-    anchor: btn,
+    anchor: trigger,
     popover: menu,
-    onOpenChange: (open) => btn.classList.toggle("is-open", open),
+    onOpenChange: (open) => {
+      chevronBtn.classList.toggle("is-open", open);
+      trigger.classList.toggle("is-open", open);
+    },
   });
   let year = parseDateValue(value)?.getFullYear() ?? new Date().getFullYear();
   let month = parseDateValue(value)?.getMonth() ?? new Date().getMonth();
 
-  const syncLabel = () => {
-    labelEl.textContent = value ? formatDateLabelZh(value) : placeholder;
-    labelEl.classList.toggle("is-placeholder", !value);
+  const syncInput = () => {
+    input.value = value;
   };
 
   const paint = () => {
-    const today = new Date();
-    const cells = buildCalendarDays(year, month);
-    menu.innerHTML = `
-      <div class="orbita-mini-cal">
-        <div class="orbita-mini-cal-head">
-          <button type="button" class="orbita-mini-cal-nav" data-dir="-1">‹</button>
-          <span>${monthLabel(year, month)}</span>
-          <button type="button" class="orbita-mini-cal-nav" data-dir="1">›</button>
-        </div>
-        <div class="orbita-mini-cal-week">${WEEKDAYS.map((d) => `<span>${d}</span>`).join("")}</div>
-        <div class="orbita-mini-cal-grid">
-          ${cells
-            .map((d) => {
-              if (!d) return `<span class="orbita-mini-cal-cell is-empty"></span>`;
-              const v = formatDateValue(d);
-              const active = v === value;
-              const isToday = d.toDateString() === today.toDateString();
-              return `<button type="button" class="orbita-mini-cal-cell${active ? " is-active" : ""}${isToday ? " is-today" : ""}" data-value="${escAttr(v)}">${d.getDate()}</button>`;
-            })
-            .join("")}
-        </div>
-      </div>`;
+    menu.innerHTML = buildMiniCalendarHtml(year, month, (v) => ({
+      active: v === draft,
+    }));
   };
 
   const close = () => portal.close();
 
-  btn.addEventListener("click", async (e) => {
+  const openPicker = () => {
     if (portal.isOpen()) {
       void close();
       return;
     }
-    const parsed = parseDateValue(value);
+    draft = value;
+    const parsed = parseDateValue(draft);
     if (parsed) {
       year = parsed.getFullYear();
       month = parsed.getMonth();
     }
     paint();
     void portal.open();
+  };
+
+  const commitDraft = () => {
+    value = draft;
+    syncInput();
+    options.onChange?.(value);
+    void close();
+  };
+
+  chevronBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openPicker();
+  });
+
+  trigger.addEventListener("click", (e) => {
+    if (e.target === chevronBtn) return;
+    openPicker();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+      e.preventDefault();
+      openPicker();
+    }
   });
 
   menu.addEventListener("click", async (e) => {
+    const action = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-action]")?.dataset.action;
+    if (action === "clear") {
+      draft = "";
+      paint();
+      return;
+    }
+    if (action === "confirm") {
+      commitDraft();
+      return;
+    }
     const nav = (e.target as HTMLElement).closest<HTMLButtonElement>(".orbita-mini-cal-nav");
     if (nav) {
       const dir = Number(nav.dataset.dir);
@@ -139,18 +138,16 @@ export function mountDatePicker(
     }
     const cell = (e.target as HTMLElement).closest<HTMLButtonElement>(".orbita-mini-cal-cell");
     if (!cell?.dataset.value) return;
-    value = cell.dataset.value;
-    syncLabel();
-    options.onChange?.(value);
-    await close();
+    draft = cell.dataset.value;
+    paint();
   });
 
-  syncLabel();
+  syncInput();
   return {
     getValue: () => value,
     setValue: (v: string) => {
       value = v;
-      syncLabel();
+      syncInput();
     },
     close,
     dispose: portal.dispose,

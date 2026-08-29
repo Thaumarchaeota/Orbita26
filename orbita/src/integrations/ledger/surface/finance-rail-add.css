@@ -1,0 +1,100 @@
+.finance-rail-add-section {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 12px;
+
+}
+
+
+
+.finance-rail-add-head {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 8px;
+
+}
+
+
+
+.finance-rail-add-title {
+
+  margin: 0;
+
+  font-size: 15px;
+
+  font-weight: 600;
+
+  color: var(--ledger-text);
+
+}
+
+
+
+.finance-rail-add {
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 10px;
+
+}
+
+
+
+.finance-rail-add-btn {
+
+  height: 40px;
+
+  padding: 0 12px;
+
+  border: 1px solid var(--ledger-border);
+
+  border-radius: 10px;
+
+  background: var(--ledger-surface);
+
+  color: var(--ledger-text);
+
+  font: inherit;
+
+  font-size: 13px;
+
+  font-weight: 500;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  transition:
+
+    border-color 0.15s ease,
+
+    color 0.15s ease,
+
+    background 0.15s ease,
+
+    box-shadow 0.15s ease;
+
+}
+
+
+
+.finance-rail-add-btn:hover {
+
+  border-color: var(--ledger-accent);
+
+  color: var(--ledger-accent);
+
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+
+}
+

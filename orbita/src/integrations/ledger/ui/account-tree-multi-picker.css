@@ -1,0 +1,68 @@
+.orbita-account-tree-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--ledger-surface, #fff);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.orbita-account-tree-picker-menu {
+  min-width: 0;
+  max-width: min(360px, calc(100vw - 16px));
+  background: var(--ledger-surface, #fff);
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  z-index: var(--orbita-popover-z, 205);
+}
+
+.orbita-account-tree-picker-menu.orbita-popover-portal-item {
+  position: fixed;
+  z-index: var(--orbita-popover-z, 205);
+}
+
+.orbita-account-tree-search-wrap {
+  padding: 8px;
+  border-bottom: 1px solid var(--ledger-border, #e5e7eb);
+}
+
+.orbita-account-tree-search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ledger-border, #e5e7eb);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.orbita-account-tree-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px 8px;
+  scrollbar-width: none;
+}
+
+.orbita-account-tree-list::-webkit-scrollbar { display: none; }
+
+.orbita-account-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+
+.orbita-account-tree-label {
+  flex: 1;
+  min-width: 0;
+}

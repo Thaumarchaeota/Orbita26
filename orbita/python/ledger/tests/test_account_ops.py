@@ -118,6 +118,16 @@ class AccountCreateTests(AccountOpsTestCase):
         with self.assertRaises(ValueError):
             self.create_account("Assets:Cash")
 
+    def test_create_rejects_open_parent_when_child_already_exists(self):
+        _write_fixture(account_lines="2026-01-01 open Assets:Bank:Checking CNY ;活期\n")
+        with self.assertRaisesRegex(ValueError, "已有子账户"):
+            self.create_account("Assets:Bank", open_date="2026-01-01", extra="CNY")
+
+    def test_create_rejects_child_when_parent_is_already_open(self):
+        _write_fixture(account_lines="2026-01-01 open Assets:Bank CNY ;银行\n")
+        with self.assertRaisesRegex(ValueError, "父账户已 open"):
+            self.create_account("Assets:Bank:Checking", open_date="2026-01-01", extra="CNY")
+
     def test_create_rejects_earlier_reference(self):
         _write_fixture(
             account_lines="2026-01-01 open Assets:Bank CNY ;银行\n",

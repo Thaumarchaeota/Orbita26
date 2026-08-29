@@ -14,7 +14,7 @@ from ledger.services.settings import get_write_target
 
 
 def on_disk_safety_diagnostics() -> list[CandidateDiagnostic]:
-    # v0.0.17-spec.md §4.2 / §5 — unsupported on-disk content must block validate/commit
+    # docs/specs/orbita-finance.md — unsupported on-disk content must block validate/commit
     return list(parse_write_target().diagnostics)
 
 

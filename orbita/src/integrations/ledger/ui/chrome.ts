@@ -39,6 +39,10 @@ export type SaveChromeHandle = {
 
 };
 
+export type DiscardChromeHandle = {
+  recompute: () => void;
+};
+
 
 
 function setSaveBtnVisual(
@@ -224,7 +228,38 @@ export function mountSaveChrome(
 
 }
 
+export function createDiscardChrome(btn: HTMLButtonElement): DiscardChromeHandle {
+  btn.className = "save-btn finance-detail-discard-btn orbita-action-btn";
+  btn.type = "button";
+  btn.textContent = "撤销全部";
 
+  function recompute(): void {
+    recomputeSavePhase();
+    const phase = getSavePhase();
+    const blocked =
+      phase === "checking"
+      || phase === "submitting"
+      || isPostCommitRefreshFailed()
+      || getLoadState() === "partial"
+      || hasLoadDiagnostics();
+    const enabled = !blocked && isLedgerDirty();
+    btn.disabled = !enabled;
+    btn.classList.toggle("is-active", enabled);
+    btn.title = enabled ? "舍弃当前未保存的编辑" : "";
+  }
+
+  return { recompute };
+}
+
+export function mountDiscardChrome(
+  btn: HTMLButtonElement,
+  onDiscard: () => void | Promise<void>,
+  signal: AbortSignal,
+): DiscardChromeHandle {
+  const handle = createDiscardChrome(btn);
+  btn.addEventListener("click", () => void onDiscard(), { signal });
+  return handle;
+}
 
 export async function showSaveSuccess(
 
