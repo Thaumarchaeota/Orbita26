@@ -50,7 +50,7 @@ fn python_exe() -> Result<PathBuf, String> {
         return Ok(venv);
     }
     Err(format!(
-        "未找到 Python 虚拟环境: {}。请运行 orbita/python/setup.ps1",
+        "未找到 Python 虚拟环境: {}。请运行 apps/desktop/python/setup.ps1",
         venv.display()
     ))
 }
@@ -162,7 +162,7 @@ pub fn start_sidecar(app: &AppHandle) -> Result<u16, String> {
 
     let child = cmd.spawn().map_err(|e| {
         format!(
-            "启动 ledger sidecar 失败: {e}。请确认已运行 orbita/python/setup.ps1"
+            "启动 ledger sidecar 失败: {e}。请确认已运行 apps/desktop/python/setup.ps1"
         )
     })?;
     *LEDGER_CHILD.lock().unwrap() = Some(child);

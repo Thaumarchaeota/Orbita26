@@ -59,7 +59,7 @@ Orbita（一个 Tauri 进程）
 | 用户“重试” | reset base → `restart_ledger_sidecar` → reconnect；不是单纯重试 fetch。 |
 | Orbita 退出 | 结束本进程启动的 Python child。 |
 
-Service 仅绑定 `127.0.0.1`。Rust 注入 `ORBITA_LEDGER_DATA_ROOT`、`ORBITA_LEDGER_HOST`、`ORBITA_LEDGER_PORT`；解释器为 `orbita/python/.venv/Scripts/python.exe`（允许 `ORBITA_PYTHON` 显式覆盖）。启动失败必须返回可行动信息；stderr 写临时日志，不得吞错。
+Service 仅绑定 `127.0.0.1`。Rust 注入 `ORBITA_LEDGER_DATA_ROOT`、`ORBITA_LEDGER_HOST`、`ORBITA_LEDGER_PORT`；解释器为 `apps/desktop/python/.venv/Scripts/python.exe`（允许 `ORBITA_PYTHON` 显式覆盖）。启动失败必须返回可行动信息；stderr 写临时日志，不得吞错。
 
 ### dataDir 切换
 

@@ -2,7 +2,7 @@
 
 ## 1. 开发入口与验证
 
-`dev-web.bat` 只作 UI 快速预览；不能验证 IPC、窗口、OAuth、外部协议、Finance Service 或系统能力。每次代码修改结束前必须运行 `orbita/dev.bat` 并确认无报错；未经用户允许不运行 build 或 `cargo check`。两个 dev 入口不能同时占用 1420。
+`dev-web.bat` 只作 UI 快速预览；不能验证 IPC、窗口、OAuth、外部协议、Finance Service 或系统能力。每次代码修改结束前必须运行 `apps/desktop/dev.bat` 并确认无报错；未经用户允许不运行 build 或 `cargo check`。两个 dev 入口不能同时占用 1420。
 
 `dev-clean`、strict port、dev 崩溃重启与 Vite 恢复 reload 是实际故障保护，不能以“冗余”删除。终端关闭会让 Vite 停止而旧窗口仍存活，导致 `ERR_CONNECTION_REFUSED`。
 

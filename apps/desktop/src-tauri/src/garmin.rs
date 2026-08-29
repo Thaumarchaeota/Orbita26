@@ -300,7 +300,7 @@ fn friendly_garmin_error(stdout: &str, stderr: &[u8]) -> String {
         return "\u{4f73}\u{660e}\u{8d26}\u{53f7}\u{5f00}\u{542f} MFA\u{ff0c}\u{672c}\u{671f}\u{4e0d}\u{652f}\u{6301}\u{5e94}\u{7528}\u{5185}\u{767b}\u{5f55}".into();
     }
     if blob.contains("garminconnect") && blob.contains("import") {
-        return "\u{672a}\u{5b89}\u{88c5} garminconnect\u{ff0c}\u{8bf7}\u{8fd0}\u{884c} orbita/python/setup.ps1".into();
+        return "\u{672a}\u{5b89}\u{88c5} garminconnect\u{ff0c}\u{8bf7}\u{8fd0}\u{884c} apps/desktop/python/setup.ps1".into();
     }
     "\u{4f73}\u{660e}\u{540c}\u{6b65}\u{5931}\u{8d25}\u{ff0c}\u{8bf7}\u{68c0}\u{67e5}\u{751f}\u{6d3b}\u{533a}\u{51ed}\u{636e}".into()
 }

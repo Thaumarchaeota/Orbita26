@@ -41,4 +41,4 @@ foreach ($checkPort in $ports) {
     }
 }
 
-Write-Host "Clean. Run orbita\dev.bat"
+Write-Host "Clean. Run apps\desktop\dev.bat"

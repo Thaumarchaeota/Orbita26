@@ -1,9 +1,9 @@
-﻿from fastapi import APIRouter
+from fastapi import APIRouter
 
 router = APIRouter()
 VERSION = "0.0.17"
 PARSER_REV = "1"
-BEANCOUNT_SETUP_HINT = "请在仓库根目录运行 orbita/python/setup.ps1 安装 Finance 依赖（含 Beancount）"
+BEANCOUNT_SETUP_HINT = "请在仓库根目录运行 apps/desktop/python/setup.ps1 安装 Finance 依赖（含 Beancount）"
 
 
 def _beancount_ready() -> tuple[bool, str | None]:

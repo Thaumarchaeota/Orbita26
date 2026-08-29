@@ -15,6 +15,7 @@
 4. [CURRENT.md](CURRENT.md)：确认当前真实状态、已知问题与下一步。
 5. 当前计划：
     - [0.0.17 收束总计划](plans/v0.0.17-closeout.md)：0.0.17 收束记录（2026-08-30 完成）；§4.1 运行时项仍开放。
+    - [0.0.18 Health 初版设计草案](plans/v0.0.18-health-page-initial-design.md)：讨论中，尚非实现授权。
     - 已结束、取消或被替代的过程计划见 [plans/archive/](plans/archive/README.md)，只供追溯，不作为实现输入。
 6. [DECISIONS.md](DECISIONS.md)：审查、重构或提出替代方案前，先排除已否决路线。
 7. [ADR](adr/README.md)：评估或提出新的重要产品、架构与数据取舍时，了解待确认决策与记录格式。
@@ -97,7 +98,7 @@
 
 - 开始实现前必须阅读本文件、`CURRENT.md`、`DECISIONS.md` 和当前计划；涉及架构或数据时还必须阅读 `SYSTEM.md`。
 - 未经用户明确允许，AI 不得创建 Git commit、提交、推送、改写历史或执行其他 Git 写操作。
-- 每次完成代码修改后，AI 必须运行 `orbita/dev.bat` 并确认无报错后方可结束对话（用户另有指示时除外）。
+- 每次完成代码修改后，AI 必须运行 `apps/desktop/dev.bat` 并确认无报错后方可结束对话（用户另有指示时除外）。
 - 根目录 `AGENTS.md` 仅保留短入口；详细规则以 [AGENTS.md](AGENTS.md) 为准，避免两处漂移。
 
 ## 公开仓库边界

@@ -43,3 +43,18 @@ Finance Service、数据根、Dashboard 信息架构和写入规则的现行细�
 TypeScript 负责 UI、交互和局部状态；Rust 负责窗口、文件、进程、数据根与 Tauri command；Python Finance Service 负责当前账本服务。外部工具保留各自边界：Garmin 属于 Health 来源，TickTick 属于 Work 连接，Zotero/Obsidian 属于 Knowledge 连接。
 
 AI、外部服务和写入行为必须遵守确认、来源和用户数据所有权边界。凭据、token、用户数据和缓存不进 Git。
+## 6. 工程拓扑
+
+当前仓库是单一 Git 仓库的多应用工程：
+
+```text
+apps/desktop/    # 现有 Tauri Windows 桌面应用
+apps/android/    # 未来 Kotlin / Compose 客户端
+services/sync/   # 未来独立部署的 Linux orbita-sync API 服务
+contracts/       # 版本化 API、schema 与脱敏测试样例
+docs/            # 全产品的现行文档
+```
+
+`apps/desktop`、`apps/android` 与 `services/sync` 各自维护构建依赖、运行时、发布版本和 CI，不共享实现代码。`contracts/` 是跨端共享的工程边界，不得存放用户数据、SQLite 文件、token、凭据或环境配置。
+
+未来三端各自维护本地数据库副本，只经 API 同步记录、版本、删除标记及确认结果；不得传输、挂载或复制 SQLite 文件。Finance 仍以 `.bean` 为唯一账本真源，`orbita-sync` 不得并发改写它。

@@ -31,7 +31,7 @@ def main():
     try:
         from garminconnect import Garmin  # noqa: F401
     except ImportError:
-        emit_fail("deps_missing", "未安装 garminconnect，请运行 orbita/python/setup.ps1")
+        emit_fail("deps_missing", "未安装 garminconnect，请运行 apps/desktop/python/setup.ps1")
 
     token_dir = str(Path(args.token_dir).expanduser().resolve())
     email = (args.email or "").strip()

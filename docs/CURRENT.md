@@ -1,7 +1,7 @@
 # 当前状态
 
 > **版本**：`0.0.17-snapshot`  
-> **代码基线**：`751203f`（0.0.17 snapshot）  
+> **代码基线**：`d6bac5a`（0.0.17-snapshot + 0.0.18 仓库结构）  
 > **最后核对**：2026-08-30；0.0.17 收束见 [`plans/v0.0.17-closeout.md`](plans/v0.0.17-closeout.md)。Finance 时间排序见 [`ADR 0002`](adr/0002-finance-chronological-order-without-drag.md)，AccountSelect 见 [`ADR 0004`](adr/0004-finance-account-select-cascade-menu.md)，领域契约见 [`specs/orbita-finance.md`](specs/orbita-finance.md)。
 
 本文件只记录当前工作树的真实状态、风险与下一步。不可回退的理由见 [`DECISIONS.md`](DECISIONS.md)；详细 Finance 设计见 `specs/orbita-finance.md`；历史过程见 `HISTORY.md`。
@@ -13,6 +13,7 @@
 - [x] **Finance 时间排序**（ADR 0002）：拖拽已移除；`domain/seq.ts` 比较器、CSV `time` metadata 与 Python e2e 已落。
 - [x] **Finance 壳层与可信保存**（ADR 0003）：绿勾 = Commit 确认；后台 reload 受 `workGeneration` 守卫。
 - [x] **Insight / snapshot 运行时**（§4.1）：用户 2026-08-30 确认日常无问题。
+- [x] **多应用仓库结构**（[`v0.0.18-repository-structure`](plans/archive/v0.0.18-repository-structure.md)）：`orbita/` 已迁入 `apps/desktop/`；`apps/desktop/dev.bat` 2026-08-30 启动验证通过。
 - [ ] **CSV 导入实机**（§4.3）：代码与自动化已落；用户未验收 Tauri 导入→保存→重载。
 - [x] **旧 Detail 链路删除**（§4.2）：阶段 D 文件已删（`views/detail/*` 除 index、`views/form/*`、`account-picker` 等）；`ledger.css` 遗留块待清。
 - [-] **预设 409 前端**：后端 revision + 409 已落；`finance-rail-filter` 保存预设时未 catch 冲突并提示用户。
@@ -45,6 +46,7 @@
 
 - 当前 `dataDir` 同时承载 App State 与 Orbita Archive 早期数据；`archiveRoot` 尚未实现。
 - `dev.bat` 以命名互斥锁拒绝第二会话；Job Object 托管子树；异常退出最多三次后停止。见 [`DEV.md`](DEV.md)。
+- 仓库已重组为多应用拓扑：桌面应用位于 `apps/desktop/`；Android、sync 与 contracts 仅建立目录边界，尚未开始实现。
 - Vitest 最多两 fork；`npm test` 经 `test-session.ps1` Job Object 与跨进程单运行锁。
 - Ledger Python 测试强制隔离临时 bill 根。
 

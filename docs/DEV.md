@@ -7,10 +7,10 @@
 
 | 入口 | 适用场景 | 不覆盖的能力 |
 | --- | --- | --- |
-| `orbita/dev-web.bat` | UI、CSS、普通前端交互的快速预览；浏览器为 `http://127.0.0.1:1420` | Tauri command、窗口、v2ray、佳明、Orbita Insight 和 Finance Service |
-| `orbita/dev.bat` | 完整桌面 App；涉及 Rust、双窗口、佳明、click-through、数据目录或 ledger 时必须用它验收 | 首次 Rust 编译会较慢 |
+| `apps/desktop/dev-web.bat` | UI、CSS、普通前端交互的快速预览；浏览器为 `http://127.0.0.1:1420` | Tauri command、窗口、v2ray、佳明、Orbita Insight 和 Finance Service |
+| `apps/desktop/dev.bat` | 完整桌面 App；涉及 Rust、双窗口、佳明、click-through、数据目录或 ledger 时必须用它验收 | 首次 Rust 编译会较慢 |
 
-每次完成代码修改后，结束对话前必须运行 `orbita/dev.bat`，等待启动过程完成并确认无报错。
+每次完成代码修改后，结束对话前必须运行 `apps/desktop/dev.bat`，等待启动过程完成并确认无报错。
 `dev-web.bat` 仅用于中途快速预览，不能替代这项验证。未经用户明确要求，不运行
 `cargo check`、`npm run build`、`tauri build` 或其他 build 命令。
 
@@ -49,7 +49,7 @@ cd <repo-root>
 .\scripts\install-dev.ps1
 .\scripts\install-buildtools.ps1  # Tauri 所需，管理员运行
 
-cd orbita\python
+cd apps\desktop\python
 .\setup.ps1                        # Garmin 与 ledger 的 venv / 依赖
 ```
 
@@ -70,7 +70,7 @@ WebView 窗口仍存活；或者旧 Vite 占用 1420，导致 `beforeDevCommand`
 ```powershell
 cd <repo-root>
 powershell -ExecutionPolicy Bypass -File .\scripts\dev-clean.ps1
-orbita\dev.bat
+apps\desktop\dev.bat
 ```
 
 等待终端出现 Vite `ready` 与 `Running ... orbita.exe`。不要关掉运行 `dev.bat` 的终端。
@@ -103,7 +103,7 @@ ID），赋值会触发 `VariableNotWritable`，导致清理失败、端口仍�
 ```powershell
 cd <repo-root>
 powershell -ExecutionPolicy Bypass -File .\scripts\dev-clean.ps1
-orbita\dev.bat
+apps\desktop\dev.bat
 ```
 
 `dev-clean.ps1` 通过 `netstat` 识别监听端口，而不依赖可能被权限策略拒绝的
@@ -139,8 +139,8 @@ orbita\dev.bat
 
 ## Finance Service（当前为 Python sidecar）
 
-- venv 必须先由 `orbita/python/setup.ps1` 创建；运行时使用
-  `orbita/python/.venv/Scripts/python.exe`（或明确设置 `ORBITA_PYTHON`），不能静默回退到
+- venv 必须先由 `apps/desktop/python/setup.ps1` 创建；运行时使用
+  `apps/desktop/python/.venv/Scripts/python.exe`（或明确设置 `ORBITA_PYTHON`），不能静默回退到
   系统 Python。
 - Orbita Panel 与 Agent 不应在启动时拉起 Python。当前 Insight 入口会异步确保 Finance Service 启动，
   Finance 页面使用它；打开窗口不得等待健康检查而阻塞。若要改为仅切入 Finance 才启动，必须先另立
@@ -244,5 +244,5 @@ cd orbita
 npm run tauri build
 ```
 
-产物为 `orbita/src-tauri/target/release/orbita.exe`。发布前还需按 manifest 实际情况同步版本，
+产物为 `apps/desktop/src-tauri/target/release/orbita.exe`。发布前还需按 manifest 实际情况同步版本，
 不要只改文档版本号。

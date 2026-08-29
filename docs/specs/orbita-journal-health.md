@@ -135,7 +135,7 @@ Journal 写、删和 Garmin 同步都是用户数据写入：必须走现有确�
 | Garmin 活动 | 重复同步同一 `externalId` 不产生重复骑行；非骑行不会被当前代码写入 exercise。 |
 | 数据目录切换 | 切换后读取新根数据；不复制旧 Journal/Health 数据；跨窗口刷新而非仅本窗口 `CustomEvent`。 |
 
-完成代码修改后，必须按仓库规则运行 `orbita/dev.bat`，等待启动完成且确认无报错；未经用户明确要求，不运行 `cargo check` 或 build。
+完成代码修改后，必须按仓库规则运行 `apps/desktop/dev.bat`，等待启动完成且确认无报错；未经用户明确要求，不运行 `cargo check` 或 build。
 
 ## 7. 当前明确未实现或待另立计划的内容
 

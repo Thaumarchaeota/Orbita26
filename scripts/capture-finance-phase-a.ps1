@@ -93,7 +93,7 @@ function Resize-Orbita([IntPtr]$hwnd, [int]$width, [int]$height) {
 
 function Open-FinanceDetail {
   $main = (Get-OrbitaWindows | Select-Object -First 1)
-  if (-not $main) { throw "No Orbita window found. Start orbita\dev.bat first." }
+  if (-not $main) { throw "No Orbita window found. Start apps\desktop\dev.bat first." }
   Assert-Responding $main
   [WinCap]::SetForegroundWindow($main.MainWindowHandle) | Out-Null
   Start-Sleep -Milliseconds 200
@@ -116,7 +116,7 @@ function Capture-Scene([string]$name, [IntPtr]$hwnd) {
 if (-not $CaptureOnly -and -not $OpenDetail) {
   Write-Host @"
 Manual Phase A capture (recommended):
-1. orbita\dev.bat running, no cargo rebuild in progress
+1. apps\desktop\dev.bat running, no cargo rebuild in progress
 2. Main window: Ctrl+Alt+F opens Insight Finance Detail (debug only)
 3. Resize admin window; toggle sidebar / rail / drawer by hand
 4. Save PNGs under: $OutDir

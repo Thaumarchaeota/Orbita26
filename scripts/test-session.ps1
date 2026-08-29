@@ -81,7 +81,7 @@ try {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = (Get-Command npm.cmd -CommandType Application -ErrorAction Stop).Source
     $startInfo.Arguments = "run test:run"
-    $startInfo.WorkingDirectory = (Resolve-Path "$PSScriptRoot\..\orbita").Path
+    $startInfo.WorkingDirectory = (Resolve-Path "$PSScriptRoot\..\apps\desktop").Path
     $startInfo.UseShellExecute = $false
     $job = New-TestJob
     $process = [System.Diagnostics.Process]::Start($startInfo)

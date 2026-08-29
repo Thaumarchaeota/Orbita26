@@ -17,6 +17,10 @@ Garmin、开发启动保护等。它是证据档案，不再作为日常入口�
 
 本轮确认：Insight Host 的基础路线已落，Finance “新壳 + 旧 Detail”路线停止，同日拖拽由时间排序与 ADR 0002 取代，旧壳层步骤由工作台重构取代，AccountSelect 由 ADR 0004 落地并于 2026-08-30 用户验收。稳定 Host、Finance、交互与数据边界分别迁至 SYSTEM、Finance spec、decisions 与 ADR。
 
+## 0.0.18：多应用仓库结构
+
+桌面应用自根 `orbita/` 迁入 `apps/desktop/`，并建立 `apps/android/`、`services/sync/`、`contracts/` 目录边界；根 `scripts/` 与现行文档路径已更新。计划见 [`plans/archive/v0.0.18-repository-structure.md`](plans/archive/v0.0.18-repository-structure.md)（2026-08-30 收官）。
+
 ## Garmin SSO 封禁事故
 
 **结论：同步路径必须零 SSO；token 是资产，禁止自动删除。**

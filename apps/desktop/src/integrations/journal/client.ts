@@ -76,7 +76,7 @@ export function formatGarminError(reason?: string | null, message?: string | nul
     case "rate_limited":
       return message ?? "佳明请求频率限制，请稍后再试。";
     case "deps_missing":
-      return "未安装 garminconnect，请运行 orbita/python/setup.ps1。";
+      return "未安装 garminconnect，请运行 apps/desktop/python/setup.ps1。";
     case "bad_credentials":
       return message ?? "佳明邮箱或密码错误，请检查生活区凭据。";
     case "mfa":

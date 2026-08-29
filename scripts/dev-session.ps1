@@ -155,7 +155,7 @@ try {
             exit $LASTEXITCODE
         }
 
-        $sessionChild = Start-SessionChild "$PSScriptRoot\..\orbita"
+        $sessionChild = Start-SessionChild "$PSScriptRoot\..\apps\desktop"
         try {
             $sessionChild.Process.WaitForExit()
             $exitCode = $sessionChild.Process.ExitCode
