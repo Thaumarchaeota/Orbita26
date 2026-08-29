@@ -1,7 +1,7 @@
 # 当前状态
 
 > **版本**：`0.0.17-snapshot`  
-> **代码基线**：`d6bac5a`（0.0.17-snapshot + 0.0.18 仓库结构）  
+> **代码基线**：`4e17289`（0.0.17-snapshot + 0.0.18 仓库结构）  
 > **最后核对**：2026-08-30；0.0.17 收束见 [`plans/v0.0.17-closeout.md`](plans/v0.0.17-closeout.md)。Finance 时间排序见 [`ADR 0002`](adr/0002-finance-chronological-order-without-drag.md)，AccountSelect 见 [`ADR 0004`](adr/0004-finance-account-select-cascade-menu.md)，领域契约见 [`specs/orbita-finance.md`](specs/orbita-finance.md)。
 
 本文件只记录当前工作树的真实状态、风险与下一步。不可回退的理由见 [`DECISIONS.md`](DECISIONS.md)；详细 Finance 设计见 `specs/orbita-finance.md`；历史过程见 `HISTORY.md`。
