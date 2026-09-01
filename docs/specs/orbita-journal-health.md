@@ -14,7 +14,9 @@ Orbita Journal 是 Orbita Archive 中的结构化个人记录领域；Orbita Hea
 - **事实优先**：原始运动文件、导入事实与人工记录优先于统计、缓存、AI 摘要和推断；后四者不得覆盖或伪装成真源。
 - **当前物理根**：`dataDir` 仍同时承载 App State 与 Orbita Archive。Journal 根由 `integrations.journal.dataRoot` 决定；为空时回退到当前 `dataDir`。不得为未来 `archiveRoot` 擅自搬运、复制或重命名用户数据。
 
-当前文件布局：
+**0.0.18 起（桌面）**：Journal / Health 专业事实写入 `{journalRoot}/journal.sqlite`；`daily` / `routine` 仅为查询投影。旧 `{journalRoot}/journal/YYYY.json` **不读取、不导入、不删除**；首次启用须重新同步 Garmin、手工补记餐食等。实现收束记录见 [`plans/archive/v0.0.18-journal-health-sqlite-foundation.md`](../plans/archive/v0.0.18-journal-health-sqlite-foundation.md)。
+
+当前文件布局（历史 JSON，仅备份）：
 
 ```text
 {journalRoot}/
@@ -81,7 +83,7 @@ ID 与 upsert 规则：
 
 - `event` 与普通 `mood` 可同日多条，以 `id` 编辑和删除。
 - `mood.primary: true` 每日至多一条；写入新的主心情前，必须把同日既有主心情降为 `false`。非主心情要显式规范化为 `primary: false`，不要让未定义状态变成第二个主心情。
-- `exercise` 保留运动领域字段；Garmin 导入的骑行以 Garmin `activityId` 作为 `externalId` 去重。不要把不同运动类型强塞进不兼容的 Journal 结构。
+- `exercise` 保留运动领域字段；Garmin 导入的活动以 Garmin `activityId` 作为 `externalId` 去重，写入 `activities` 表（`activity_json` 含 `sport`、`duration`、`metrics.startTime` 等）。不要把不同运动类型强塞进不兼容的 Journal 结构。
 
 ## 4. Orbita Health / Garmin 同步
 
@@ -106,9 +108,36 @@ Rust `garmin_sync` 运行项目 Python 环境中的 `scripts/garmin_sync.py`；�
 
 1. 日汇总 → `daily`；合并旧 `data`，保留 `meals`。
 2. 睡眠 → `routine.data.night`；保留既有 `naps`。
-3. 运动 → 目前仅写入 `sport === "cycling"` 的 `exercise`；按 `externalId` 去重。
+3. 运动 → 凡 `garmin_sync` 拉取到且 `map_exercise` 能解析出 `externalId` 与 `metrics.startTime` 的 Garmin 活动，写入 `activities`（按 `externalId` 去重）；不限运动类型。
 
-“同步成功”只表示脚本和写入流程成功，不表示 Garmin 有所有类型的数据。非骑行 `exercise` 写入、完整 Media/Trail 归档及其他外部健康来源均未在当前契约中实现。
+“同步成功”只表示脚本和写入流程成功，不表示 Garmin 有所有类型的数据。完整 Activity/FIT 详情、`.fit` 归档索引与 Garmin Nutrition 等仍未在当前契约中实现。
+
+#### 4.2.1 指标日快照与 SpO2（0.0.18+）
+
+0.0.18 起，HR、Stress、Body Battery、Respiration、SpO2、HRV、步数累计等时序写入
+`{journalRoot}/journal.sqlite` 的 `metric_day_snapshots`（按北京 `local_date` + `metric_name` +
+规范化 `samples` JSON、coverage、content hash、`parserRev` 等）。日摘要标量（如 `spo2Avg`）在
+`daily_metrics`，与时序快照分离。
+
+**SpO2 须合并两路 Garmin 数据（设备/账号可有差异，以 probe 为准）：**
+
+| 来源 | 方法 | 典型 payload | 粒度 |
+| --- | --- | --- | --- |
+| 日间 | `get_spo2_data` | `spO2HourlyAverages`：`[[epochMs, percent], …]` | 约每小时 1 点 |
+| 睡眠 | `get_sleep_data` | `wellnessEpochSPO2DataDTOList[].spo2Reading` 等 | 睡眠期约每分钟 |
+
+不得假定 `TimeOffsetSpo2Values` 或 `spO2SingleValues` 一定存在；缺失不是同步失败。实现与排错
+顺序见 [DEV.md — Health 时序指标排错](../DEV.md#health-时序指标排错spo2-等)。
+
+**解析版本**：`metric_day_snapshots` 中 SpO2 快照可带 `parserRev`；映射逻辑变更后须递增，否则同 content hash 会跳过重写，用户需再同步。
+
+#### 4.2.2 Insight 轨道活动读取（0.0.18+）
+
+`health_overview_query` / `read_track` 从 `activities` 表按请求的 **北京 `local_date` 范围**（由 `trackFromUtc`/`trackToUtc` 推导）选取行，解析 `activity_json.metrics.startTime` 与 `duration` 得到 `startUtc`/`endUtc`。
+
+- **不得**在 SQL 已按 `local_date` 命中后，再用 UTC 窗口重叠过滤丢弃活动（否则上午结束的活动可能在当日午后开始的 buffer 里被误删）。
+- 轨道 UI 按**当前视口** UTC 裁剪绘制；视口外活动不画，但仍在缓存合并结果中保留。
+- 活动须含可解析的 `startTime`（整数或浮点秒）；`duration` 为 0 时 UI 可能不绘制区间。
 
 ### 4.3 原始运动文件
 
@@ -118,8 +147,12 @@ Rust `garmin_sync` 运行项目 Python 环境中的 `scripts/garmin_sync.py`；�
 
 Journal 写、删和 Garmin 同步都是用户数据写入：必须走现有确认交互。查询、摘要与显示可直接读取，但 AI 不能把推断写成事实，也不能声称尚未实现的财务或健康写入已经完成。
 
-- 吃饭相关请求可通过既有 Journal 工具提出记录与确认；热量若为估计，应明确其不确定性。
-- Agent 读取 Journal 时应尊重醒来日、`daily.meals` 和已有数据合并规则。
+**0.0.18 SQLite 后**：Agent Health 工具（餐食、睡眠、午睡、`garmin_sync`）经 `journal_list` / `journal_upsert` / `journal_delete` 写入 `journal.sqlite`；`daily` / `routine` 仅为查询投影，餐食真源为 `meals` 表（`sync_outbox.domain = health`）。Panel AI 确认框通过同一 API 水合餐食；写入成功后派发 `orbita:journal-changed` 刷新 Health 总览。
+
+- 吃饭相关请求通过 `journal_add_meal` / `journal_update_meal` / `journal_delete_meal`；热量若为估计，应明确其不确定性；`kcal` 接受整数或浮点；未填 `at` 时默认当前北京时间（Health 轨道需要 `at`）。
+- 餐食 id 为 `daily.data.meals[].id`（UUID），不是 `journal/YYYY.json:…` 路径。
+- `journal_set_sleep` 在当日已有佳明 `night`（`source: garmin`）时须失败，不得覆盖。
+- Agent 读取时应尊重醒来日、餐食合并规则与 Garmin 手工事实共存。
 - 不得通过“修复”静默重建、清空、替换 Journal 年文件、token 或 Garmin 数据。
 
 ## 6. 修改与验收清单
@@ -132,7 +165,7 @@ Journal 写、删和 Garmin 同步都是用户数据写入：必须走现有确�
 | 餐食或喝水 | 写入后保留 Garmin daily 字段；Garmin 同步后 `meals` 仍存在；修改/删除只影响目标餐食。 |
 | 睡眠 | 跨午夜归醒来日；手填时间按 `Asia/Shanghai` 正确持久化；同步更新 night 后 naps 仍存在。 |
 | Garmin 同步 | 有 token 时能完成指定范围同步；缺 token 返回 `no_token` 且不触发登录；失败不删除 token；429 不循环重试。 |
-| Garmin 活动 | 重复同步同一 `externalId` 不产生重复骑行；非骑行不会被当前代码写入 exercise。 |
+| Garmin 活动 | 重复同步同一 `externalId` 不产生重复行；凡能解析 `startTime` 的 Garmin 活动类型均写入；轨道按视口显示区间。 |
 | 数据目录切换 | 切换后读取新根数据；不复制旧 Journal/Health 数据；跨窗口刷新而非仅本窗口 `CustomEvent`。 |
 
 完成代码修改后，必须按仓库规则运行 `apps/desktop/dev.bat`，等待启动完成且确认无报错；未经用户明确要求，不运行 `cargo check` 或 build。
@@ -142,7 +175,7 @@ Journal 写、删和 Garmin 同步都是用户数据写入：必须走现有确�
 - 将 `dataDir` 物理拆分为 App State 与 `archiveRoot`，以及任何自动迁移/备份策略。
 - 统一所有领域为万能 `Event`、图数据库或自动跨域归因。
 - Connection / Semantic 的正式产品形态与数据模型。
-- 非骑行 Garmin 活动写入 Journal、完整 Trail/Media 管理、所有 `.fit` 的索引与浏览体验。
+- 完整 Activity/FIT 详情页、Trail/Media 管理、所有 `.fit` 的索引与浏览体验。
 - 在 Orbita Insight 内完成 Health / Journal 领域业务页面；当前 Insight 的这两个领域区仍以壳和后续工作为主。
 - Garmin MFA 的应用内自动化、同步时自动 SSO、删除 token 作为常规排错。
 

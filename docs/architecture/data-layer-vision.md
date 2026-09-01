@@ -35,9 +35,11 @@ Orbita Archive
 ├── Orbita Journal
 ├── Orbita Finance
 ├── Orbita Health / Exercise
+├── Orbita Work（Proposed）
+├── Plan（Proposed）
 ├── Knowledge
 ├── Media
-└── Future: 跨领域关联（未定名）
+└── Connection（Proposed 跨领域连接组）
 ```
 
 ## 3. 当前阶段：单根目录的 Archive 基础
@@ -59,7 +61,7 @@ archiveRoot = Orbita Archive
 
 | 领域 | 角色 | 当前判断 |
 | --- | --- | --- |
-| Orbita Journal | 每日、作息、餐食等结构化记录 | 已有基础能力。 |
+| Orbita Journal | 每日、作息、随记等结构化记录 | 已有基础能力。 |
 | Orbita Finance | 账本与资产记录 | 正在迁入与收束；领域数据保留 bean/Beancount 语义。 |
 | Orbita Health / Exercise | Garmin 健康、活动与原始运动文件 | 已有同步和归档基础。 |
 | Knowledge | Zotero、Obsidian 等知识系统 | 主要仍是外部连接，不应假装已完整归档。 |
@@ -78,31 +80,35 @@ Orbita Archive 的职责是：
 
 | 领域 | 领域对象例子 | 当前/预期存储语义 |
 | --- | --- | --- |
-| Orbita Journal | `daily`、`routine`、`meal`、随记 | 按 Journal 自己的条目与日期规则。 |
-| Orbita Health | 日汇总、睡眠、活动、`.fit` | Garmin 是外部来源；原始运动文件优先保留。 |
-| Orbita Finance | 账户、分类、交易、余额 | Ledger 是内部账本模型；当前底层为 bean/Beancount，不改成通用事件。 |
+| Orbita Journal | 现行的 daily/routine/随记；目标为 `journal/entry` | 现行存储与目标 Object 分类须经迁移衔接，不能混为一层。 |
+| Orbita Health | 餐食、午睡、活动、睡眠夜、体重、水分、日汇总、指标与 `.fit` | 餐食、午睡、活动、睡眠夜是可连接 Object；体重/体成分、水分、日汇总、高密度指标等测量/汇总数据不成为 Object。Garmin 是外部来源；原始运动文件优先保留。 |
+| Orbita Finance | 账户、分类、交易、余额 | Ledger 是内部账本模型；当前底层为 bean/Beancount。Finance v2 的目标中 Transaction 是本地 SQLite Object，Posting 为从属组件；不改成通用事件。 |
 | Knowledge | 论文、笔记、阅读记录 | 保留 Zotero/Obsidian 的边界；可先存引用和元数据。 |
 | Media | 照片、视频、轨迹 | 原文件与稳定元数据/路径，后续再做索引。 |
 
 外部工具不是 Orbita 的敌人。Garmin、Beancount、Zotero、Obsidian、TickTick 可以继续各自擅长记录和操作；Orbita 的价值在于档案、上下文和连接，而不是把所有工具重写一遍。
 
-## 5. Connection：跨领域关联（仍待设计）
+已收束的记录身份、Health Object/Data 与 Connection 字段细节见 [记录分类与 Health / Connection 结构](object-record-model.md)。
 
-Connection 的工程形态与正式名称都**尚未定案**。Obsidian 双链只是帮助理解的类比：它提示我们“已有对象之间可以双向关联”，但不代表 Orbita 的第一版必须照搬 Obsidian。
+## 5. Connection：跨领域连接组（Proposed）
+
+**Connection（连接）** 是已收束的目标公共模型：一种 Archive Object，容纳零个或多个已有 Object，并表达这些对象之间或围绕该组形成的上下文关联。它仍未实现，且精确 schema、迁移和同步尚未授权。Obsidian 双链只是帮助理解的类比。
 
 ```text
 Obsidian：笔记 A ↔ 笔记 B
 Orbita：Journal 条目 ↔ 骑行记录 ↔ 交易 ↔ 照片 ↔ 地点 ↔ 知识记录
 ```
 
-目前能确定的边界是：关联不复制或改写主数据；它只描述已有档案对象之间的上下文。第一步不需要图数据库，也不需要 AI 自动理解人生。
+Connection 不复制或改写主数据；它只稳定引用已有对象。成员可为空、可嵌套 Connection，但不得形成直接或间接环；成员不要求两两有命名关系。第一步不需要图数据库，也不需要 AI 自动理解人生。
 
-### 5.1 候选方向：Context
+Connection 本体有必填标题、可选短描述和可选对象专属 MD；成员由 `connectionId + memberDomain + memberType + memberId` 保存，且同一成员不得在同一 Connection 重复。成员被软删后保留引用并显示“已删除”。
 
-一次旅行、一个项目、一段时期并不只是两条数据之间的边，而是能汇集多种记录的上下文。**Context（上下文卡片）** 是一个值得验证的候选方向：
+### 5.1 Connection 连接组
+
+一次旅行、一个项目、一段时期并不只是两条数据之间的边，而是能汇集多种记录的上下文。Connection 正是这类连接组：
 
 ```text
-Context：2026 年川西旅行
+Connection：2026 年川西旅行
 ├── 3 次骑行
 ├── 12 笔交通与住宿消费
 ├── 多张照片
@@ -110,39 +116,34 @@ Context：2026 年川西旅行
 └── 一条路线
 ```
 
-Context 不取代任何领域对象，只保存它们的引用。用户从任意一条骑行、交易或随记进入时，也可以看到反向关联到的 Context。
+Connection 不取代任何领域对象，只保存 ArchiveRef；用户从任意成员进入时可反查所属 Connection。它既可作为手工建立的空草稿，也可承接有证据的规则建议；自动建议不能直接成为用户事实。
 
-是否以 Context 作为第一步、由用户手建还是由系统提出候选，尚未决定。它只是当前最容易说明“同一段经历被不同系统拆散”这一问题的模型。
+### 5.2 Connection 与专门关系
 
-### 5.2 候选方向：Relation
-
-当出现明确、高价值的两对象关系时，可能需要 `Relation`，例如：
+Connection 不是所有关系的替代物。会影响领域行为、约束或统计的明确关系必须由领域自己保存，例如 Work Node 的 `parentNodeId`、Segment 到 Node 的归属，以及 `PlanItem.kind = schedule` 与 Segment 的强关联。Schedule 不得反向推导或自动创建 Segment；仅 Segment 的明确用户操作可创建或更新关联 Schedule。过去提出的通用二元关系模型仅是已被 Connection 方向覆盖的候选，不进入第一版：
 
 ```text
 照片 A --拍摄于--> 骑行 B
 午餐 A --由--> 交易 B 支付
 ```
 
-如果采用 Relation，它不应只是自由文本标签，至少应有关系类型、来源、证据与状态；AI 建议的关系永远只是候选，不能自动成为事实。
+若未来出现少数确有价值的二元关系类型，必须另立设计，明确来源、证据、状态和用户确认；AI 建议永远只是候选，不能自动成为事实。
 
 ```ts
 type ArchiveRef = {
-  domain: "journal" | "health" | "ledger" | "media" | "knowledge";
+  domain: string;
   type: string;
   id: string;
 };
-
-type Relation = {
-  from: ArchiveRef;
-  to: ArchiveRef;
-  kind: string;
-  source: "user" | "imported" | "rule" | "ai_suggested";
-  evidence?: ArchiveRef[];
-  status: "active" | "retracted";
-};
 ```
 
-`ArchiveRef` 是一种候选的公共引用信封：只统一“如何引用一个已有对象”，不统一对象的数据结构。无论 Connection 最终叫什么、采用何种存储，这种“引用而非改写领域模型”的边界值得保留。
+`ArchiveRef` 是目标公共引用信封：只统一“如何引用一个已有对象”，不统一对象的数据结构。Connection、字段 schema 与存储实现仍须独立计划。
+
+### 5.3 本地事实与同一 Sync Core（Proposed）
+
+所有可同步的 Archive Object 都先在每台设备自己的本地 SQLite 写入；可独立同步的 Data 也同样如此。Object 或独立 data-root 组成 aggregate 根，Component 与严格子 Data 只能随父 aggregate 原子同步。跨端传输的是有版本的领域 aggregate，不是 SQLite 文件、Markdown 目录或任一端的数据库副本。
+
+这是一套通用 Sync Core，不按 Finance、Work、Plan、Journal 或 Health 另起同步机制。Finance Transaction / Posting 未来复用它，只在对账、会计约束和派生账本上有自己的领域逻辑。Garmin 的特殊性也只在 connector 的事实入口与写入授权；其规范化事实仍走同一 Core。Observation、缓存、投影、凭据、outbox 与本机派生文件不属于同步事实。对象的 MD detail 如启用同步，按对象 aggregate 携带内容与 manifest；本机路径不参与身份。
 
 ## 6. 时间、语义与 Insight
 
@@ -151,6 +152,8 @@ type Relation = {
 时间不是普通字段，而是个人数据最重要的共同维度。它需要贯穿各领域：发生时间、记录时间、时间范围、时区、持续时间、来源与前后关系。
 
 但不应为此先建一个万能 Timeline 数据库。每个领域先保存自己的时间语义；未来的时间线、索引或查询视图建立在这些记录之上。
+
+精确时刻的目标底层表示为 UTC；日期与用户输入按全局 Business Time Zone 解释，逐步消除硬编码的上海时区。
 
 ```text
 购买跑鞋 → 开始训练 → 训练提升 → 形成习惯
@@ -176,7 +179,7 @@ Insight 的长期路径是：
 
 ```text
 Orbita Archive
-  → 跨领域关联（具体产品形态未定）
+  → Connection 与可回钻的跨领域关联
   → 带证据的统计与解释
   → Insight
   → 用户确认后的 Action
@@ -201,8 +204,8 @@ Insight 的目标不是评价人生，而是发现长期趋势、行为模式、
 | --- | --- | --- | --- |
 | A. Archive 基础 | 各领域事实可靠保存 | 领域模型、原始文件、稳定数据根 | 统一万能模型。 |
 | B. 可引用性 | 能稳定指向跨领域对象 | 各领域稳定 id、基本时间/来源元数据 | 自动关联。 |
-| C. 关联原型（候选） | 验证“经历上下文”是否有价值 | 可选的上下文卡片、双向浏览或其他原型 | 把候选模型当最终模型。 |
-| D. 明确关系（候选） | 验证少量关系类型是否必要 | 若采用，则带来源/证据/状态 | 自由图谱。 |
+| C. Connection 原型 | 验证连接组与双向浏览是否有价值 | Connection、成员引用、反查 | 把目标 schema 当已实现。 |
+| D. 专门关系（按需） | 验证少量领域强关系是否必要 | 领域字段或独立、带证据的设计 | 自由图谱。 |
 | E. Insight | 发现有依据的模式 | 可回钻的统计、提示与解释 | 人生总分、不可解释判断。 |
 
 任何阶段要进入实施，都必须另开 `plans/` 文件，写清本轮范围、数据迁移、兼容性、用户确认点和验收条件。本文件不提供任务 checkbox，也不代表这些阶段已被排期。
@@ -210,11 +213,11 @@ Insight 的目标不是评价人生，而是发现长期趋势、行为模式、
 ## 9. 仍待决定的问题
 
 - `archiveRoot` 何时从当前共用的 `dataDir` 中物理拆出，以及迁移/备份如何做。
-- Context 在第一版由用户手建、从记录页创建，还是先由 AI 仅提出候选。
-- Connection 的首个产品形态究竟是 Context、对象间 Relation、时间线浏览，还是另一种尚未提出的模型。
+- Connection 的删除/恢复本体语义、嵌套读取深度、来源/证据和 AI 建议确认方式；本体标题/描述/MD、成员引用、重复与软删成员规则已定。
+- 哪些专门二元关系具有足够价值，值得脱离 Connection 进入领域契约。
 - 哪些领域对象已有稳定 id，哪些需要先补引用策略。
 - Media、Knowledge 是否保存完整副本、稳定引用，还是两者并存。
-- 哪些 Relation 类型有足够明确的用户价值，值得成为正式类型。
+- Work、Plan、Journal Entry 与 Connection 的迁移顺序和跨端冲突策略。
 
 这些问题不能由代码审查或 AI 擅自“补全”。每一项进入实现前都应形成独立 plan，并在必要时补充 `DECISIONS.md`。
 

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/schemas/sleep_night.json",
+  "title": "sleep_night snapshot",
+  "type": "object",
+  "required": [
+    "id",
+    "wakeDate",
+    "source",
+    "revision",
+    "night",
+    "contentHash",
+    "naturalKey",
+    "createdAtUtc",
+    "updatedAtUtc"
+  ],
+  "properties": {
+    "id": { "$ref": "_common.json#/$defs/uuid" },
+    "wakeDate": {
+      "$ref": "_common.json#/$defs/localDate",
+      "description": "Asia/Shanghai wake calendar date."
+    },
+    "source": { "$ref": "_common.json#/$defs/source" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "night": {
+      "type": "object",
+      "properties": {
+        "sleepStartUtc": { "type": "integer" },
+        "sleepEndUtc": { "type": "integer" },
+        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "stages": {
+          "type": "object",
+          "properties": {
+            "deep": { "type": "integer", "minimum": 0 },
+            "light": { "type": "integer", "minimum": 0 },
+            "rem": { "type": "integer", "minimum": 0 },
+            "awake": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "contentHash": { "$ref": "_common.json#/$defs/contentHash" },
+    "naturalKey": {
+      "type": "object",
+      "required": ["wakeDate", "source"],
+      "properties": {
+        "wakeDate": { "$ref": "_common.json#/$defs/localDate" },
+        "source": { "$ref": "_common.json#/$defs/source" }
+      },
+      "additionalProperties": false
+    },
+    "createdAtUtc": { "$ref": "_common.json#/$defs/rfc3339Utc" },
+    "updatedAtUtc": { "$ref": "_common.json#/$defs/rfc3339Utc" },
+    "deletedAtUtc": {
+      "oneOf": [{ "$ref": "_common.json#/$defs/rfc3339Utc" }, { "type": "null" }]
+    }
+  },
+  "additionalProperties": false
+}

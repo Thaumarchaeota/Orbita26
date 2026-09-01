@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/sync-envelope.json",
+  "title": "Journal Health v1 sync envelope",
+  "$defs": {
+    "SyncChange": {
+      "type": "object",
+      "required": [
+        "opId",
+        "contractVersion",
+        "domain",
+        "recordType",
+        "recordId",
+        "kind",
+        "origin",
+        "localRevision",
+        "createdAtUtc"
+      ],
+      "properties": {
+        "opId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "contractVersion": { "$ref": "schemas/_common.json#/$defs/protocolVersion" },
+        "domain": { "$ref": "schemas/_common.json#/$defs/domain" },
+        "recordType": { "$ref": "schemas/_common.json#/$defs/recordType" },
+        "recordId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "kind": { "$ref": "schemas/_common.json#/$defs/operationKind" },
+        "origin": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Device or importer identity; server derives authorization from session, not this field alone."
+        },
+        "baseServerVersion": {
+          "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }],
+          "description": "Last confirmed server version for this record; null for first push."
+        },
+        "serverVersion": { "type": "integer", "minimum": 1 },
+        "changeSeq": { "type": "integer", "minimum": 1 },
+        "localRevision": { "type": "integer", "minimum": 1 },
+        "contentHash": { "$ref": "schemas/_common.json#/$defs/contentHash" },
+        "naturalKey": { "$ref": "schemas/_common.json#/$defs/naturalKey" },
+        "conflictId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "snapshot": {
+          "description": "Full type-specific fact snapshot for upsert/resolve.",
+          "oneOf": [
+            { "$ref": "schemas/daily_metrics.json" },
+            { "$ref": "schemas/metric_day_snapshot.json" },
+            { "$ref": "schemas/sleep_night.json" },
+            { "$ref": "schemas/nap.json" },
+            { "$ref": "schemas/meal.json" },
+            { "$ref": "schemas/activity.json" },
+            { "$ref": "schemas/body_measurement.json" },
+            { "$ref": "schemas/event.json" },
+            { "$ref": "schemas/mood.json" },
+            { "$ref": "schemas/note.json" }
+          ]
+        },
+        "tombstone": {
+          "type": "object",
+          "required": ["id", "revision", "deletedAtUtc"],
+          "properties": {
+            "id": { "$ref": "schemas/_common.json#/$defs/uuid" },
+            "revision": { "type": "integer", "minimum": 1 },
+            "deletedAtUtc": { "$ref": "schemas/_common.json#/$defs/rfc3339Utc" }
+          },
+          "additionalProperties": false
+        },
+        "createdAtUtc": { "$ref": "schemas/_common.json#/$defs/rfc3339Utc" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "delete" } }, "required": ["kind"] },
+          "then": {
+            "required": ["tombstone", "naturalKey"],
+            "not": { "anyOf": [
+              { "required": ["snapshot"] },
+              { "required": ["contentHash"] },
+              { "required": ["conflictId"] }
+            ] }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["upsert", "restore"] } }, "required": ["kind"] },
+          "then": {
+            "required": ["snapshot", "contentHash", "naturalKey"],
+            "not": { "required": ["tombstone"] }
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "resolve" } },
+            "required": ["kind"]
+          },
+          "then": { "required": ["snapshot", "contentHash", "naturalKey", "conflictId"] }
+        }
+      ]
+    },
+    "SyncOperation": {
+      "type": "object",
+      "required": ["contractVersion", "deviceId", "clientChangeSeq", "changes"],
+      "properties": {
+        "contractVersion": { "$ref": "schemas/_common.json#/$defs/protocolVersion" },
+        "deviceId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "clientChangeSeq": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Last durable change sequence applied on this device."
+        },
+        "changes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SyncChange" },
+          "maxItems": 100
+        }
+      },
+      "additionalProperties": false
+    },
+    "ChangeOutcome": {
+      "type": "object",
+      "required": ["opId", "status"],
+      "properties": {
+        "opId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "status": {
+          "type": "string",
+          "enum": ["accepted", "deduplicated", "conflict", "rejected", "retryable"]
+        },
+        "serverVersion": { "type": "integer", "minimum": 0 },
+        "changeSeq": { "type": "integer", "minimum": 0 },
+        "conflictId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "error": { "$ref": "#/$defs/SyncError" }
+      },
+      "additionalProperties": false
+    },
+    "SyncResult": {
+      "type": "object",
+      "required": ["contractVersion", "outcomes", "nextChangeSeq"],
+      "properties": {
+        "contractVersion": { "$ref": "schemas/_common.json#/$defs/protocolVersion" },
+        "outcomes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ChangeOutcome" }
+        },
+        "remoteChanges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SyncChange" }
+        },
+        "nextChangeSeq": { "type": "integer", "minimum": 0 },
+        "hasMore": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "SyncError": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,63}$"
+        },
+        "message": { "type": "string" },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "retryable": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "PullRequest": {
+      "type": "object",
+      "required": ["contractVersion", "deviceId", "cursor"],
+      "properties": {
+        "contractVersion": { "$ref": "schemas/_common.json#/$defs/protocolVersion" },
+        "deviceId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "cursor": { "type": "integer", "minimum": 0 },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 500 }
+      },
+      "additionalProperties": false
+    },
+    "AckRequest": {
+      "type": "object",
+      "required": ["contractVersion", "deviceId", "deliveredChangeSeq"],
+      "properties": {
+        "contractVersion": { "$ref": "schemas/_common.json#/$defs/protocolVersion" },
+        "deviceId": { "$ref": "schemas/_common.json#/$defs/uuid" },
+        "deliveredChangeSeq": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "PullChange": {
+      "allOf": [
+        { "$ref": "#/$defs/SyncChange" },
+        {
+          "type": "object",
+          "required": ["serverVersion", "changeSeq"],
+          "properties": {
+            "serverVersion": { "type": "integer", "minimum": 1 },
+            "changeSeq": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "PullResponse": {
+      "type": "object",
+      "required": ["contractVersion", "changes", "nextChangeSeq", "hasMore"],
+      "properties": {
+        "contractVersion": { "$ref": "schemas/_common.json#/$defs/protocolVersion" },
+        "changes": { "type": "array", "items": { "$ref": "#/$defs/PullChange" } },
+        "nextChangeSeq": { "type": "integer", "minimum": 0 },
+        "hasMore": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "AckResponse": {
+      "type": "object",
+      "required": ["contractVersion", "deliveredChangeSeq"],
+      "properties": {
+        "contractVersion": { "$ref": "schemas/_common.json#/$defs/protocolVersion" },
+        "deliveredChangeSeq": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/SyncOperation" },
+    { "$ref": "#/$defs/SyncResult" },
+    { "$ref": "#/$defs/SyncChange" },
+    { "$ref": "#/$defs/SyncError" },
+    { "$ref": "#/$defs/PullRequest" },
+    { "$ref": "#/$defs/PullResponse" },
+    { "$ref": "#/$defs/AckRequest" },
+    { "$ref": "#/$defs/AckResponse" }
+  ]
+}

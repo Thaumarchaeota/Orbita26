@@ -42,6 +42,19 @@ Garmin、开发启动保护等。它是证据档案，不再作为日常入口�
 “试试”。恢复自动同步前须先验证 token 稳定。旧 HANDOFF：§25.0.13–§25.0.14；具体开发规则见
 [DEV.md](DEV.md#garmin最高优先级安全约束)。
 
+## Health SpO2 排错弯路
+
+**结论：Garmin 时序必须先实机 probe / 查 SQLite，再改 parser 或 UI；勿凭 README 猜字段。**
+
+2026-08-30，Health 轨道 SpO2 多轮显示为空。错误路线包括：声称 `reference/` 为空（实为
+gitignore，应用直接路径读）；只读 `python-garminconnect_readme.md` 泛化说明而未对账号跑
+`get_spo2_data` / `get_sleep_data`；在 SQLite 已有数百个 `spo2` 样本时仍改 ingest 猜测
+`TimeOffsetSpo2Values`，而实机日间序列在 `spO2HourlyAverages`、睡眠序列在
+`wellnessEpochSPO2DataDTOList`。
+
+定案：排错顺序见 [DEV.md — Health 时序指标排错](DEV.md#health-时序指标排错spo2-等)；字段与
+粒度契约见 [specs/orbita-journal-health.md §4.2.1](specs/orbita-journal-health.md#421-指标日快照与-spo2-202018)。
+
 ## Dialog 层叠 P0 事故
 
 2026-08-06，AI 对话删除确认与设置弹窗分别挂在 `#app`、`body`，共享 `z-index:200`；设置虽

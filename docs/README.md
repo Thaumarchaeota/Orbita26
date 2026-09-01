@@ -1,9 +1,9 @@
 # Orbita 文档
 
-> 文档与计划收束基线：`0.0.17-closeout`；代码版本基线仍为 `0.0.17-snapshot`。  
+> 文档与计划收束基线：`0.0.18-closeout`；代码版本基线仍为 `0.0.17-snapshot`。  
 > 代码版本以 manifest 为准；当前实现状态以 `CURRENT.md` 为准；当前工作范围以 `plans/` 中的计划为准。
 
-`0.0.17-closeout` 是 0.0.17 的收束总计划（2026-08-30 文档与实现收束完成）；`0.0.17-snapshot` 仍表示代码基线，不是正式发布版本号。`plans/` 中其他文件（如 0.0.18 讨论草案）不是 0.0.17 执行输入。
+`0.0.18-closeout` 表示 0.0.18 的 Journal / Health 本地真源与 Health 初版已经收束；其未完成的实机与 L3 证据如实随归档保留，并转入 0.0.19 的前置门槛。`0.0.17-snapshot` 仍表示当前代码基线，不是正式发布版本号。0.0.19 的当前设计与实施输入见下方活动计划。
 
 ## 从这里开始
 
@@ -15,7 +15,11 @@
 4. [CURRENT.md](CURRENT.md)：确认当前真实状态、已知问题与下一步。
 5. 当前计划：
     - [0.0.17 收束总计划](plans/v0.0.17-closeout.md)：0.0.17 收束记录（2026-08-30 完成）；§4.1 运行时项仍开放。
-    - [0.0.18 Health 初版设计草案](plans/v0.0.18-health-page-initial-design.md)：讨论中，尚非实现授权。
+    - [0.0.19 Archive / Work / Plan 数据模型](plans/v0.0.19-archive-work-schedule-data-model.md)：Archive Object、Connection、Work 与 Plan 的目标领域边界；仅授权设计收束。
+    - [0.0.19 一个 Sync Core 与两个外部 Adapter](plans/v0.0.19-three-module-sync-architecture.md)：当前同步主架构；定义 Sync Core、Garmin Ingest 与 Schedule Adapter。
+    - [0.0.19 同步跨计划就绪稿](plans/v0.0.19-sync-cross-plan-readiness.md)：Sync S0 的阻断项、对象 allowlist 与实施次序。
+    - [0.0.19 生产部署计划](plans/v0.0.19-orbita-sync-production-deployment.md)：在 Sync S0 后的 Linux、恢复与外部 Adapter 实施门槛。
+    - [0.0.18 Journal / Health SQLite 与 Health 初版](plans/archive/v0.0.18-journal-health-sqlite-foundation.md)：已收束的实施记录；未完成验证项已递延至 0.0.19。
     - 已结束、取消或被替代的过程计划见 [plans/archive/](plans/archive/README.md)，只供追溯，不作为实现输入。
 6. [DECISIONS.md](DECISIONS.md)：审查、重构或提出替代方案前，先排除已否决路线。
 7. [ADR](adr/README.md)：评估或提出新的重要产品、架构与数据取舍时，了解待确认决策与记录格式。
@@ -29,7 +33,7 @@
 - 一个 Orbita：Orbita Panel（代码 `main`）与 Orbita Insight（代码 `admin`）是两个窗口，不拆成第二个应用。
 - Orbita Insight 有健康、随记、财务、工作四个领域区；当前代码 id 为 `health | journal | finance | work`。
 - Orbita Archive 是长期个人档案数据域；当前物理上仍与 App State 共用 `dataDir`。
-- Finance Service 不在 Orbita Panel 启动；当前代码在 Orbita Insight 入口异步确保它启动，Finance 页面使用该服务。若要收窄为仅进入 Finance 才启动，须先另立计划并验收生命周期与错误体验。
+- Finance Service 不在 Orbita Panel 启动；当前代码在 Orbita Insight 入口异步确保它启动，Finance 页面使用该服务。Finance v2 的 SQLite 真源、Observation、对账与 `.bean` materializer 是 0.0.19 的 Proposed 方向（ADR 0014），不得反写当前 `.bean`。
 - 本阶段不做手机端、NAS 前置，以及今日区的 7 日切换。
 
 上述内容是当前产品口径的摘要。实现进度、遗留项和验证结果必须写在 `CURRENT.md`，不要在这里重复维护。

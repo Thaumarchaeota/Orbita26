@@ -203,6 +203,43 @@ Garmin 的 token 是用户资产，SSO 是稀缺、会触发账号级限流的�
 这是由 2026-08-04 的 429 封禁事故得出的硬禁令；完整根因和已否决方案见
 `HISTORY.md#garmin-sso-封禁事故` 与旧 HANDOFF §25.0.13–§25.0.14。
 
+### Health 时序指标排错（SpO2 等）
+
+Garmin Connect **没有统一公开 schema**；`garminconnect` 的 README / demo 只列方法名，**不能**
+当作字段映射规格。改 ingest、解析或 Health 轨道显示前，必须先对**真实 token**取证，再动
+SQLite 或 UI。2026-08-30 SpO2 曾因此多轮误判（见 `HISTORY.md#health-spo2-排错弯路`）。
+
+**推荐顺序（只读，同步路径零 SSO）：**
+
+1. 确认 token：`{dataDir}/garmin/garmin_tokens.json`（`integrations.garmin.tokenDir` 为空时的默认）。
+2. 跑审计脚本（逐指标 sampleCount / validCount / 错误）：
+
+   ```powershell
+   cd apps\desktop\python\scripts
+   ..\..\.venv\Scripts\python.exe garmin_fetch_audit.py --token-dir D:\path\to\dataDir\garmin --date 2026-08-30
+   ```
+
+   或 `garmin_probe.py` 看 `capabilities.series`。
+3. 查本地是否已写入：`{journalRoot}/journal.sqlite` → `metric_day_snapshots`（`metric_name`、
+   `local_date`、`snapshot_json` 前缀）；活动查 `activities`（`local_date`、`activity_json`）。
+   **有样本而 UI 无图** → 查 `health_query` / 轨道视口 / 图例（`legend.activity` 等），不要先改 parser。
+   活动常见误判：SQL 已按 `local_date` 命中但被 UTC 重叠过滤丢弃（见 spec §4.2.2）；或视口未覆盖该时段。
+4. 改 parser 后 bump `parserRev`（见 `journal_db/garmin.rs`），否则同 content hash 会跳过
+   重写；用户须再同步一次。
+
+**`reference/`**：在 `.gitignore` 中，workspace 默认搜索可能显示为空；用直接路径读取
+（如 `reference/python-garminconnect_readme.md`），勿声称目录不存在。
+
+**SpO2 实机形状（2026-08-30 账号，仅供排错对照，非全设备保证）：**
+
+| 来源 | API | 典型字段 | 粒度 |
+| --- | --- | --- | --- |
+| 日间 Pulse Ox | `get_spo2_data` | `spO2HourlyAverages`：`[[epochMs, percent], …]`；`spO2SingleValues` 常为 null | 约每小时 1 点 |
+| 睡眠 | `get_sleep_data` | `wellnessEpochSPO2DataDTOList[].spo2Reading`；亦可有 `timeOffsetSleepSpo2` | 睡眠期约每分钟 |
+
+合并写入 `metric_day_snapshots`（`metric_name='spo2'`）；日摘要 `spo2Avg` 来自 `get_spo2_data`
+标量字段，与时序分离。
+
 ## UI / 交互的不可回退结论
 
 ### Dialog

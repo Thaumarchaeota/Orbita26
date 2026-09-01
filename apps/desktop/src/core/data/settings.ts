@@ -30,6 +30,7 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
   const next = { ...settings, version: Math.max(settings.version, 1) };
   cached = next;
   await writeSettings(next);
+  window.dispatchEvent(new CustomEvent("orbita:settings-changed"));
 }
 
 export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
@@ -41,6 +42,9 @@ export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSet
       ...current.ui,
       ...(patch.ui ?? {}),
       fonts: { ...current.ui.fonts, ...(patch.ui?.fonts ?? {}) },
+      healthTrackAxis: patch.ui?.healthTrackAxis
+        ? normalizeHealthTrackAxisPrefs(patch.ui.healthTrackAxis)
+        : current.ui.healthTrackAxis,
     },
     integrations: {
       v2ray: { ...current.integrations.v2ray, ...(patch.integrations?.v2ray ?? {}) },

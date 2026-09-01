@@ -15,10 +15,14 @@ import { healthDestination } from "./tabs/health";
 import { journalDestination } from "./tabs/journal";
 import { financeDestination } from "./tabs/finance";
 import { workDestination } from "./tabs/work";
+import { settingsDestination } from "./tabs/settings";
+import { timelineDestination } from "./tabs/timeline";
 
 export function registerDefaultAdminTabs(): void {
   registerInsightDestination(healthDestination);
   registerInsightDestination(journalDestination);
   registerInsightDestination(financeDestination);
   registerInsightDestination(workDestination);
+  registerInsightDestination(timelineDestination);
+  registerInsightDestination(settingsDestination);
 }

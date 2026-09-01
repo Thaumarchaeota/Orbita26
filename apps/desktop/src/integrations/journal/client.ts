@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { isTauri } from "../../core/data/client";
 import type { JournalEntry } from "../../core/data/types";
 import type { AppSettings } from "../../core/data/types";
 
@@ -18,11 +19,14 @@ export async function journalList(params: JournalListParams = {}) {
 }
 
 export async function journalUpsert(entry: JournalEntry) {
-  return invoke<{ entry: JournalEntry }>("journal_upsert", { req: { entry } });
+  const res = await invoke<{ entry: JournalEntry }>("journal_upsert", { req: { entry } });
+  notifyJournalChanged();
+  return res;
 }
 
 export async function journalDelete(id: string) {
-  return invoke<void>("journal_delete", { req: { id } });
+  await invoke<void>("journal_delete", { req: { id } });
+  notifyJournalChanged();
 }
 
 export type GarminSyncReason =
@@ -111,13 +115,38 @@ export async function garminSync(params?: { from?: string; to?: string }) {
     );
   });
   try {
-    return await Promise.race([
+    const result = await Promise.race([
       invoke<GarminSyncResult>("garmin_sync", { req }),
       timeout,
     ]);
+    if (result.ok) notifyJournalChanged();
+    return result;
   } finally {
     if (timer !== undefined) window.clearTimeout(timer);
   }
+}
+
+export function notifyJournalChanged(): void {
+  window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+  if (isTauri()) {
+    void import("@tauri-apps/api/event").then(({ emit }) => emit("orbita:journal-changed"));
+  }
+}
+
+export function bindJournalChanged(handler: () => void): () => void {
+  window.addEventListener("orbita:journal-changed", handler);
+  let unlisten: (() => void) | undefined;
+  if (isTauri()) {
+    void import("@tauri-apps/api/event").then(({ listen }) => {
+      void listen("orbita:journal-changed", handler).then((fn) => {
+        unlisten = fn;
+      });
+    });
+  }
+  return () => {
+    window.removeEventListener("orbita:journal-changed", handler);
+    unlisten?.();
+  };
 }
 
 export async function garminLogin(params?: { email?: string; password?: string }) {
@@ -142,6 +171,97 @@ export async function garminLogin(params?: { email?: string; password?: string }
 
 export async function bkeasySummary() {
   return invoke<{ today: number; month: number }>("bkeasy_summary");
+}
+
+export type HealthOverviewRequest = {
+  selectedDate: string;
+  trackFromUtc: number;
+  trackToUtc: number;
+  trendDays: number;
+};
+
+export type HealthOverviewResponse = {
+  track: {
+    sleepBlocks: Array<{
+      id: string;
+      startUtc: number;
+      endUtc: number;
+      isNap: boolean;
+      score: number | null;
+      source: string;
+    }>;
+    series: Array<{ metric: string; samples: Array<{ t: number; v: number | null }> }>;
+    activities: Array<{
+      id: string;
+      startUtc: number;
+      endUtc: number | null;
+      activityType: string | null;
+      name: string | null;
+      distanceM: number | null;
+      durationSec: number | null;
+    }>;
+    meals: Array<{
+      id: string;
+      occurredAtUtc: number;
+      mealType: string | null;
+      description: string | null;
+      kcal: number | null;
+    }>;
+  };
+  trends: Array<{
+    id: string;
+    title: string;
+    series: Array<{
+      metric: string;
+      label: string;
+      unit: string;
+      chartType: string;
+      points: Array<{ date: string; value: number | null }>;
+      windowAvg: number | null;
+      prevWindowAvg: number | null;
+    }>;
+  }>;
+  daySummary: {
+    date: string;
+    cards: Array<{
+      id: string;
+      label: string;
+      value: string | null;
+      unit: string | null;
+      everSeen: boolean;
+    }>;
+    energy: {
+      mealCount: number;
+      intakeKcal: number | null;
+      burnKcal: number | null;
+      deltaKcal: number | null;
+      daysWithMeals: number;
+      daysInWindow: number;
+    };
+  };
+  localDateRange: { earliest: string; latest: string } | null;
+};
+
+export type HealthSyncStatus = {
+  lastSuccessAt: string | null;
+  syncing: boolean;
+  lastError: string | null;
+  earliestLocalDate: string | null;
+  latestLocalDate: string | null;
+};
+
+export async function healthOverviewQuery(req: HealthOverviewRequest) {
+  return invoke<HealthOverviewResponse>("health_overview_query", {
+    req: {
+      ...req,
+      trackFromUtc: Math.floor(req.trackFromUtc),
+      trackToUtc: Math.ceil(req.trackToUtc),
+    },
+  });
+}
+
+export async function healthSyncStatus() {
+  return invoke<HealthSyncStatus>("health_sync_status");
 }
 
 export function beijingToday(): string {

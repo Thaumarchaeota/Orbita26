@@ -1,4 +1,5 @@
 import type { FontPrefs } from "./fonts";
+import type { HealthTrackAxisPrefs } from "./health-track-axis";
 import type { LifeRingGoals } from "./life-ring-goals";
 import type { LifeRingSlots } from "./life-ring-metrics";
 import type { ThemePrefs } from "./theme-prefs";
@@ -28,6 +29,7 @@ export type UiPrefs = {
   lifeRingSlots: LifeRingSlots;
   lifeRingGoals: LifeRingGoals;
   fonts: FontPrefs;
+  healthTrackAxis: HealthTrackAxisPrefs;
 };
 
 export type V2rayIntegration = { exePath: string };
@@ -46,7 +48,7 @@ export type TicktickIntegration = {
 
 export type JournalIntegration = { dataRoot: string };
 export type BKeasyIntegration = { dataRoot: string };
-export type GarminIntegration = { tokenDir: string };
+export type GarminIntegration = { tokenDir: string; syncDays: number };
 
 export type WorkIntegration = {
   projectNotesDir: string;

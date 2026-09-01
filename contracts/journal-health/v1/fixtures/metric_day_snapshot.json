@@ -1,0 +1,25 @@
+{
+  "id": "00000000-0000-4000-8000-000000000002",
+  "localDate": "2026-01-15",
+  "metricName": "hr",
+  "source": "garmin",
+  "revision": 1,
+  "payload": {
+    "samples": [
+      { "t": 1704067200, "v": 72 },
+      { "t": 1704067260, "v": 74 }
+    ],
+    "coverage": 1.0
+  },
+  "contentHash": "f6325732bdc23a621024bc7bed7ae54196c7687f18a0eb10d4cd74499e87892c",
+  "naturalKey": {
+    "localDate": "2026-01-15",
+    "metricName": "hr",
+    "source": "garmin",
+    "coverage": 1.0,
+    "contentHash": "f6325732bdc23a621024bc7bed7ae54196c7687f18a0eb10d4cd74499e87892c"
+  },
+  "createdAtUtc": "2026-01-15T08:00:00Z",
+  "updatedAtUtc": "2026-01-15T08:00:00Z",
+  "deletedAtUtc": null
+}

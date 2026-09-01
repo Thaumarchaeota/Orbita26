@@ -210,3 +210,21 @@
 .orbita-mini-cal-cell:hover:not(.is-active):not(.is-empty) {
   background: var(--ledger-hover, #f3f4f6);
 }
+
+.orbita-date-picker.is-no-chevron .orbita-date-picker-trigger {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.orbita-date-picker.is-no-chevron .orbita-date-picker-input {
+  text-align: center;
+  font-weight: 600;
+  padding: 4px 8px;
+}
+
+.orbita-date-picker.is-no-chevron .orbita-date-picker-trigger:focus-within,
+.orbita-date-picker.is-no-chevron .orbita-date-picker-trigger.is-open {
+  border-color: transparent;
+  box-shadow: none;
+}

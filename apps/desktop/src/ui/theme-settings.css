@@ -161,6 +161,34 @@
 .settings-row .dialog-btn {
   flex: 0 0 auto;
 }
+.health-axis-range-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.health-axis-range-grid.is-disabled {
+  opacity: 0.45;
+}
+.health-axis-range-row {
+  display: grid;
+  grid-template-columns: 72px 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.health-axis-range-label {
+  font-size: 12px;
+  color: var(--admin-muted, #6b7280);
+}
+.health-axis-range-row input {
+  width: 100%;
+  min-width: 0;
+}
+.health-axis-range-sep {
+  color: var(--admin-muted, #9ca3af);
+  font-size: 12px;
+  text-align: center;
+}
 .settings-select {
   position: relative;
   display: block;

@@ -20,7 +20,7 @@
 | `action-motion.ts` + `theme-action-motion.css` | 操作按钮的 pending、成功勾、错误和拒绝 shake 反馈；不定义何时业务上成功。 | 通用 UI action motion；Finance 保存的“何时显示绿勾”受 ADR 0003 约束。 | 已实现。 |
 | `layout-flip.ts` | 对稳定、固定宽度目标做单轴 FLIP 平移；处理连续切换、取消、卸载和 reduced motion；不得用于卡片列表每项或虚拟列表内部节点。 | `apps/desktop/src/ui/layout-flip.ts`；Finance 主体重居中与 Admin 侧栏开合。 | 已实现；见 [ADR 0003](adr/0003-perceived-responsiveness-and-durable-completion.md)。 |
 | `card-surface-motion.ts` | 卡片视觉状态的 paint 过渡与诊断；不提供跨页面的卡片组件或通用布局动画。 | Finance `CardDetailSurface`。 | 已实现，但仍是 Finance 专用，不可当作公共 card primitive。 |
-| 现有 `mountDatePicker` | 单日日期按钮、月历浮层与 `YYYY-MM-DD` 值；当前不支持单触发器日期范围或快捷范围。 | `apps/desktop/src/ui/date-picker.ts`；Finance Composer。 | 已实现；`DateRangePicker` 为范围扩展。 |
+| `showChevron?: boolean` | 单日日期按钮、月历浮层与 `YYYY-MM-DD` 值；`showChevron: false` 隐藏右侧三角，点日期即开日历（Health 轨道日期）。 | `apps/desktop/src/ui/date-picker.ts`；Finance Composer。 | 已实现；`DateRangePicker` 为范围扩展。 |
 | `SearchableSelectPopover` | 单层“搜索框 + 平铺选项列表”，统一选中态、空态、最大高度、隐藏滚动条与键盘（↑↓/Enter/Esc）；不承载树或业务语义。 | `apps/desktop/src/ui/searchable-select-popover.ts`；`TagPicker` 内部。 | 已实现。 |
 | `TagPicker` | 复用 `SearchableSelectPopover`，无限多选与可移除 chips；已选较多时显示前几个与 `+N`。 | `apps/desktop/src/integrations/ledger/ui/tag-picker.ts`；`finance-rail-filter.ts`。 | 已实现。 |
 | `LoadingIndicator` | 主题适配的统一加载几何、速度、reduced-motion 与无障碍状态；提供按钮内紧凑样式和内容区局部样式，不阻断整页。 | `apps/desktop/src/ui/loading-indicator.ts`；`finance-rail-audit.ts`。 | 已实现。 |
@@ -28,6 +28,7 @@
 | `TimePicker` | 统一 `HH:mm` 输入、小时与 `00/15/30/45` 快捷面板、即时合法性校验（`:60` 不可写）；不改变时区或写入链路。 | `apps/desktop/src/ui/time-picker.ts`；`cds-composer.ts`（Composer modal）。 | 已实现。 |
 | `AccountSelect` | 精确账户目标专用的可搜索单选器；合成父目录不可选，账本已声明父账户可选（ADR 0004）。 | `apps/desktop/src/integrations/ledger/ui/account-select.ts`；`cds-composer.ts`、`cds-composer-advanced.ts`、`cds-editing.ts`、`finance-rail-audit.ts`。 | 已实现；用户 2026-08-30 验收。 |
 | `AccountTreeMultiPicker` | 账户筛选专用的可搜索层级复选树，普通级联勾选、父级半选；不持有筛选状态。 | `apps/desktop/src/integrations/ledger/ui/account-tree-multi-picker.ts`；`finance-rail-filter.ts`。 | 已实现。 |
+| `SwatchToggleGrid` | 开关格：色条（`color`/`stripeStyle`）或 Lucide 图标（`iconHtml` + `iconColor`）；多选 on/off，不负责业务状态持久化。 | `apps/desktop/src/ui/swatch-toggle-grid.ts`；Health 轨道图例（图标见 `integrations/admin/tabs/health/icons.ts`）。 | 已实现；Finance 类型格待迁移。 |
 
 ## 已落地的 Finance 工作台规则
 

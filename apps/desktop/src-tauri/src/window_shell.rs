@@ -4,7 +4,7 @@ use tauri::WebviewWindow;
 const BLEED_L: i32 = 12;
 const BLEED_T: i32 = 4;
 const BLEED_R: i32 = 4;
-const BLEED_B: i32 = 12;
+const BLEED_B: i32 = 0;
 
 fn active_monitor(window: &WebviewWindow) -> Result<tauri::Monitor, String> {
     if let Ok(Some(m)) = window.current_monitor() {
@@ -67,6 +67,11 @@ pub fn attach_to_taskbar(window: &WebviewWindow) {
 pub fn detach_from_taskbar(window: &WebviewWindow) {
     let _ = window.set_skip_taskbar(true);
     bring_to_front(window);
+}
+
+pub fn hide_to_tray(window: &WebviewWindow) {
+    let _ = window.set_skip_taskbar(true);
+    let _ = window.hide();
 }
 
 pub fn repair_window_show(window: &WebviewWindow) -> Result<(), String> {

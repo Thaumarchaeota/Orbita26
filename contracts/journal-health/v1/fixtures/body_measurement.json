@@ -1,0 +1,20 @@
+{
+  "id": "00000000-0000-4000-8000-000000000007",
+  "localDate": "2026-01-15",
+  "source": "garmin",
+  "revision": 1,
+  "payload": {
+    "weightKg": 70.5,
+    "source": "garmin",
+    "externalId": "garmin-weight-2026-01-15-1704067200"
+  },
+  "contentHash": "9d36dfec71ebeb9bf6615ff98837e97d2c18e72324e40a56adcbd74e017a12d8",
+  "naturalKey": {
+    "localDate": "2026-01-15",
+    "source": "garmin",
+    "contentHash": "9d36dfec71ebeb9bf6615ff98837e97d2c18e72324e40a56adcbd74e017a12d8"
+  },
+  "createdAtUtc": "2026-01-15T08:00:00Z",
+  "updatedAtUtc": "2026-01-15T08:00:00Z",
+  "deletedAtUtc": null
+}

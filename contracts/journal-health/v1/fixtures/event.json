@@ -1,0 +1,16 @@
+{
+  "id": "00000000-0000-4000-8000-000000000008",
+  "localDate": "2026-01-15",
+  "source": "manual",
+  "revision": 1,
+  "payload": {
+    "at": 1705286400,
+    "remark": "示例事件备注"
+  },
+  "naturalKey": {
+    "id": "00000000-0000-4000-8000-000000000008"
+  },
+  "createdAtUtc": "2026-01-15T10:00:00Z",
+  "updatedAtUtc": "2026-01-15T10:00:00Z",
+  "deletedAtUtc": null
+}

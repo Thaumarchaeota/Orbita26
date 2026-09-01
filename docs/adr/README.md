@@ -46,3 +46,9 @@ ADR 用来记录重要但尚可讨论的产品、架构和数据取舍：为什�
 | [0006](0006-health-owned-meals-with-nutrition-envelope.md) | Accepted | Health 拥有 meals；nutrition 为可扩展属性（0.0.18 范围）。 |
 | [0007](0007-journal-note-as-a-first-class-record.md) | Accepted | Journal note 为一等记录（0.0.18 范围）。 |
 | [0008](0008-garmin-health-initial-fetch-catalog.md) | Accepted | Garmin Health 初始拉取目录（0.0.18 范围）。 |
+| [0009](0009-journal-health-professional-facts-with-sync-envelope.md) | Accepted | Journal / Health 专业事实表与共享同步信封（0.0.18 范围）。 |
+| [0010](0010-work-ticktick-local-projection.md) | Proposed | Work 与 TickTick 本地投影。 |
+| [0011](0011-finance-multi-replica-record-coordination.md) | Proposed | Finance 多副本记录协调。 |
+| [0012](0012-archive-object-connection-model.md) | Proposed | Archive Object 与 Connection 连接组模型。 |
+| [0013](0013-work-schedule-domain-model.md) | Proposed | Work 与 Plan 领域模型及 TickTick 适配边界。 |
+| [0014](0014-finance-v2-canonical-reconciliation.md) | Proposed | Finance v2 的 SQLite 真源与可追溯对账。 |

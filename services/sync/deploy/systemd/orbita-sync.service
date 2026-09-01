@@ -1,0 +1,18 @@
+[Unit]
+Description=Orbita Sync API Service
+After=docker.service tailscaled.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=orbita
+Group=orbita
+WorkingDirectory=/srv/app/orbita-sync
+ExecStart=/usr/bin/docker compose -f /srv/app/orbita-sync/deploy/docker-compose.yml up -d
+ExecStop=/usr/bin/docker compose -f /srv/app/orbita-sync/deploy/docker-compose.yml down
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

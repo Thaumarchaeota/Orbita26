@@ -7,7 +7,9 @@ use std::time::{Duration, Instant};
 use tauri::AppHandle;
 
 use crate::data;
-use crate::journal::{self, beijing_now_ts, beijing_today};
+use crate::journal::{self, beijing_now_ts, beijing_today, ingest_garmin_sync};
+use crate::journal_db::{GarminSeriesInput, set_garmin_sync_meta_app};
+use crate::journal_db::{GarminBodyMeasurementInput, GarminDailyInput, GarminExerciseInput, GarminRoutineInput};
 use crate::v2ray;
 
 #[derive(Debug, Serialize)]
@@ -66,6 +68,8 @@ struct PythonSyncResult {
     daily: Option<Vec<DailyItem>>,
     routines: Option<Vec<RoutineItem>>,
     exercises: Option<Vec<ExerciseItem>>,
+    series: Option<Vec<SeriesItem>>,
+    measurements: Option<Vec<MeasurementItem>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -98,6 +102,32 @@ struct ExerciseItem {
     sport: String,
     duration: i64,
     metrics: Option<Map<String, Value>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct MeasurementItem {
+    date: String,
+    #[serde(rename = "externalId")]
+    external_id: String,
+    #[serde(rename = "weightKg")]
+    weight_kg: f64,
+}
+
+fn mark_sync_failed(app: &AppHandle, message: &str) {
+    let _ = set_garmin_sync_meta_app(app, &[("syncing", "0"), ("last_error", message)]);
+}
+
+fn mark_sync_started(app: &AppHandle) {
+    let _ = set_garmin_sync_meta_app(app, &[("syncing", "1"), ("last_error", "")]);
+}
+
+#[derive(Debug, Deserialize)]
+struct SeriesItem {
+    metric: String,
+    #[serde(rename = "localDate")]
+    local_date: String,
+    samples: Option<Vec<Value>>,
+    coverage: Option<f64>,
 }
 
 fn legacy_token_dir() -> PathBuf {
@@ -461,6 +491,7 @@ pub fn garmin_login(app: &AppHandle, req: GarminLoginRequest) -> Result<GarminLo
 
 pub fn garmin_sync(app: &AppHandle, req: GarminSyncRequest) -> Result<GarminSyncResponse, String> {
     journal::journal_root(app)?;
+    mark_sync_started(app);
     let settings = data::read_settings(app)?;
     let to = req.to.unwrap_or_else(beijing_today);
     let from = req.from.unwrap_or_else(|| add_days(&to, -6).unwrap_or(to.clone()));
@@ -470,11 +501,11 @@ pub fn garmin_sync(app: &AppHandle, req: GarminSyncRequest) -> Result<GarminSync
     let token = token_file(&token_dir);
 
     if !token_usable(&token) {
+        let message = "\u{5c1a}\u{672a}\u{767b}\u{5f55}\u{4f73}\u{660e}\u{ff0c}\u{8bf7}\u{5230}\u{8bbe}\u{7f6e}\u{586b}\u{5199}\u{90ae}\u{7bb1}\u{5bc6}\u{7801}\u{5e76}\u{70b9}\u{51fb}\u{300c}\u{91cd}\u{65b0}\u{767b}\u{5f55}\u{4f73}\u{660e}\u{300d}".to_string();
+        mark_sync_failed(app, &message);
         return Ok(GarminSyncResponse {
             ok: false,
-            message: Some(
-                "\u{5c1a}\u{672a}\u{767b}\u{5f55}\u{4f73}\u{660e}\u{ff0c}\u{8bf7}\u{5230}\u{8bbe}\u{7f6e}\u{586b}\u{5199}\u{90ae}\u{7bb1}\u{5bc6}\u{7801}\u{5e76}\u{70b9}\u{51fb}\u{300c}\u{91cd}\u{65b0}\u{767b}\u{5f55}\u{4f73}\u{660e}\u{300d}".into(),
-            ),
+            message: Some(message),
             reason: Some("no_token".into()),
             daily_count: None,
             exercise_count: None,
@@ -484,6 +515,7 @@ pub fn garmin_sync(app: &AppHandle, req: GarminSyncRequest) -> Result<GarminSync
 
     let script = script_path("garmin_sync.py");
     if !script.is_file() {
+        mark_sync_failed(app, "garmin_sync.py not found");
         return Ok(GarminSyncResponse {
             ok: false,
             message: Some("garmin_sync.py not found".into()),
@@ -510,6 +542,7 @@ pub fn garmin_sync(app: &AppHandle, req: GarminSyncRequest) -> Result<GarminSync
     ) {
         Ok(output) => output,
         Err(message) => {
+            mark_sync_failed(app, &message);
             return Ok(GarminSyncResponse {
                 ok: false,
                 message: Some(message),
@@ -524,6 +557,7 @@ pub fn garmin_sync(app: &AppHandle, req: GarminSyncRequest) -> Result<GarminSync
     let parsed = match parse_json_stdout::<PythonSyncResult>(&output.stdout, &output.stderr) {
         Ok(p) => p,
         Err((reason, message)) => {
+            mark_sync_failed(app, &message);
             return Ok(GarminSyncResponse {
                 ok: false,
                 message: Some(message),
@@ -536,9 +570,14 @@ pub fn garmin_sync(app: &AppHandle, req: GarminSyncRequest) -> Result<GarminSync
     };
 
     if !parsed.ok {
+        let message = parsed
+            .message
+            .clone()
+            .unwrap_or_else(|| "garmin sync failed".into());
+        mark_sync_failed(app, &message);
         return Ok(GarminSyncResponse {
             ok: false,
-            message: parsed.message.or(Some("garmin sync failed".into())),
+            message: Some(message),
             reason: parsed.reason,
             daily_count: None,
             exercise_count: None,
@@ -551,37 +590,76 @@ pub fn garmin_sync(app: &AppHandle, req: GarminSyncRequest) -> Result<GarminSync
     let mut routine_count = 0u32;
     let fetched = beijing_now_ts();
 
-    if let Some(dailies) = parsed.daily {
-        for d in dailies {
-            let data_map = d.data.unwrap_or_default();
-            journal::upsert_daily_from_garmin(app, &d.date, d.fetched_at.unwrap_or(fetched), data_map)?;
+    let dailies: Vec<GarminDailyInput> = parsed
+        .daily
+        .unwrap_or_default()
+        .into_iter()
+        .map(|d| {
             daily_count += 1;
-        }
-    }
-
-    if let Some(routines) = parsed.routines {
-        for r in routines {
-            journal::upsert_routine_night_from_garmin(app, &r.date, r.night, r.naps)?;
-            routine_count += 1;
-        }
-    }
-
-    if let Some(exercises) = parsed.exercises {
-        for ex in exercises {
-            if ex.sport != "cycling" {
-                continue;
+            GarminDailyInput {
+                date: d.date,
+                fetched_at: d.fetched_at.unwrap_or(fetched),
+                data: d.data.unwrap_or_default(),
             }
-            let metrics = ex.metrics.unwrap_or_default();
-            journal::upsert_exercise_from_garmin(
-                app,
-                &ex.date,
-                &ex.external_id,
-                &ex.sport,
-                ex.duration,
-                metrics,
-            )?;
+        })
+        .collect();
+
+    let routines: Vec<GarminRoutineInput> = parsed
+        .routines
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| {
+            routine_count += 1;
+            GarminRoutineInput {
+                date: r.date,
+                night: r.night,
+                naps: r.naps,
+            }
+        })
+        .collect();
+
+    let exercises: Vec<GarminExerciseInput> = parsed
+        .exercises
+        .unwrap_or_default()
+        .into_iter()
+        .map(|ex| {
             exercise_count += 1;
-        }
+            GarminExerciseInput {
+                date: ex.date,
+                external_id: ex.external_id,
+                sport: ex.sport,
+                duration: ex.duration,
+                metrics: ex.metrics.unwrap_or_default(),
+            }
+        })
+        .collect();
+
+    let measurements: Vec<GarminBodyMeasurementInput> = parsed
+        .measurements
+        .unwrap_or_default()
+        .into_iter()
+        .map(|m| GarminBodyMeasurementInput {
+            date: m.date,
+            external_id: m.external_id,
+            weight_kg: m.weight_kg,
+        })
+        .collect();
+
+    let series: Vec<GarminSeriesInput> = parsed
+        .series
+        .unwrap_or_default()
+        .into_iter()
+        .map(|s| GarminSeriesInput {
+            local_date: s.local_date,
+            metric: s.metric,
+            samples: s.samples.unwrap_or_default(),
+            coverage: s.coverage,
+        })
+        .collect();
+
+    if let Err(e) = ingest_garmin_sync(app, dailies, routines, exercises, series, measurements) {
+        mark_sync_failed(app, &e);
+        return Err(e);
     }
 
     Ok(GarminSyncResponse {

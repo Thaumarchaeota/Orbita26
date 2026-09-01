@@ -219,6 +219,7 @@ function mountSettingsDialog() {
         blockOpacity: appearance.blockOpacity,
         fonts: appearance.fonts,
         lifeRingGoals: life.lifeRingGoals,
+        healthTrackAxis: life.healthTrackAxis,
       },
       integrations: {
         ...savedSettings.integrations,
@@ -231,7 +232,10 @@ function mountSettingsDialog() {
         everything: { exePath: navigation.everythingExePath },
         cursor: { exePath: navigation.cursorExePath },
         journal: { dataRoot: life.journalDataRoot },
-        garmin: { tokenDir: life.garminTokenDir },
+        garmin: {
+          tokenDir: life.garminTokenDir,
+          syncDays: savedSettings.integrations.garmin.syncDays,
+        },
         work: {
           projectNotesDir: work.projectNotesDir,
           ticktickProjectId: work.ticktickProjectId,

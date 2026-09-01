@@ -122,6 +122,46 @@ impl Default for LifeRingGoals {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MetricAxisRange {
+    pub min: f64,
+    pub max: f64,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HealthTrackAxisRanges {
+    #[serde(default = "super::defaults::default_hr_axis_range")]
+    pub hr: MetricAxisRange,
+    #[serde(default = "super::defaults::default_respiration_axis_range")]
+    pub respiration: MetricAxisRange,
+    #[serde(default = "super::defaults::default_steps_axis_range")]
+    pub steps_cumulative: MetricAxisRange,
+    #[serde(default = "super::defaults::default_stress_axis_range")]
+    pub stress: MetricAxisRange,
+    #[serde(default = "super::defaults::default_body_battery_axis_range")]
+    pub body_battery: MetricAxisRange,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HealthTrackAxisPrefs {
+    #[serde(default = "super::defaults::default_health_track_axis_mode")]
+    pub mode: String,
+    #[serde(default = "super::defaults::default_health_track_axis_ranges")]
+    pub ranges: HealthTrackAxisRanges,
+}
+
+impl Default for HealthTrackAxisPrefs {
+    fn default() -> Self {
+        Self {
+            mode: super::defaults::default_health_track_axis_mode(),
+            ranges: super::defaults::default_health_track_axis_ranges(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct OpaqueThemePrefs {
@@ -178,6 +218,8 @@ pub struct UiPrefs {
     pub life_ring_goals: LifeRingGoals,
     #[serde(default)]
     pub fonts: FontPrefs,
+    #[serde(default)]
+    pub health_track_axis: HealthTrackAxisPrefs,
     #[serde(default = "super::defaults::default_dock_left_grid", skip_serializing)]
     pub dock_left_grid: GridPrefs,
     #[serde(default = "super::defaults::default_bookmarks_grid", skip_serializing)]
@@ -199,6 +241,7 @@ impl Default for UiPrefs {
             life_ring_slots: LifeRingSlots::default(),
             life_ring_goals: LifeRingGoals::default(),
             fonts: FontPrefs::default(),
+            health_track_axis: HealthTrackAxisPrefs::default(),
             dock_left_grid: super::defaults::default_dock_left_grid(),
             bookmarks_grid: super::defaults::default_bookmarks_grid(),
             apps_grid: super::defaults::default_apps_grid(),
@@ -325,11 +368,22 @@ pub struct BkeasyIntegration {
     pub data_root: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GarminIntegration {
     #[serde(default)]
     pub token_dir: String,
+    #[serde(default = "super::defaults::default_garmin_sync_days")]
+    pub sync_days: u32,
+}
+
+impl Default for GarminIntegration {
+    fn default() -> Self {
+        Self {
+            token_dir: String::new(),
+            sync_days: super::defaults::default_garmin_sync_days(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]

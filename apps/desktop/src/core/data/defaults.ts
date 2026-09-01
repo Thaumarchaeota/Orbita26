@@ -1,3 +1,5 @@
+import { DEFAULT_GARMIN_SYNC_DAYS } from "./garmin-sync-days";
+import { defaultHealthTrackAxisPrefs } from "./health-track-axis";
 import { defaultFontPrefs } from "./fonts";
 import { DEFAULT_LIFE_RING_GOALS } from "./life-ring-goals";
 import { defaultLifeRingSlots } from "./life-ring-metrics";
@@ -55,7 +57,7 @@ export function defaultIntegrations(): Integrations {
     },
     journal: { dataRoot: "" },
     bkeasy: { dataRoot: "" },
-    garmin: { tokenDir: "" },
+    garmin: { tokenDir: "", syncDays: DEFAULT_GARMIN_SYNC_DAYS },
     work: { projectNotesDir: "12_project-tracking", ticktickProjectId: "" },
     credentials: defaultCredentials(),
   };
@@ -73,5 +75,6 @@ export function defaultUiPrefs(): UiPrefs {
     lifeRingSlots: defaultLifeRingSlots(),
     lifeRingGoals: { ...DEFAULT_LIFE_RING_GOALS },
     fonts: defaultFontPrefs(),
+    healthTrackAxis: defaultHealthTrackAxisPrefs(),
   };
 }

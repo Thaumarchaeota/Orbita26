@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/excluded-domains.json",
+  "title": "Domains explicitly excluded from journal-health/v1 sync",
+  "description": "These artifacts must never appear in SyncChange snapshots or remote operation logs.",
+  "excluded": [
+    {
+      "id": "daily_projection",
+      "name": "daily",
+      "reason": "Query projection derived from daily_metrics and meals; not a synchronizable fact."
+    },
+    {
+      "id": "routine_projection",
+      "name": "routine",
+      "reason": "Query projection derived from sleep_night and naps; not a synchronizable fact."
+    },
+    {
+      "id": "trends_cache",
+      "name": "trends cache",
+      "reason": "Ephemeral aggregated UI cache; recomputed from metric_day_snapshots."
+    },
+    {
+      "id": "app_state",
+      "name": "app state",
+      "reason": "Per-device UI and session preferences; not shared across replicas."
+    },
+    {
+      "id": "sqlite_file",
+      "name": "sqlite file",
+      "reason": "Physical journal.sqlite must not be uploaded; only typed snapshots cross the wire."
+    },
+    {
+      "id": "finance",
+      "name": "finance",
+      "reason": "Finance uses a separate contract and sync plan; v1 rejects finance payloads."
+    },
+    {
+      "id": "raw_fit",
+      "name": "raw FIT",
+      "reason": "Binary Garmin activity files stay on device; only normalized activity snapshots sync."
+    },
+    {
+      "id": "tokens",
+      "name": "tokens",
+      "reason": "Garmin SSO tokens, device enrollment secrets, and API credentials never sync."
+    },
+    {
+      "id": "legacy_journal_json",
+      "name": "journal/YYYY.json",
+      "reason": "Legacy year files are not read or imported; excluded from all sync paths."
+    },
+    {
+      "id": "sync_metadata",
+      "name": "sync replica metadata",
+      "reason": "sync_records, sync_cursor, sync_applied_ops are per-replica local state, not domain facts."
+    }
+  ]
+}

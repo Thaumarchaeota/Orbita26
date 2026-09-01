@@ -1,8 +1,8 @@
 use super::AgentTool;
 use crate::journal::{
-    self, beijing_today, build_journal_snapshot, datetime_to_unix_beijing, journal_delete,
-    journal_list, journal_upsert, resolve_night_timestamps, JournalDeleteRequest, JournalListRequest,
-    JournalUpsertRequest,
+    self, beijing_now_hhmm, beijing_today, build_journal_snapshot, datetime_to_unix_beijing,
+    journal_delete, journal_list, journal_upsert, resolve_night_timestamps, JournalDeleteRequest,
+    JournalListRequest, JournalUpsertRequest,
 };
 use serde_json::{json, Value};
 use tauri::AppHandle;
@@ -21,6 +21,17 @@ fn ensure_journal(app: &AppHandle) -> Result<(), String> {
         return Err("请先在设置中配置数据存储位置".into());
     }
     Ok(())
+}
+
+fn parse_kcal(v: &Value) -> Option<i64> {
+    let n = v
+        .as_i64()
+        .or_else(|| v.as_f64().map(|f| f.round() as i64))?;
+    if n >= 0 {
+        Some(n)
+    } else {
+        None
+    }
 }
 
 fn data_dir_missing(app: &AppHandle) -> bool {
@@ -238,6 +249,17 @@ impl AgentTool for JournalSetSleep {
         let date = opt_str(&args, "date").unwrap_or_else(beijing_today);
         let sleep_time = opt_str(&args, "sleepTime").ok_or("sleepTime 必填")?;
         let wake_time = opt_str(&args, "wakeTime").ok_or("wakeTime 必填")?;
+        if let Some(existing) = load_routine(app, &date)? {
+            if existing
+                .get("data")
+                .and_then(|d| d.get("night"))
+                .and_then(|n| n.get("source"))
+                .and_then(|s| s.as_str())
+                == Some("garmin")
+            {
+                return Err("该日已有佳明睡眠，无法手动覆盖".into());
+            }
+        }
         let (sleep_ts, wake_ts) = resolve_night_timestamps(&date, &sleep_time, &wake_time)?;
 
         let mut data = json!({ "naps": [] });
@@ -351,7 +373,7 @@ impl AgentTool for JournalDeleteEntry {
         json!({
             "type": "object",
             "properties": {
-                "id": { "type": "string", "description": "journal/YYYY.json:uuid" }
+                "id": { "type": "string", "description": "条目 id（UUID，来自 journal_list）" }
             },
             "required": ["id"]
         })
@@ -454,8 +476,7 @@ impl AgentTool for JournalAddMeal {
         let date = opt_str(&args, "date").unwrap_or_else(beijing_today);
         let kcal = args
             .get("kcal")
-            .and_then(|v| v.as_i64())
-            .filter(|v| *v >= 0)
+            .and_then(parse_kcal)
             .ok_or("kcal 必填")?;
         let slot = normalize_meal_slot(opt_str(&args, "slot").as_deref().unwrap_or("snack"));
         let text = opt_str(&args, "text").unwrap_or_default();
@@ -469,7 +490,7 @@ impl AgentTool for JournalAddMeal {
                     .collect()
             })
             .unwrap_or_default();
-        let at = opt_str(&args, "at");
+        let at = opt_str(&args, "at").unwrap_or_else(beijing_now_hhmm);
         let confidence = opt_str(&args, "confidence");
         let existing = load_daily_for_date(app, &date)?;
         let mut meals = existing
@@ -487,9 +508,7 @@ impl AgentTool for JournalAddMeal {
             "text": text,
             "source": "ai_estimate",
         });
-        if let Some(a) = at {
-            meal["at"] = json!(a);
-        }
+        meal["at"] = json!(at);
         if let Some(c) = confidence {
             meal["confidence"] = json!(c);
         }
@@ -506,7 +525,7 @@ impl AgentTool for JournalUpdateMeal {
         "journal_update_meal"
     }
     fn description(&self) -> &str {
-        "更新吃饭记录。id 来自 journal_list 当日 daily.data.meals。"
+        "更新吃饭记录。id 为 daily.data.meals 中的餐食 UUID。"
     }
     fn parameters(&self) -> Value {
         json!({
@@ -588,7 +607,7 @@ impl AgentTool for JournalDeleteMeal {
         "journal_delete_meal"
     }
     fn description(&self) -> &str {
-        "删除吃饭记录。id 来自 daily.data.meals。"
+        "删除吃饭记录。id 为 daily.data.meals 中的餐食 UUID。"
     }
     fn parameters(&self) -> Value {
         json!({

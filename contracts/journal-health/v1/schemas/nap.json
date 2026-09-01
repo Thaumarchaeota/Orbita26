@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/schemas/nap.json",
+  "title": "nap snapshot",
+  "type": "object",
+  "required": [
+    "id",
+    "localDate",
+    "source",
+    "revision",
+    "payload",
+    "naturalKey",
+    "createdAtUtc",
+    "updatedAtUtc"
+  ],
+  "properties": {
+    "id": { "$ref": "_common.json#/$defs/uuid" },
+    "localDate": { "$ref": "_common.json#/$defs/localDate" },
+    "source": { "$ref": "_common.json#/$defs/source" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "externalKey": {
+      "type": ["string", "null"],
+      "description": "Required for source=garmin; format garmin:{start}:{end}:{duration}."
+    },
+    "payload": {
+      "type": "object",
+      "required": ["start", "end", "duration"],
+      "properties": {
+        "start": { "type": "integer", "description": "Unix epoch seconds." },
+        "end": { "type": "integer" },
+        "duration": { "type": "integer", "minimum": 0, "description": "Duration in seconds." },
+        "source": { "$ref": "_common.json#/$defs/source" }
+      },
+      "additionalProperties": true
+    },
+    "naturalKey": {
+      "type": "object",
+      "required": ["localDate", "source"],
+      "properties": {
+        "localDate": { "$ref": "_common.json#/$defs/localDate" },
+        "source": { "$ref": "_common.json#/$defs/source" },
+        "externalKey": { "type": ["string", "null"] },
+        "id": { "$ref": "_common.json#/$defs/uuid" }
+      },
+      "additionalProperties": false
+    },
+    "createdAtUtc": { "$ref": "_common.json#/$defs/rfc3339Utc" },
+    "updatedAtUtc": { "$ref": "_common.json#/$defs/rfc3339Utc" },
+    "deletedAtUtc": {
+      "oneOf": [{ "$ref": "_common.json#/$defs/rfc3339Utc" }, { "type": "null" }]
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "source": { "const": "garmin" } }, "required": ["source"] },
+      "then": {
+        "required": ["externalKey"],
+        "properties": {
+          "externalKey": { "type": "string", "minLength": 1 },
+          "naturalKey": { "required": ["externalKey"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "source": { "const": "manual" } }, "required": ["source"] },
+      "then": {
+        "naturalKey": { "required": ["id"] }
+      }
+    }
+  ]
+}

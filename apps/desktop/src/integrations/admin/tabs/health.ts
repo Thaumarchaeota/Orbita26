@@ -1,4 +1,4 @@
-import { mountPlaceholderDestination } from "../placeholder";
+import { mountHealthOverview } from "./health/overview";
 import type { InsightDestination } from "../types";
 
 export const healthDestination: InsightDestination = {
@@ -6,7 +6,7 @@ export const healthDestination: InsightDestination = {
   kind: "domain",
   label: "健康",
   icon: "health",
-  mount(root) {
-    return mountPlaceholderDestination(root, "健康");
+  mount(root, ctx) {
+    return mountHealthOverview(root, ctx);
   },
 };

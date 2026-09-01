@@ -1,0 +1,81 @@
+.ticktick-icon-btn {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border, var(--admin-border, #d1d5db));
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted, var(--admin-muted, #6b7280));
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+.ticktick-icon-btn:hover:not(:disabled) {
+  color: var(--text, var(--admin-text, #374151));
+  border-color: var(--border-active, var(--admin-border, #9ca3af));
+}
+
+.ticktick-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ticktick-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ticktick-refresh-icon,
+.ticktick-refresh-done {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: opacity 0.22s ease, transform 0.32s ease;
+}
+
+.ticktick-refresh-done {
+  opacity: 0;
+  transform: scale(0.45) rotate(-40deg);
+  color: #22c55e;
+}
+
+.ticktick-icon-btn.is-spinning .ticktick-refresh-icon {
+  animation: ticktick-spin 0.75s linear infinite;
+}
+
+.ticktick-icon-btn.is-success {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #22c55e;
+}
+
+.ticktick-icon-btn.is-success .ticktick-refresh-icon {
+  opacity: 0;
+  transform: scale(0.45) rotate(90deg);
+}
+
+.ticktick-icon-btn.is-success .ticktick-refresh-done {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.ticktick-check-path {
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18;
+  animation: none;
+}
+
+.ticktick-icon-btn.is-success .ticktick-check-path {
+  animation: ticktick-check-draw 0.38s ease forwards 0.12s;
+}
+
+@keyframes ticktick-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ticktick-check-draw {
+  to { stroke-dashoffset: 0; }
+}

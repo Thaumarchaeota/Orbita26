@@ -1,50 +1,19 @@
 use chrono::{Datelike, FixedOffset, TimeZone, Utc};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
+use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashSet;
-use std::fs;
-use std::path::{Path, PathBuf};
 use tauri::AppHandle;
-use uuid::Uuid;
 
 use crate::data;
+use crate::journal_db::{
+    self, GarminBodyMeasurementInput, GarminDailyInput, GarminExerciseInput, GarminRoutineInput,
+    GarminSeriesInput, ingest_garmin_batch, set_garmin_sync_meta,
+};
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JournalListRequest {
-    pub date: Option<String>,
-    pub from: Option<String>,
-    pub to: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JournalListResponse {
-    pub entries: Vec<Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JournalUpsertRequest {
-    pub entry: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JournalUpsertResponse {
-    pub entry: Value,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct JournalDeleteRequest {
-    pub id: String,
-}
-
-#[derive(Debug, Serialize)]
-struct JournalFile {
-    entries: Vec<Value>,
-}
+pub use crate::journal_db::{
+    JournalDeleteRequest, JournalListRequest, JournalListResponse, JournalUpsertRequest,
+    JournalUpsertResponse,
+};
 
 pub fn journal_root(app: &AppHandle) -> Result<String, String> {
     let settings = data::read_settings(app)?;
@@ -55,247 +24,34 @@ pub fn journal_root(app: &AppHandle) -> Result<String, String> {
     Ok(root.to_string())
 }
 
-fn journal_path(root: &str, year: i32) -> PathBuf {
-    Path::new(root).join("journal").join(format!("{year}.json"))
-}
-
-fn year_from_date(date: &str) -> Result<i32, String> {
-    let y: i32 = date
-        .get(0..4)
-        .ok_or_else(|| "invalid date".to_string())?
-        .parse()
-        .map_err(|_| "invalid date year".to_string())?;
-    Ok(y)
-}
-
-fn read_file(path: &Path) -> Result<JournalFile, String> {
-    if !path.exists() {
-        return Ok(JournalFile { entries: vec![] });
-    }
-    let raw = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let v: Value = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
-    let entries = v
-        .get("entries")
-        .and_then(|e| e.as_array())
-        .cloned()
-        .unwrap_or_default();
-    Ok(JournalFile { entries })
-}
-
-fn write_file(path: &Path, file: &JournalFile) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let v = json!({ "entries": file.entries });
-    fs::write(path, serde_json::to_string_pretty(&v).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())
-}
-
-fn entry_kind(entry: &Value) -> Option<&str> {
-    entry.get("kind").and_then(|k| k.as_str())
-}
-
-fn entry_date(entry: &Value) -> Option<&str> {
-    entry.get("date").and_then(|d| d.as_str())
-}
-
-fn entry_id(entry: &Value) -> Option<&str> {
-    entry.get("id").and_then(|d| d.as_str())
-}
-
-fn is_primary_mood(entry: &Value) -> bool {
-    entry.get("primary").and_then(|p| p.as_bool()).unwrap_or(false)
-}
-
-fn new_id(path: &Path) -> String {
-    let rel = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("journal.json");
-    format!("journal/{rel}:{}", Uuid::new_v4())
-}
-
-fn clear_primary_mood(entries: &mut [Value], date: &str) {
-    for e in entries.iter_mut() {
-        if entry_kind(e) == Some("mood") && entry_date(e) == Some(date) && is_primary_mood(e) {
-            if let Some(obj) = e.as_object_mut() {
-                obj.insert("primary".into(), Value::Bool(false));
-            }
-        }
-    }
-}
-
-fn normalize_mood_upsert(entry: &mut Value) {
-    let primary = entry.get("primary").and_then(|p| p.as_bool()).unwrap_or(false);
-    if primary {
-        return;
-    }
-    if let Some(obj) = entry.as_object_mut() {
-        obj.insert("primary".into(), Value::Bool(false));
-    }
+fn with_root<F, T>(app: &AppHandle, f: F) -> Result<T, String>
+where
+    F: FnOnce(&str) -> Result<T, String>,
+{
+    let root = journal_root(app)?;
+    f(&root)
 }
 
 pub fn journal_list(app: &AppHandle, req: JournalListRequest) -> Result<JournalListResponse, String> {
-    let root = journal_root(app)?;
-    let mut years: Vec<i32> = Vec::new();
-    if let Some(ref d) = req.date {
-        years.push(year_from_date(d)?);
-    } else if let (Some(ref f), Some(ref t)) = (&req.from, &req.to) {
-        let yf = year_from_date(f)?;
-        let yt = year_from_date(t)?;
-        for y in yf..=yt {
-            years.push(y);
-        }
-    } else {
-        let tz = FixedOffset::east_opt(8 * 3600).ok_or("tz")?;
-        years.push(Utc::now().with_timezone(&tz).year());
-    }
-    years.sort_unstable();
-    years.dedup();
-
-    let mut out = Vec::new();
-    for y in years {
-        let path = journal_path(&root, y);
-        let file = read_file(&path)?;
-        for e in file.entries {
-            let date = entry_date(&e).unwrap_or("");
-            if let Some(ref d) = req.date {
-                if date != d.as_str() {
-                    continue;
-                }
-            }
-            if let (Some(ref f), Some(ref t)) = (&req.from, &req.to) {
-                if date < f.as_str() || date > t.as_str() {
-                    continue;
-                }
-            }
-            out.push(e);
-        }
-    }
-    Ok(JournalListResponse { entries: out })
+    with_root(app, |root| journal_db::journal_list(root, req))
 }
 
 pub fn journal_upsert(app: &AppHandle, req: JournalUpsertRequest) -> Result<JournalUpsertResponse, String> {
-    let root = journal_root(app)?;
-    let mut entry = req.entry;
-    let kind = entry_kind(&entry).ok_or("entry.kind required")?.to_string();
-    let date = entry_date(&entry).ok_or("entry.date required")?.to_string();
-    let year = year_from_date(&date)?;
-    let path = journal_path(&root, year);
-    let mut file = read_file(&path)?;
-
-    if kind == "mood" {
-        let primary = entry.get("primary").and_then(|p| p.as_bool()).unwrap_or(false);
-        if primary {
-            clear_primary_mood(&mut file.entries, &date);
-        } else {
-            normalize_mood_upsert(&mut entry);
-        }
-    }
-
-    let upserted = if kind == "routine" || kind == "daily" {
-        let idx = file.entries.iter().position(|e| {
-            entry_kind(e) == Some(kind.as_str()) && entry_date(e) == Some(date.as_str())
-        });
-        if let Some(i) = idx {
-            let existing_id = entry_id(&file.entries[i]).unwrap_or("").to_string();
-            if let Some(obj) = entry.as_object_mut() {
-                obj.insert("id".into(), json!(existing_id));
-            }
-            file.entries[i] = entry.clone();
-            entry
-        } else {
-            if entry.get("id").and_then(|v| v.as_str()).unwrap_or("").is_empty() {
-                if let Some(obj) = entry.as_object_mut() {
-                    obj.insert("id".into(), json!(new_id(&path)));
-                }
-            }
-            file.entries.push(entry.clone());
-            entry
-        }
-    } else if kind == "exercise" {
-        let ext = entry
-            .get("externalId")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let idx = if !ext.is_empty() {
-            file.entries.iter().position(|e| {
-                entry_kind(e) == Some("exercise")
-                    && e.get("externalId").and_then(|v| v.as_str()) == Some(ext.as_str())
-            })
-        } else {
-            None
-        };
-        if let Some(i) = idx {
-            let existing_id = entry_id(&file.entries[i]).unwrap_or("").to_string();
-            if let Some(obj) = entry.as_object_mut() {
-                obj.insert("id".into(), json!(existing_id));
-            }
-            file.entries[i] = entry.clone();
-            entry
-        } else {
-            if entry.get("id").and_then(|v| v.as_str()).unwrap_or("").is_empty() {
-                if let Some(obj) = entry.as_object_mut() {
-                    obj.insert("id".into(), json!(new_id(&path)));
-                }
-            }
-            file.entries.push(entry.clone());
-            entry
-        }
-    } else {
-        let id = entry.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        if id.is_empty() {
-            if let Some(obj) = entry.as_object_mut() {
-                obj.insert("id".into(), json!(new_id(&path)));
-            }
-            file.entries.push(entry.clone());
-            entry
-        } else {
-            let idx = file.entries.iter().position(|e| entry_id(e) == Some(id.as_str()));
-            if let Some(i) = idx {
-                file.entries[i] = entry.clone();
-            } else {
-                file.entries.push(entry.clone());
-            }
-            entry
-        }
-    };
-
-    write_file(&path, &file)?;
-    Ok(JournalUpsertResponse { entry: upserted })
+    with_root(app, |root| journal_db::journal_upsert(root, req))
 }
 
 pub fn journal_delete(app: &AppHandle, req: JournalDeleteRequest) -> Result<(), String> {
-    let root = journal_root(app)?;
-    let id = req.id.trim();
-    if id.is_empty() {
-        return Err("id required".into());
-    }
-    let parts: Vec<&str> = id.split(':').collect();
-    if parts.len() < 2 {
-        return Err("invalid id".into());
-    }
-    let file_part = parts[0].trim_start_matches("journal/");
-    let year: i32 = file_part
-        .get(0..4)
-        .ok_or("invalid id year")?
-        .parse()
-        .map_err(|_| "invalid id year")?;
-    let path = journal_path(&root, year);
-    let mut file = read_file(&path)?;
-    let before = file.entries.len();
-    file.entries.retain(|e| entry_id(e) != Some(id));
-    if file.entries.len() == before {
-        return Err("entry not found".into());
-    }
-    write_file(&path, &file)?;
-    Ok(())
+    with_root(app, |root| journal_db::journal_delete(root, req))
 }
 
 pub fn beijing_today() -> String {
     let tz = FixedOffset::east_opt(8 * 3600).unwrap();
     Utc::now().with_timezone(&tz).format("%Y-%m-%d").to_string()
+}
+
+pub fn beijing_now_hhmm() -> String {
+    let tz = FixedOffset::east_opt(8 * 3600).unwrap();
+    Utc::now().with_timezone(&tz).format("%H:%M").to_string()
 }
 
 pub fn beijing_now_ts() -> i64 {
@@ -368,6 +124,14 @@ fn week_start_beijing(date: &str) -> Result<String, String> {
     let weekday = dt.weekday().num_days_from_monday();
     let start = dt - chrono::Duration::days(weekday as i64);
     Ok(start.format("%Y-%m-%d").to_string())
+}
+
+fn entry_kind(entry: &Value) -> Option<&str> {
+    entry.get("kind").and_then(|k| k.as_str())
+}
+
+fn is_primary_mood(entry: &Value) -> bool {
+    entry.get("primary").and_then(|p| p.as_bool()).unwrap_or(false)
 }
 
 #[derive(Debug, Serialize)]
@@ -452,7 +216,7 @@ pub fn build_journal_snapshot(app: &AppHandle, date: Option<&str>) -> Result<Jou
     let week_exercise_days = week_entries
         .iter()
         .filter(|e| entry_kind(e) == Some("exercise"))
-        .filter_map(|e| entry_date(e))
+        .filter_map(|e| e.get("date").and_then(|d| d.as_str()))
         .collect::<HashSet<_>>()
         .len() as u32;
 
@@ -528,134 +292,40 @@ pub fn build_journal_snapshot(app: &AppHandle, date: Option<&str>) -> Result<Jou
     })
 }
 
-pub fn upsert_routine_night_from_garmin(
+pub fn ingest_garmin_sync(
     app: &AppHandle,
-    date: &str,
-    night: Map<String, Value>,
-    naps: Option<Vec<Map<String, Value>>>,
+    dailies: Vec<GarminDailyInput>,
+    routines: Vec<GarminRoutineInput>,
+    exercises: Vec<GarminExerciseInput>,
+    series: Vec<GarminSeriesInput>,
+    measurements: Vec<GarminBodyMeasurementInput>,
 ) -> Result<(), String> {
-    let existing = journal_list(
-        app,
-        JournalListRequest {
-            date: Some(date.to_string()),
-            from: None,
-            to: None,
-        },
-    )?
-    .entries
-    .into_iter()
-    .find(|e| entry_kind(e) == Some("routine"));
-
-    let mut data = json!({ "naps": [] });
-    if let Some(ref r) = existing {
-        if let Some(d) = r.get("data") {
-            data = d.clone();
-            if data.get("naps").is_none() {
-                data["naps"] = json!([]);
+    with_root(app, |root| {
+        journal_db::with_connection(root, |conn| {
+            let tx = conn
+                .unchecked_transaction()
+                .map_err(|e| format!("begin transaction: {e}"))?;
+            ingest_garmin_batch(&tx, &dailies, &routines, &exercises, &series, &measurements)?;
+            let now = journal_db::util::utc_now();
+            set_garmin_sync_meta(
+                &tx,
+                &[
+                    ("last_success_at", now.as_str()),
+                    ("last_error", ""),
+                    ("syncing", "0"),
+                ],
+            )?;
+            if let (Some(first), Some(last)) = (dailies.first(), dailies.last()) {
+                set_garmin_sync_meta(
+                    &tx,
+                    &[
+                        ("earliest_local_date", first.date.as_str()),
+                        ("latest_local_date", last.date.as_str()),
+                    ],
+                )?;
             }
-        }
-    }
-    if let Some(new_naps) = naps {
-        let kept: Vec<Value> = data
-            .get("naps")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter(|n| {
-                        n.get("source")
-                            .and_then(|s| s.as_str())
-                            .map(|s| s != "garmin")
-                            .unwrap_or(true)
-                    })
-                    .cloned()
-                    .collect()
-            })
-            .unwrap_or_default();
-        let mut merged = kept;
-        for n in new_naps {
-            merged.push(Value::Object(n));
-        }
-        data["naps"] = Value::Array(merged);
-    }
-    data["night"] = Value::Object(night);
-
-    let mut entry = json!({
-        "kind": "routine",
-        "date": date,
-        "tz": "Asia/Shanghai",
-        "data": data,
-    });
-    if let Some(r) = existing {
-        if let Some(id) = r.get("id") {
-            entry["id"] = id.clone();
-        }
-    }
-    journal_upsert(app, JournalUpsertRequest { entry })?;
-    Ok(())
-}
-
-pub fn upsert_daily_from_garmin(
-    app: &AppHandle,
-    date: &str,
-    fetched_at: i64,
-    data_map: Map<String, Value>,
-) -> Result<(), String> {
-    let existing = journal_list(
-        app,
-        JournalListRequest {
-            date: Some(date.to_string()),
-            from: None,
-            to: None,
-        },
-    )?
-    .entries
-    .into_iter()
-    .find(|e| entry_kind(e) == Some("daily"));
-
-    let mut merged = data_map;
-    if let Some(ex) = &existing {
-        if let Some(old) = ex.get("data").and_then(|d| d.as_object()) {
-            if let Some(meals) = old.get("meals") {
-                merged.insert("meals".into(), meals.clone());
-            }
-        }
-    }
-
-    let mut entry = json!({
-        "kind": "daily",
-        "date": date,
-        "source": "garmin",
-        "fetchedAt": fetched_at,
-        "data": Value::Object(merged),
-    });
-    if let Some(ex) = existing {
-        if let Some(id) = ex.get("id") {
-            entry["id"] = id.clone();
-        }
-    }
-    journal_upsert(app, JournalUpsertRequest { entry })?;
-    Ok(())
-}
-
-pub fn upsert_exercise_from_garmin(
-    app: &AppHandle,
-    date: &str,
-    external_id: &str,
-    sport: &str,
-    duration: i64,
-    metrics: Map<String, Value>,
-) -> Result<(), String> {
-    let entry = json!({
-        "kind": "exercise",
-        "date": date,
-        "source": "garmin",
-        "externalId": external_id,
-        "data": {
-            "sport": sport,
-            "duration": duration,
-            "metrics": Value::Object(metrics),
-        }
-    });
-    journal_upsert(app, JournalUpsertRequest { entry })?;
-    Ok(())
+            tx.commit().map_err(|e| format!("commit transaction: {e}"))?;
+            Ok(())
+        })
+    })
 }

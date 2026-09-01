@@ -8,6 +8,8 @@
 
 ## 当前焦点
 
+- [-] **0.0.18 Journal / Health SQLite + Insight Health 已收束**（2026-09-02）：本地 SQLite、Garmin ingest、Health 三轨总览与 Panel/AI 读取边界的实际交付已冻结，详见[归档计划](plans/archive/v0.0.18-journal-health-sqlite-foundation.md)。全 catalog Garmin 实机、L3 独立验收与轨道 UI 用户手验未伪称完成，已作为 0.0.19 Sync S0 / 真实数据接入的前置证据保留。
+- [ ] **0.0.19 Archive / Sync Core / Adapter / Finance v2**（2026-09-02）：以 Archive Object / Connection、一个 Sync Core、Garmin Ingest、Schedule Adapter 及 Finance v2 为目标架构。当前只完成 Proposed 设计与服务骨架边界；未授权 schema、迁移、真实用户数据上传、第三方凭据迁移或 Linux 部署。实施入口见 `plans/v0.0.19-*.md` 与 ADR 0012–0014。
 - [x] **Finance 工作台**（收束计划 §4.2）：生产路径 `views/detail/index.ts` 已接线 shell、右栏三模块、搜索、Composer modal、CardDetailSurface、保存状态机与 BalanceAudit；Vitest 与 Python 回归覆盖核心链路。
 - [x] **AccountSelect**（ADR 0004）：Composer、行内编辑、校验面板已用 `mountAccountSelect`；用户 2026-08-30 验收完成。
 - [x] **Finance 时间排序**（ADR 0002）：拖拽已移除；`domain/seq.ts` 比较器、CSV `time` metadata 与 Python e2e 已落。
@@ -64,6 +66,6 @@
 
 ## 下一步
 
-1. （可选）`ledger.css` 遗留样式清理（§4.4 P1）。
-2. （可选）使用前补测 CSV 导入→保存→重载（Tauri 实机）。
-3. 0.0.18：从 [`v0.0.18-health-page-initial-design.md`](plans/v0.0.18-health-page-initial-design.md) 立项。
+1. 0.0.19：先完成 [`v0.0.19-sync-cross-plan-readiness.md`](plans/v0.0.19-sync-cross-plan-readiness.md) 的 Sync S0 阻断项与 0.0.18 遗留 L3 证据；不得直接把现有 outbox 接到网络。
+2. 0.0.19：以 [`v0.0.19-three-module-sync-architecture.md`](plans/v0.0.19-three-module-sync-architecture.md) 为主输入，分阶段实现 Sync Core、Garmin Ingest、Schedule Adapter；Finance v2 按 ADR 0014 另立 L3 实施计划。
+3. （可选）`ledger.css` 遗留样式清理（§4.4 P1），以及 CSV 导入→保存→重载的 Tauri 实机补测。

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/schemas/_common.json",
+  "title": "Journal Health v1 common definitions",
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "localDate": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Asia/Shanghai calendar date (YYYY-MM-DD)."
+    },
+    "rfc3339Utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["manual", "garmin"]
+    },
+    "domain": {
+      "type": "string",
+      "enum": ["health", "journal"]
+    },
+    "recordType": {
+      "type": "string",
+      "enum": [
+        "daily_metrics",
+        "metric_day_snapshot",
+        "sleep_night",
+        "nap",
+        "meal",
+        "activity",
+        "body_measurement",
+        "event",
+        "mood",
+        "note"
+      ]
+    },
+    "operationKind": {
+      "type": "string",
+        "enum": ["upsert", "delete", "restore", "resolve"]
+    },
+    "protocolVersion": {
+      "type": "string",
+      "const": "journal-health/v1"
+    },
+    "contentHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Lowercase hex SHA-256 of canonical payload JSON."
+    },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "source", "revision", "createdAtUtc", "updatedAtUtc"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "source": { "$ref": "#/$defs/source" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "createdAtUtc": { "$ref": "#/$defs/rfc3339Utc" },
+        "updatedAtUtc": { "$ref": "#/$defs/rfc3339Utc" },
+        "deletedAtUtc": {
+          "oneOf": [{ "$ref": "#/$defs/rfc3339Utc" }, { "type": "null" }]
+        }
+      },
+      "additionalProperties": false
+    },
+    "metricSample": {
+      "type": "object",
+      "required": ["t", "v"],
+      "properties": {
+        "t": { "type": "integer", "description": "Unix epoch seconds (UTC)." },
+        "v": { "type": "number" },
+        "src": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "naturalKey": {
+      "type": "object",
+      "description": "Fields that uniquely identify a fact within an account for deduplication.",
+      "additionalProperties": { "type": ["string", "number", "null"] }
+    }
+  }
+}

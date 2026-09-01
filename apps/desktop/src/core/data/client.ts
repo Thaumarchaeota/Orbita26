@@ -2,7 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import { normalizeFontPrefs } from "./fonts";
 import { migrateLifeRingGoalsFromSlots, normalizeLifeRingGoals } from "./life-ring-goals";
 import { normalizeLifeRingSlots } from "./life-ring-metrics";
-import { defaultAiConfig, defaultIntegrations, defaultUiPrefs, DEFAULT_LIFE_RINGS, DEFAULT_TOP_GRID } from "./defaults";
+import {
+  defaultAiConfig,
+  defaultIntegrations,
+  defaultUiPrefs,
+  DEFAULT_LIFE_RINGS,
+  DEFAULT_TOP_GRID,
+} from "./defaults";
+import { normalizeGarminSyncDays } from "./garmin-sync-days";
+import { normalizeHealthTrackAxisPrefs } from "./health-track-axis";
 import { normalizeThemePrefs, themeFromPrefs } from "./theme-prefs";
 import type {
   AppEntry,
@@ -293,6 +301,7 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
       ? normalizeLifeRingGoals(uiRaw.lifeRingGoals)
       : migrateLifeRingGoalsFromSlots(uiRaw?.lifeRingSlots),
     fonts: normalizeFontPrefs(uiRaw?.fonts),
+    healthTrackAxis: normalizeHealthTrackAxisPrefs(uiRaw?.healthTrackAxis),
   };
   const intRaw = (migrated.integrations ?? raw.integrations ?? {}) as Partial<AppSettings["integrations"]>;
   const credRaw = intRaw.credentials ?? base.integrations.credentials;
@@ -309,7 +318,13 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
       cursor: { ...base.integrations.cursor, ...(intRaw.cursor ?? {}) },
       journal: { ...base.integrations.journal, ...(intRaw.journal ?? {}) },
       bkeasy: { ...base.integrations.bkeasy, ...(intRaw.bkeasy ?? {}) },
-      garmin: { ...base.integrations.garmin, ...(intRaw.garmin ?? {}) },
+      garmin: {
+        ...base.integrations.garmin,
+        ...(intRaw.garmin ?? {}),
+        syncDays: normalizeGarminSyncDays(
+          intRaw.garmin?.syncDays ?? base.integrations.garmin.syncDays,
+        ),
+      },
       work: {
         ...base.integrations.work,
         ...(intRaw.work ?? {}),

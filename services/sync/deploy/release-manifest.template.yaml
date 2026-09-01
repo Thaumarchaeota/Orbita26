@@ -1,0 +1,44 @@
+# Orbita Sync release manifest template
+# Fill in at release time; do not commit real digests from production builds.
+
+release:
+  version: "0.1.0"
+  channel: stable
+  published_at: "YYYY-MM-DDTHH:MM:SSZ"
+
+artifacts:
+  container:
+    image: "orbita-sync"
+    tag: "0.1.0"
+    digest: "sha256:REPLACE_WITH_IMAGE_DIGEST"
+    sbom: "sbom-0.1.0.json"
+
+  binaries:
+    - name: orbita-sync-tools
+      target: x86_64-unknown-linux-gnu
+      sha256: "REPLACE_WITH_BINARY_SHA256"
+
+contracts:
+  journal_health: "v1"
+  min_client_version: "0.0.18"
+  max_client_version: "0.0.19"
+
+migrations:
+  server_schema: 1
+  rollback_supported: false
+
+connectors:
+  garmin:
+    cutover_phase_required: server_active
+  ticktick:
+    cutover_phase_required: server_broker_active
+
+verification:
+  - backup_restore_verifier
+  - protocol_simulator
+  - redaction_tests
+  - migration_roundtrip
+
+notes: |
+  Replace all REPLACE_WITH_* placeholders before publishing.
+  Run isolated restore verification against the release backup fixture.

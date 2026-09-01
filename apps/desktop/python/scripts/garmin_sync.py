@@ -11,7 +11,8 @@ from garmin_lib import (
     emit,
     emit_fail,
     fetch_activities,
-    in_sleep_window,
+    fetch_day_series,
+    map_body_measurement,
     map_daily,
     map_exercise,
     map_sleep,
@@ -46,15 +47,20 @@ def main():
     dailies = []
     routines = []
     exercises = []
+    series = []
+    measurements = []
     seen = set()
     try:
         progress("daily")
         for d in date_range(args.from_date, args.to_date):
             dailies.append(map_daily(client, d))
-            if in_sleep_window(d, args.to_date):
-                sl = map_sleep(client, d)
-                if sl:
-                    routines.append(sl)
+            series.extend(fetch_day_series(client, d))
+            m = map_body_measurement(client, d)
+            if m:
+                measurements.append(m)
+            sl = map_sleep(client, d)
+            if sl:
+                routines.append(sl)
         start_dt = date.fromisoformat(args.from_date)
         end_dt = date.fromisoformat(args.to_date)
         progress("activities")
@@ -89,6 +95,8 @@ def main():
         "daily": dailies,
         "routines": routines,
         "exercises": exercises,
+        "series": series,
+        "measurements": measurements,
     })
     return 0
 

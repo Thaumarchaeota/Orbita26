@@ -1,0 +1,68 @@
+{
+  "dailies": [
+    {
+      "local_date": "2026-01-15",
+      "steps": 8420,
+      "active_calories": 420,
+      "resting_hr": 58,
+      "stress_avg": 32,
+      "body_battery_high": 85,
+      "body_battery_low": 22,
+      "source": "garmin",
+      "external_id": "daily-2026-01-15",
+      "content_hash": "a1b2c3d4e5f6"
+    }
+  ],
+  "routines": [
+    {
+      "wake_date": "2026-01-15",
+      "sleep_start": "2026-01-14T22:30:00Z",
+      "sleep_end": "2026-01-15T06:45:00Z",
+      "deep_seconds": 3600,
+      "light_seconds": 7200,
+      "rem_seconds": 1800,
+      "awake_seconds": 300,
+      "source": "garmin",
+      "external_id": "sleep-2026-01-15",
+      "content_hash": "b2c3d4e5f6a1"
+    }
+  ],
+  "series": [
+    {
+      "local_date": "2026-01-15",
+      "metric_name": "heart_rate",
+      "samples": [
+        { "ts": "2026-01-15T08:00:00Z", "value": 62.0 },
+        { "ts": "2026-01-15T12:00:00Z", "value": 78.0 }
+      ],
+      "source": "garmin",
+      "external_id": "hr-2026-01-15",
+      "content_hash": "c3d4e5f6a1b2"
+    }
+  ],
+  "exercises": [
+    {
+      "external_id": "act-12345",
+      "sport": "running",
+      "start": "2026-01-15T07:00:00Z",
+      "end": "2026-01-15T07:35:00Z",
+      "duration_seconds": 2100,
+      "distance_meters": 5200,
+      "calories": 310,
+      "avg_hr": 145,
+      "source": "garmin",
+      "content_hash": "d4e5f6a1b2c3"
+    }
+  ],
+  "body_measurements": [
+    {
+      "measured_at": "2026-01-15T06:50:00Z",
+      "weight_kg": 72.5,
+      "body_fat_pct": 18.2,
+      "muscle_mass_kg": null,
+      "source": "garmin",
+      "external_id": "body-2026-01-15",
+      "content_hash": "e5f6a1b2c3d4"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { getSettings } from "../../core/settings";
+import { normalizeGarminSyncDays } from "../../core/data/garmin-sync-days";
 import { beijingToday, garminStatus, garminSync, journalConfigured, syncFromDate } from "./client";
 
 let syncing = false;
@@ -55,7 +56,8 @@ export async function runGarminSyncSilent(): Promise<boolean> {
   }
   syncing = true;
   try {
-    const res = await garminSync({ from: syncFromDate(7), to: beijingToday() });
+    const days = normalizeGarminSyncDays(getSettings().integrations.garmin.syncDays);
+    const res = await garminSync({ from: syncFromDate(days), to: beijingToday() });
     if (res.ok) {
       window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
       return true;

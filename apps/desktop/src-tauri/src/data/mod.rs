@@ -16,7 +16,7 @@ pub use types::{
     AiConfig, AiCredentials, ApiEntry, AppEntry, AppItem, AppLink, AppSettings, Bookmark,
     BookmarkEntry, BookmarkLink, BkeasyIntegration, ChatMessage, Conversation, ConversationMeta,
     CursorIntegration, EverythingIntegration, FontPrefs, GarminCredentials, GarminIntegration,
-    GridPrefs, Integrations, IntegrationsCredentials, JournalIntegration, LifeRingColors,
+    GridPrefs, HealthTrackAxisPrefs, Integrations, IntegrationsCredentials, JournalIntegration, LifeRingColors,
     LifeRingGoals, LifeRingSlot, LifeRingSlots, LocalEntry, LocalFileItem, ObsidianIntegration,
     OpaqueThemePrefs, ThemePrefs, TicktickCredentials, TicktickIntegration, TransparentThemePrefs,
     UiPrefs, V2rayIntegration, WorkIntegration, ZoteroIntegration,

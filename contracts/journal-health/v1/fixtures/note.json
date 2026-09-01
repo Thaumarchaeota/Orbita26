@@ -1,0 +1,17 @@
+{
+  "id": "00000000-0000-4000-8000-00000000000a",
+  "localDate": "2026-01-15",
+  "source": "manual",
+  "revision": 1,
+  "payload": {
+    "title": "示例笔记",
+    "body": "这是一条脱敏测试笔记。",
+    "at": 1705282800
+  },
+  "naturalKey": {
+    "id": "00000000-0000-4000-8000-00000000000a"
+  },
+  "createdAtUtc": "2026-01-15T07:00:00Z",
+  "updatedAtUtc": "2026-01-15T07:00:00Z",
+  "deletedAtUtc": null
+}

@@ -1,6 +1,12 @@
 import type { AppSettings } from "../../../core/settings";
 import type { LifeRingGoals } from "../../../core/data/life-ring-goals";
 import { normalizeLifeRingGoals } from "../../../core/data/life-ring-goals";
+import {
+  HEALTH_TRACK_AXIS_METRICS,
+  normalizeHealthTrackAxisPrefs,
+  type HealthTrackAxisMetricKey,
+  type HealthTrackAxisPrefs,
+} from "../../../core/data/health-track-axis";
 import { pickLocalFolder } from "../../shell/adapter";
 import {
   formatGarminError,
@@ -64,6 +70,28 @@ export const lifeTabHtml = `
       </div>
       <p class="settings-hint" id="garminSyncStatus"></p>
     </div>
+    <div class="settings-section">
+      <div class="settings-section-title">健康轨道</div>
+      <div class="dialog-field">
+        <label for="healthTrackAxisMode">Y 轴刻度</label>
+        <select id="healthTrackAxisMode">
+          <option value="fixed">固定范围</option>
+          <option value="dynamic">动态范围（按当前窗口）</option>
+        </select>
+      </div>
+      <p class="settings-hint">固定模式下超出范围的数值会贴在边界；动态模式按当前可见数据缩放。</p>
+      <div class="health-axis-range-grid" id="healthTrackAxisRanges">
+        ${HEALTH_TRACK_AXIS_METRICS.map(
+          ({ key, label }) => `
+        <div class="health-axis-range-row" data-metric="${key}">
+          <span class="health-axis-range-label">${label}</span>
+          <input type="number" step="any" data-field="min" aria-label="${label}下限">
+          <span class="health-axis-range-sep">–</span>
+          <input type="number" step="any" data-field="max" aria-label="${label}上限">
+        </div>`,
+        ).join("")}
+      </div>
+    </div>
   </div>`;
 
 export type LifeDraft = {
@@ -72,6 +100,7 @@ export type LifeDraft = {
   garminEmail: string;
   garminPassword: string;
   garminTokenDir: string;
+  healthTrackAxis: HealthTrackAxisPrefs;
 };
 
 async function refreshGarminStatus(loginStatusEl: HTMLElement, loginBtn: HTMLButtonElement) {
@@ -105,6 +134,17 @@ export function bindLifeTab(root: HTMLElement) {
   const loginStatusEl = root.querySelector<HTMLElement>("#garminLoginStatus")!;
   const syncBtn = root.querySelector<HTMLButtonElement>("#garminSyncBtn")!;
   const syncStatus = root.querySelector<HTMLElement>("#garminSyncStatus")!;
+  const axisModeEl = root.querySelector<HTMLSelectElement>("#healthTrackAxisMode")!;
+  const axisRangesEl = root.querySelector<HTMLElement>("#healthTrackAxisRanges")!;
+
+  const syncAxisRangeEnabled = () => {
+    const fixed = axisModeEl.value === "fixed";
+    axisRangesEl.querySelectorAll<HTMLInputElement>("input").forEach((el) => {
+      el.disabled = !fixed;
+    });
+    axisRangesEl.classList.toggle("is-disabled", !fixed);
+  };
+  axisModeEl.addEventListener("change", syncAxisRangeEnabled);
 
   root.querySelector('[data-action="browse-journal"]')!.addEventListener("click", async () => {
     const path = await pickLocalFolder();
@@ -179,10 +219,32 @@ export function bindLifeTab(root: HTMLElement) {
       emailEl.value = settings.integrations.credentials.garmin.email;
       passEl.value = settings.integrations.credentials.garmin.password;
       tokenEl.value = settings.integrations.garmin.tokenDir;
+      const axis = settings.ui.healthTrackAxis;
+      axisModeEl.value = axis.mode;
+      for (const { key } of HEALTH_TRACK_AXIS_METRICS) {
+        const row = axisRangesEl.querySelector<HTMLElement>(`[data-metric="${key}"]`);
+        if (!row) continue;
+        const range = axis.ranges[key as HealthTrackAxisMetricKey];
+        const minEl = row.querySelector<HTMLInputElement>('[data-field="min"]')!;
+        const maxEl = row.querySelector<HTMLInputElement>('[data-field="max"]')!;
+        minEl.value = String(range.min);
+        maxEl.value = String(range.max);
+      }
+      syncAxisRangeEnabled();
       syncStatus.textContent = "";
       void refreshGarminStatus(loginStatusEl, loginBtn);
     },
     read(): LifeDraft {
+      const ranges = {} as HealthTrackAxisPrefs["ranges"];
+      for (const { key } of HEALTH_TRACK_AXIS_METRICS) {
+        const row = axisRangesEl.querySelector<HTMLElement>(`[data-metric="${key}"]`)!;
+        const minEl = row.querySelector<HTMLInputElement>('[data-field="min"]')!;
+        const maxEl = row.querySelector<HTMLInputElement>('[data-field="max"]')!;
+        ranges[key] = {
+          min: Number(minEl.value),
+          max: Number(maxEl.value),
+        };
+      }
       return {
         lifeRingGoals: normalizeLifeRingGoals({
           goalIntake: Number(goalIntakeEl.value),
@@ -193,6 +255,10 @@ export function bindLifeTab(root: HTMLElement) {
         garminEmail: emailEl.value.trim(),
         garminPassword: passEl.value,
         garminTokenDir: tokenEl.value.trim(),
+        healthTrackAxis: normalizeHealthTrackAxisPrefs({
+          mode: axisModeEl.value === "dynamic" ? "dynamic" : "fixed",
+          ranges,
+        }),
       };
     },
   };

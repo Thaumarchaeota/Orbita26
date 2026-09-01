@@ -1,0 +1,25 @@
+{
+  "id": "00000000-0000-4000-8000-000000000006",
+  "localDate": "2026-01-15",
+  "source": "garmin",
+  "revision": 1,
+  "externalId": "12345678901",
+  "activity": {
+    "sport": "running",
+    "duration": 3600,
+    "metrics": {
+      "startTime": 1704067200,
+      "distance": 10000,
+      "distance_km": 10.0,
+      "avg_speed_kmh": 10.0
+    }
+  },
+  "contentHash": "85b61bd39d98a1faaacfe61896e1b686164603db75d497b0ec5d05b5903d6e0f",
+  "naturalKey": {
+    "externalId": "12345678901",
+    "source": "garmin"
+  },
+  "createdAtUtc": "2026-01-15T08:00:00Z",
+  "updatedAtUtc": "2026-01-15T08:00:00Z",
+  "deletedAtUtc": null
+}

@@ -14,6 +14,7 @@ import {
 import { setHostDataDirGuard } from "./host-guards";
 import { DOMAIN_ICONS } from "./icons";
 import { getInsightDestination, getInsightDestinations } from "./registry";
+import { registerInsightSettingsNav } from "./settings/nav";
 import type {
   InsightDestinationHandle,
   InsightDestinationId,
@@ -62,13 +63,15 @@ function moveTabIndicator(navEl: HTMLElement, btn: HTMLButtonElement): void {
 function updateSidebarActive(id: InsightDestinationId): void {
   if (!nav) return;
   nav.querySelectorAll<HTMLButtonElement>(".admin-tab-btn").forEach((btn) => {
-    const isActive = btn.dataset.tab === id;
+    const isActive = id !== "settings" && btn.dataset.tab === id;
     btn.classList.toggle("is-active", isActive);
     if (isActive) moveTabIndicator(nav!, btn);
   });
+  if (id === "settings" && tabIndicator) tabIndicator.style.opacity = "0";
 }
 
 function persistDestination(id: InsightDestinationId): void {
+  if (id === "settings") return;
   const entry = cache.get(id);
   savePersistedDestination({
     destinationId: id,
@@ -156,9 +159,13 @@ async function onDataDirChanged(panel: HTMLElement): Promise<void> {
 }
 
 function resolveInitialDestination(): InsightDestinationId {
-  const dests = getInsightDestinations();
+  const dests = getInsightDestinations().filter((d) => d.showInNav !== false);
   const persisted = loadPersistedDestination();
-  if (persisted && dests.some((d) => d.id === persisted.destinationId)) {
+  if (
+    persisted &&
+    persisted.destinationId !== "settings" &&
+    dests.some((d) => d.id === persisted.destinationId)
+  ) {
     return persisted.destinationId;
   }
   return dests.some((d) => d.id === DEFAULT_DESTINATION) ? DEFAULT_DESTINATION : dests[0]?.id ?? DEFAULT_DESTINATION;
@@ -232,6 +239,7 @@ export function mountAdminShell(root: HTMLElement): void {
   viewport = root.querySelector<HTMLElement>("#adminContent")!;
 
   for (const dest of dests) {
+    if (dest.showInNav === false) continue;
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "admin-tab-btn";
@@ -257,6 +265,13 @@ export function mountAdminShell(root: HTMLElement): void {
   unbindDataDir = bindDataDirChanged(() => {
     void onDataDirChanged(viewport!);
   });
+
+  registerInsightSettingsNav(
+    (id) => {
+      void activateDestination(id, viewport!);
+    },
+    () => activeId,
+  );
 
   window.addEventListener("beforeunload", () => {
     if (activeId) persistDestination(activeId);

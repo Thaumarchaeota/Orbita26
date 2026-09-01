@@ -5,7 +5,7 @@ import socket
 import sys
 import time
 import warnings
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 warnings.filterwarnings("ignore")
@@ -14,7 +14,6 @@ logging.getLogger("garminconnect").setLevel(logging.CRITICAL)
 CURRENT_ROUTE = {"name": "direct", "proxies": {"http": None, "https": None}}
 
 RATE_LIMIT_COOLDOWN_SEC = 6 * 3600
-SLEEP_LOOKBACK_DAYS = 7
 
 
 def port_open(host: str, port: int) -> bool:
@@ -364,7 +363,10 @@ def parse_ts_seconds(v):
             pass
         s = s.replace("Z", "+00:00")
         try:
-            return int(datetime.fromisoformat(s).timestamp())
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return int(dt.timestamp())
         except ValueError:
             return None
     return None
@@ -576,13 +578,6 @@ def date_range(start: str, end: str):
         yield cur.isoformat()
         cur += timedelta(days=1)
 
-
-def in_sleep_window(d: str, to_date: str) -> bool:
-    end = date.fromisoformat(to_date)
-    cur = date.fromisoformat(d)
-    return (end - cur).days < SLEEP_LOOKBACK_DAYS
-
-
 def body_battery_hl(bb_list):
     highs, lows = [], []
     if not isinstance(bb_list, list):
@@ -653,6 +648,33 @@ def map_naps(raw, dto):
     return naps
 
 
+def map_sleep_levels(raw):
+    stage_map = {0: "deep", 1: "light", 2: "rem", 3: "awake"}
+    levels = raw.get("sleepLevels") or []
+    if not isinstance(levels, list):
+        return []
+    segments = []
+    for entry in levels:
+        if not isinstance(entry, dict):
+            continue
+        start = parse_ts_seconds(entry.get("startGMT") or entry.get("startTimestampGMT"))
+        end = parse_ts_seconds(entry.get("endGMT") or entry.get("endTimestampGMT"))
+        level = entry.get("activityLevel")
+        if level is None:
+            level = entry.get("sleepLevel")
+        if level is None:
+            continue
+        try:
+            stage_id = int(float(level))
+        except (TypeError, ValueError):
+            continue
+        stage = stage_map.get(stage_id)
+        if not stage or start is None or end is None or end <= start:
+            continue
+        segments.append({"start": start, "end": end, "stage": stage})
+    return segments
+
+
 def map_sleep(client, d: str):
     try:
         raw = client.get_sleep_data(d) or {}
@@ -683,6 +705,9 @@ def map_sleep(client, d: str):
         "source": "garmin",
         "stages": {"deep": deep, "light": light, "rem": rem, "awake": awake},
     }
+    level_segments = map_sleep_levels(raw)
+    if level_segments:
+        night["levelSegments"] = level_segments
     if score is not None:
         night["score"] = score
     out = {"date": str(wake_date)[:10], "night": night}
@@ -742,6 +767,7 @@ def map_daily(client, d: str):
             data["bodyBattery"] = {"high": hi, "low": lo}
     except Exception:
         pass
+    enrich_daily_metrics(client, d, data)
     return {"date": d, "fetchedAt": int(time.time()), "data": data}
 
 
@@ -752,10 +778,19 @@ def sport_key(activity):
     return str(t).lower()
 
 
+def normalize_sport(sk: str) -> str:
+    if not sk:
+        return "activity"
+    if "cycling" in sk or "ride" in sk or "biking" in sk:
+        return "cycling"
+    if "run" in sk or "jog" in sk:
+        return "running"
+    if "walk" in sk or "hike" in sk:
+        return "walking"
+    return sk.split("_")[0] if "_" in sk else sk
+
+
 def map_exercise(act):
-    sk = sport_key(act)
-    if "cycling" not in sk and "ride" not in sk and "biking" not in sk:
-        return None
     aid = str(act.get("activityId") or act.get("activityIdDTO") or "")
     if not aid:
         return None
@@ -769,9 +804,14 @@ def map_exercise(act):
     np = safe_int(act.get("normPower") or act.get("normalizedPower"))
     start = act.get("startTimeLocal") or act.get("startTimeGMT") or ""
     day = start[:10] if isinstance(start, str) and len(start) >= 10 else None
-    if not day:
+    start_ts = parse_ts_seconds(act.get("startTimeGMT") or act.get("startTimeLocal") or start)
+    if not day or not start_ts:
         return None
+    sk = sport_key(act)
+    sport = normalize_sport(sk)
     metrics = {
+        "startTime": start_ts,
+        "distance": dist_m,
         "distance_km": dist_km,
         "elevation_gain_m": safe_int(elev) if elev is not None else None,
         "avg_speed_kmh": avg_speed_kmh,
@@ -781,9 +821,34 @@ def map_exercise(act):
     return {
         "date": day,
         "externalId": aid,
-        "sport": "cycling",
+        "sport": sport,
         "duration": duration or 0,
         "metrics": metrics,
+    }
+
+
+def map_body_measurement(client, d: str):
+    try:
+        raw = client.get_body_composition(d) or {}
+    except Exception:
+        return None
+    weight = safe_float(raw.get("weight"))
+    if weight is None:
+        wlist = raw.get("dateWeightList") or raw.get("allWeightMetrics") or []
+        if isinstance(wlist, list) and wlist:
+            latest = wlist[-1]
+            if isinstance(latest, dict):
+                weight = safe_float(latest.get("weight"))
+    if weight is None:
+        return None
+    if weight > 500:
+        weight = weight / 1000.0
+    ts = parse_ts_seconds(raw.get("measurementTimeInGMT") or raw.get("timestampGMT"))
+    ext_id = f"garmin-weight-{d}-{int(ts or 0)}"
+    return {
+        "date": d,
+        "externalId": ext_id,
+        "weightKg": round(weight, 2),
     }
 
 
@@ -810,3 +875,496 @@ def fetch_activities(client, from_date: str, to_date: str, max_pages: int = 15):
             break
         start += limit
     return activities
+
+
+def values_array_from(raw, *keys):
+    if not isinstance(raw, dict):
+        return None
+    for key in keys:
+        arr = raw.get(key)
+        if isinstance(arr, list) and arr:
+            return arr
+    return None
+
+
+def map_pair_array(arr, value_index=1):
+    samples = []
+    if not isinstance(arr, list):
+        return samples
+    for item in arr:
+        if not isinstance(item, (list, tuple)) or len(item) <= value_index:
+            continue
+        ts = parse_ts_seconds(item[0])
+        val = safe_float(item[value_index])
+        if val is None:
+            val = safe_int(item[value_index])
+        if ts is not None and val is not None:
+            samples.append({"t": ts, "v": val})
+    return samples
+
+
+def map_hrv_readings(raw):
+    samples = []
+    if not isinstance(raw, dict):
+        return samples
+    readings = raw.get("hrvReadings")
+    if not isinstance(readings, list):
+        return samples
+    for entry in readings:
+        if not isinstance(entry, dict):
+            continue
+        ts = parse_ts_seconds(entry.get("readingTimeGMT") or entry.get("readingTimeLocal"))
+        val = safe_float(entry.get("hrvValue"))
+        if val is None:
+            val = safe_int(entry.get("hrvValue"))
+        if ts is not None and val is not None:
+            samples.append({"t": ts, "v": val})
+    return samples
+
+
+def _sleep_spo2_base_sec(container, dto):
+    for src in (container, dto):
+        if not isinstance(src, dict):
+            continue
+        for key in (
+            "startTimeInSeconds",
+            "StartTimeInSeconds",
+            "sleepStartTimestampGMT",
+            "sleepStartTimestampLocal",
+            "startGMT",
+            "startTimestampGMT",
+        ):
+            ts = parse_ts_seconds(_dict_get_ci(src, key))
+            if ts is not None:
+                return ts
+    return None
+
+
+def _spo2_sample(t, v, src):
+    return {"t": t, "v": v, "src": src}
+
+
+def _append_spo2_offset_map(samples, offsets, base, src="daily_offset"):
+    if base is None or not isinstance(offsets, dict):
+        return
+    for offset, val in offsets.items():
+        try:
+            off = int(offset)
+        except (TypeError, ValueError):
+            continue
+        if off < 0:
+            continue
+        v = _valid_spo2_value(val)
+        if v is not None:
+            samples.append(_spo2_sample(base + off, v, src))
+
+
+def map_sleep_spo2_samples(client, d: str):
+    samples = []
+    try:
+        sleep_raw = client.get_sleep_data(d) or {}
+        dto = sleep_raw.get("dailySleepDTO") or {}
+        spo2_block = sleep_raw.get("sleepSpO2Summary") or dto.get("sleepSpO2Summary")
+        for container in (sleep_raw, dto, spo2_block if isinstance(spo2_block, dict) else None):
+            if not isinstance(container, dict):
+                continue
+            offsets = _dict_get_ci(
+                container,
+                "timeOffsetSleepSpo2",
+                "TimeOffsetSleepSpo2",
+                "timeOffsetSpo2Values",
+                "TimeOffsetSpo2Values",
+            )
+            if isinstance(offsets, dict):
+                _append_spo2_offset_map(samples, offsets, _sleep_spo2_base_sec(container, dto), "sleep_offset")
+        epoch_list = sleep_raw.get("wellnessEpochSPO2DataDTOList")
+        if not isinstance(epoch_list, list):
+            epoch_list = dto.get("wellnessEpochSPO2DataDTOList")
+        if not isinstance(epoch_list, list) and isinstance(spo2_block, dict):
+            epoch_list = spo2_block.get("wellnessEpochSPO2DataDTOList") or spo2_block.get("epochData")
+        if isinstance(epoch_list, list):
+            for entry in epoch_list:
+                if not isinstance(entry, dict):
+                    continue
+                ts = parse_ts_seconds(
+                    entry.get("epochTimestamp")
+                    or entry.get("startGMT")
+                    or entry.get("timestampGMT")
+                    or entry.get("startTimeInSeconds")
+                    or entry.get("StartTimeInSeconds")
+                    or entry.get("readingTimeGMT")
+                )
+                val = _valid_spo2_value(entry.get("spo2Reading") or entry.get("spO2Reading") or entry.get("value") or entry)
+                if ts is not None and val is not None:
+                    samples.append(_spo2_sample(ts, val, "sleep_epoch"))
+    except Exception:
+        pass
+    return samples
+
+
+def _dict_get_ci(raw, *keys):
+    if not isinstance(raw, dict):
+        return None
+    lower = {str(k).lower(): v for k, v in raw.items()}
+    for key in keys:
+        if key in raw:
+            return raw[key]
+        v = lower.get(str(key).lower())
+        if v is not None:
+            return v
+    return None
+
+
+def _spo2_reading_value(entry):
+    if entry is None:
+        return None
+    if isinstance(entry, (int, float)):
+        return safe_float(entry)
+    if isinstance(entry, dict):
+        return safe_float(
+            entry.get("spo2Reading")
+            or entry.get("spO2Reading")
+            or entry.get("value")
+            or entry.get("reading")
+        )
+    return safe_float(entry)
+
+
+def _valid_spo2_value(entry):
+    val = _spo2_reading_value(entry)
+    if val is None:
+        return None
+    if val < 50 or val > 100:
+        return None
+    return val
+
+
+def _parse_spo2_batch(raw, d: str):
+    samples = []
+    if not isinstance(raw, dict):
+        return samples
+
+    start = None
+    for key in (
+        "startTimeInSeconds",
+        "StartTimeInSeconds",
+        "startTimestampGMT",
+        "startTimestamp",
+        "startGMT",
+    ):
+        start = parse_ts_seconds(_dict_get_ci(raw, key))
+        if start is not None:
+            break
+    day_start = parse_ts_seconds(f"{d}T00:00:00+08:00")
+    if start is None:
+        start = day_start
+
+    offsets = _dict_get_ci(
+        raw,
+        "timeOffsetSpo2Values",
+        "TimeOffsetSpo2Values",
+        "spo2OffsetValues",
+        "offsetSpo2Values",
+    )
+    if isinstance(offsets, dict):
+        base = (
+            parse_ts_seconds(_dict_get_ci(raw, "startTimeInSeconds", "StartTimeInSeconds"))
+            or parse_ts_seconds(_dict_get_ci(raw, "startTimestampGMT"))
+            or start
+        )
+        _append_spo2_offset_map(samples, offsets, base, "daily_offset")
+
+    if not samples and isinstance(offsets, list):
+        base = start
+        for item in offsets:
+            if not isinstance(item, dict):
+                continue
+            off = item.get("offset") or item.get("timeOffset") or item.get("timeOffsetInSeconds")
+            try:
+                off = int(off)
+            except (TypeError, ValueError):
+                continue
+            if off < 0:
+                continue
+            v = _valid_spo2_value(item)
+            if v is None:
+                v = _valid_spo2_value(item.get("value") or item.get("spo2Reading"))
+            if base is not None and v is not None:
+                samples.append(_spo2_sample(base + off, v, "daily_offset"))
+
+    if not samples:
+        epoch_list = _dict_get_ci(
+            raw,
+            "wellnessEpochSPO2DataDTOList",
+            "spO2ReadingsDTOList",
+            "readings",
+        )
+        if isinstance(epoch_list, list):
+            for entry in epoch_list:
+                if not isinstance(entry, dict):
+                    continue
+                ts = parse_ts_seconds(
+                    entry.get("epochTimestamp")
+                    or entry.get("startGMT")
+                    or entry.get("timestampGMT")
+                    or entry.get("startTimeInSeconds")
+                    or entry.get("StartTimeInSeconds")
+                )
+                val = _valid_spo2_value(entry)
+                if ts is not None and val is not None:
+                    samples.append(_spo2_sample(ts, val, "epoch"))
+
+    if not samples:
+        arr = values_array_from(
+            raw,
+            "spO2HourlyAverages",
+            "spo2HourlyAverages",
+            "spO2ValuesArray",
+            "spo2ValuesArray",
+            "values",
+            "spO2SingleValues",
+        )
+        if arr:
+            for item in arr:
+                if not isinstance(item, (list, tuple)) or len(item) < 2:
+                    continue
+                t_raw = item[0]
+                val = _valid_spo2_value(item[1])
+                if val is None:
+                    continue
+                ts = parse_ts_seconds(t_raw)
+                if ts is None:
+                    continue
+                if ts < 200000 and start is not None:
+                    ts = start + int(ts)
+                elif ts < 200000 and day_start is not None:
+                    ts = day_start + int(ts)
+                samples.append(_spo2_sample(ts, val, "hourly"))
+    return samples
+
+
+def _fetch_spo2_raw(client, d: str):
+    try:
+        raw = client.get_spo2_data(d)
+        if raw:
+            return raw
+    except Exception:
+        pass
+    garth = getattr(client, "client", client)
+    connectapi = getattr(garth, "connectapi", None)
+    if not callable(connectapi):
+        return {}
+    for path in (
+        f"/wellness-service/wellness/daily/spo2/{d}",
+        f"/wellness-service/wellness/spo2/{d}",
+    ):
+        try:
+            raw = connectapi(path)
+            if raw:
+                return raw
+        except Exception:
+            continue
+    return {}
+
+
+def map_daily_spo2_samples(client, d: str):
+    samples = []
+    raw = _fetch_spo2_raw(client, d)
+    batches = []
+    if isinstance(raw, list):
+        batches = [x for x in raw if isinstance(x, dict)]
+    elif isinstance(raw, dict):
+        nested = _dict_get_ci(raw, "pulseOx", "pulseOxSummary", "spO2Summary")
+        if isinstance(nested, dict):
+            batches = [nested]
+        elif isinstance(nested, list):
+            batches = [x for x in nested if isinstance(x, dict)]
+        else:
+            batches = [raw]
+    for batch in batches:
+        samples.extend(_parse_spo2_batch(batch, d))
+    return samples
+
+
+def map_spo2_samples(client, d: str):
+    daily = map_daily_spo2_samples(client, d)
+    sleep = map_sleep_spo2_samples(client, d)
+    merged = {s["t"]: s for s in daily}
+    for s in sleep:
+        merged[s["t"]] = s
+    return sorted(merged.values(), key=lambda s: s["t"])
+
+
+def enrich_daily_metrics(client, d: str, data: dict):
+    try:
+        stress = client.get_stress_data(d) or {}
+        avg = safe_int(stress.get("avgStressLevel"))
+        if avg is not None:
+            data["avgStress"] = avg
+    except Exception:
+        pass
+    try:
+        spo2 = client.get_spo2_data(d) or {}
+        avg = safe_float(
+            spo2.get("averageSpO2")
+            or spo2.get("avgSpO2")
+            or spo2.get("lowestSpO2")
+            or spo2.get("lastSevenDaysAvgSpO2")
+        )
+        if avg is not None:
+            data["spo2Avg"] = avg
+    except Exception:
+        pass
+    try:
+        hrv = client.get_hrv_data(d) or {}
+        if isinstance(hrv, dict):
+            nightly = safe_float(
+                hrv.get("lastNightAvg")
+                or hrv.get("weeklyAvg")
+                or hrv.get("hrvSummary")
+            )
+            if nightly is None and isinstance(hrv.get("hrvReadings"), list) and hrv["hrvReadings"]:
+                last = hrv["hrvReadings"][-1]
+                if isinstance(last, dict):
+                    nightly = safe_float(last.get("hrvValue"))
+            if nightly is not None:
+                data["hrvNightly"] = nightly
+    except Exception:
+        pass
+    return data
+
+
+def map_series_samples(raw, value_keys):
+    samples = []
+    if not raw:
+        return samples
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                ts = parse_ts_seconds(item[0])
+                val = safe_float(item[1])
+                if val is None:
+                    val = safe_int(item[1])
+                if ts is not None:
+                    samples.append({"t": ts, "v": val})
+            elif isinstance(item, dict):
+                ts = parse_ts_seconds(item.get("startGMT") or item.get("timestampGMT"))
+                val = None
+                for key in value_keys:
+                    if key in item and item[key] is not None:
+                        val = safe_float(item[key])
+                        if val is None:
+                            val = safe_int(item[key])
+                        break
+                if ts is not None:
+                    samples.append({"t": ts, "v": val})
+    elif isinstance(raw, dict):
+        arr = (
+            raw.get("heartRateValues")
+            or raw.get("stressValuesArray")
+            or raw.get("stressValues")
+            or raw.get("bodyBatteryValuesArray")
+            or raw.get("respirationValuesArray")
+            or raw.get("values")
+        )
+        if isinstance(arr, list):
+            samples = map_series_samples(arr, value_keys)
+    return samples
+
+
+def map_steps_cumulative(client, d: str):
+    samples = []
+    try:
+        raw = client.get_steps_data(d) or []
+    except Exception:
+        return samples
+    if not isinstance(raw, list):
+        return samples
+    cumulative = 0
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        ts = parse_ts_seconds(entry.get("startGMT") or entry.get("endGMT"))
+        delta = safe_int(entry.get("steps")) or 0
+        cumulative += delta
+        if ts is not None:
+            samples.append({"t": ts, "v": cumulative})
+    return samples
+
+
+def map_metric_snapshot(client, d: str, metric: str):
+    samples = []
+    coverage = None
+    try:
+        if metric == "hr":
+            raw = client.get_heart_rates(d) or {}
+            arr = raw.get("heartRateValues") if isinstance(raw, dict) else raw
+            samples = map_series_samples(arr or raw, [])
+        elif metric == "stress":
+            raw = client.get_stress_data(d) or {}
+            arr = values_array_from(raw, "stressValuesArray", "stressValues")
+            samples = map_pair_array(arr, 1) if arr else map_series_samples([raw], ["stressLevel", "value"])
+        elif metric == "body_battery":
+            stress_raw = client.get_stress_data(d) or {}
+            arr = values_array_from(stress_raw, "bodyBatteryValuesArray", "bodyBatteryValues")
+            if arr:
+                samples = map_pair_array(arr, 2)
+            if not samples:
+                raw = client.get_body_battery(d, d) or []
+                if isinstance(raw, list) and raw and isinstance(raw[0], dict):
+                    arr = values_array_from(raw[0], "bodyBatteryValuesArray", "bodyBatteryValues")
+                    if arr:
+                        samples = map_pair_array(arr, 1 if len(arr[0]) <= 2 else 2)
+                    else:
+                        samples = map_series_samples(raw[0].get("bodyBatteryValuesArray") or raw, [])
+                else:
+                    samples = map_series_samples(raw, [])
+        elif metric == "spo2":
+            samples = map_spo2_samples(client, d)
+        elif metric == "respiration":
+            raw = client.get_respiration_data(d) or {}
+            arr = values_array_from(raw, "respirationValuesArray", "respirationValues")
+            samples = map_pair_array(arr, 1) if arr else map_series_samples([raw], ["respirationValue", "value"])
+        elif metric == "hrv":
+            raw = client.get_hrv_data(d) or {}
+            samples = map_hrv_readings(raw)
+            if not samples:
+                samples = map_series_samples(raw if isinstance(raw, list) else [raw], ["hrvValue", "value"])
+        elif metric in ("steps", "steps_cumulative"):
+            samples = map_steps_cumulative(client, d)
+    except Exception:
+        pass
+    valid = [s for s in samples if s.get("v") is not None]
+    if samples:
+        coverage = len(valid) / len(samples)
+    return {
+        "metric": metric,
+        "localDate": d,
+        "samples": samples,
+        "coverage": coverage,
+        "sampleCount": len(samples),
+        "validCount": len(valid),
+    }
+
+
+def probe_series(client, d: str):
+    metrics = ["hr", "stress", "body_battery", "spo2", "respiration", "hrv", "steps_cumulative"]
+    out = {}
+    for m in metrics:
+        snap = map_metric_snapshot(client, d, m)
+        out[m] = {
+            "sampleCount": snap["sampleCount"],
+            "validCount": snap["validCount"],
+            "coverage": snap["coverage"],
+        }
+    return out
+
+
+def fetch_day_series(client, d: str):
+    metrics = ["hr", "stress", "body_battery", "spo2", "respiration", "hrv", "steps_cumulative"]
+    out = []
+    for m in metrics:
+        snap = map_metric_snapshot(client, d, m)
+        if snap["sampleCount"] > 0:
+            out.append(snap)
+    return out

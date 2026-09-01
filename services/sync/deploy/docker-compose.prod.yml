@@ -1,0 +1,56 @@
+services:
+  orbita-sync:
+    image: orbita-sync:latest
+    build:
+      context: ../../..
+      dockerfile: services/sync/deploy/Dockerfile
+    read_only: true
+    user: "1000:1000"
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - /srv/appdata/orbita-sync/state:/data/state:rw
+      - /srv/storage/backup/orbita-sync:/data/backup:rw
+      - /etc/orbita-sync/config.toml:/etc/orbita-sync/config.toml:ro
+      - ./secrets/enrollment_pepper:/run/secrets/enrollment_pepper:ro
+      - ./secrets/token_pepper:/run/secrets/token_pepper:ro
+      - ./secrets/metrics_token:/run/secrets/metrics_token:ro
+      - /tmp
+    tmpfs:
+      - /tmp:size=64M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    environment:
+      - ORBITA_SYNC_CONFIG=/etc/orbita-sync/config.toml
+      - ORBITA_SYNC_SECRET_ENROLLMENT_PEPPER_FILE=/run/secrets/enrollment_pepper
+      - ORBITA_SYNC_SECRET_TOKEN_PEPPER_FILE=/run/secrets/token_pepper
+      - ORBITA_SYNC_SECRET_METRICS_TOKEN_FILE=/run/secrets/metrics_token
+      - RUST_LOG=info
+
+  orbita-sync-backup:
+    image: orbita-sync:latest
+    user: "1000:1000"
+    read_only: true
+    profiles: ["backup"]
+    volumes:
+      - /srv/appdata/orbita-sync/state:/data/state:ro
+      - /srv/storage/backup/orbita-sync:/data/backup:rw
+    environment:
+      - ORBITA_SYNC_STATE_DIR=/data/state
+      - ORBITA_SYNC_BACKUP_DIR=/data/backup
+    entrypoint: ["/usr/local/bin/orbita-sync-tools"]
+    command:
+      - backup
+      - --source
+      - /data/state/server.sqlite
+      - --dest-dir
+      - /data/backup
+    tmpfs:
+      - /tmp:size=32M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

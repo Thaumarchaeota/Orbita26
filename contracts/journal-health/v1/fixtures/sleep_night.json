@@ -1,0 +1,25 @@
+{
+  "id": "00000000-0000-4000-8000-000000000003",
+  "wakeDate": "2026-01-15",
+  "source": "garmin",
+  "revision": 1,
+  "night": {
+    "sleepStartUtc": 1704067200,
+    "sleepEndUtc": 1704092400,
+    "score": 82,
+    "stages": {
+      "deep": 5400,
+      "light": 10800,
+      "rem": 3600,
+      "awake": 900
+    }
+  },
+  "contentHash": "50824d9b37ca59f96abf4f07c90d101a1e06be0ea79e0eed2dac49e5bb1a0333",
+  "naturalKey": {
+    "wakeDate": "2026-01-15",
+    "source": "garmin"
+  },
+  "createdAtUtc": "2026-01-15T08:00:00Z",
+  "updatedAtUtc": "2026-01-15T08:00:00Z",
+  "deletedAtUtc": null
+}

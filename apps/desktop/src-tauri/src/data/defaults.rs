@@ -174,6 +174,40 @@ pub(crate) fn default_goal_hydration() -> u32 {
     2000
 }
 
+pub(crate) fn default_health_track_axis_mode() -> String {
+    "fixed".into()
+}
+
+pub(crate) fn default_hr_axis_range() -> super::types::MetricAxisRange {
+    super::types::MetricAxisRange { min: 40.0, max: 210.0 }
+}
+
+pub(crate) fn default_respiration_axis_range() -> super::types::MetricAxisRange {
+    super::types::MetricAxisRange { min: 8.0, max: 30.0 }
+}
+
+pub(crate) fn default_steps_axis_range() -> super::types::MetricAxisRange {
+    super::types::MetricAxisRange { min: 0.0, max: 20000.0 }
+}
+
+pub(crate) fn default_stress_axis_range() -> super::types::MetricAxisRange {
+    super::types::MetricAxisRange { min: 0.0, max: 100.0 }
+}
+
+pub(crate) fn default_body_battery_axis_range() -> super::types::MetricAxisRange {
+    super::types::MetricAxisRange { min: 0.0, max: 100.0 }
+}
+
+pub(crate) fn default_health_track_axis_ranges() -> super::types::HealthTrackAxisRanges {
+    super::types::HealthTrackAxisRanges {
+        hr: default_hr_axis_range(),
+        respiration: default_respiration_axis_range(),
+        steps_cumulative: default_steps_axis_range(),
+        stress: default_stress_axis_range(),
+        body_battery: default_body_battery_axis_range(),
+    }
+}
+
 pub(crate) fn default_theme_palette() -> String {
     "ocean".into()
 }
@@ -232,6 +266,10 @@ pub(crate) fn default_ticktick_redirect() -> String {
 
 pub(crate) fn default_work_notes_dir() -> String {
     "12_project-tracking".into()
+}
+
+pub(crate) fn default_garmin_sync_days() -> u32 {
+    7
 }
 
 pub(crate) fn default_version() -> u32 {

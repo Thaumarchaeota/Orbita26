@@ -1,0 +1,44 @@
+# Orbita Sync — example configuration
+# Copy to /etc/orbita-sync/config.toml and restrict permissions to 0600.
+
+[server]
+bind = "127.0.0.1:8787"
+max_body_bytes = 1048576
+max_batch_ops = 100
+
+[database]
+path = "/data/state/server.sqlite"
+wal = true
+foreign_keys = true
+
+[backup]
+enabled = true
+directory = "/data/backup"
+max_age_hours = 48
+retention_days = 30
+pages_per_step = 100
+
+[auth]
+token_hash_algorithm = "argon2id"
+invite_ttl_secs = 300
+max_devices_per_account = 10
+
+[retention]
+history_days = 180
+tombstone_days = 365
+
+[connectors.garmin]
+enabled = false
+lease_ttl_secs = 300
+cooldown_default_secs = 3600
+schedule_cron = "0 */6 * * *"
+
+[connectors.ticktick]
+enabled = false
+oauth_redirect_uri = "https://sync.example.ts.net/oauth/ticktick/callback"
+auth_transaction_ttl_secs = 600
+
+[observability]
+log_level = "info"
+redact_payloads = true
+metrics_enabled = true

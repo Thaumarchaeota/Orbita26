@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/errors.json",
+  "title": "Journal Health v1 sync error codes",
+  "version": "1.0.0",
+  "errors": {
+    "UPGRADE_REQUIRED": {
+      "httpStatus": 426,
+      "retryable": false,
+      "message": "Client contract version is not supported; upgrade required.",
+      "clientAction": "block_sync_and_prompt_upgrade"
+    },
+    "CONTRACT_MISMATCH": {
+      "httpStatus": 400,
+      "retryable": false,
+      "message": "Payload does not match the declared contract version or record schema.",
+      "clientAction": "reject_op_and_log"
+    },
+    "SCHEMA_VALIDATION_FAILED": {
+      "httpStatus": 400,
+      "retryable": false,
+      "message": "Snapshot failed JSON Schema validation.",
+      "clientAction": "reject_op_and_log"
+    },
+    "UNAUTHORIZED": {
+      "httpStatus": 401,
+      "retryable": false,
+      "message": "Missing or invalid device token.",
+      "clientAction": "re_enroll_device"
+    },
+    "FORBIDDEN": {
+      "httpStatus": 403,
+      "retryable": false,
+      "message": "Device lacks capability for this operation (e.g. garmin write on non-collector).",
+      "clientAction": "reject_op"
+    },
+    "VERSION_CONFLICT": {
+      "httpStatus": 409,
+      "retryable": false,
+      "message": "baseServerVersion does not match server current version.",
+      "clientAction": "surface_conflict"
+    },
+    "CONTENT_CONFLICT": {
+      "httpStatus": 409,
+      "retryable": false,
+      "message": "Concurrent edit with different content hash.",
+      "clientAction": "surface_conflict"
+    },
+    "DUPLICATE_OP": {
+      "httpStatus": 200,
+      "retryable": false,
+      "message": "Operation already applied (idempotent deduplication).",
+      "clientAction": "ack_outbox"
+    },
+    "NATURAL_KEY_COLLISION": {
+      "httpStatus": 409,
+      "retryable": false,
+      "message": "Natural key matches an existing record with a different UUID.",
+      "clientAction": "surface_conflict"
+    },
+    "INVARIANT_VIOLATION": {
+      "httpStatus": 409,
+      "retryable": false,
+      "message": "Cross-record invariant failed (e.g. multiple primary moods per day).",
+      "clientAction": "surface_conflict"
+    },
+    "PAYLOAD_TOO_LARGE": {
+      "httpStatus": 413,
+      "retryable": false,
+      "message": "Snapshot or batch exceeds size limits.",
+      "clientAction": "reject_op"
+    },
+    "RATE_LIMITED": {
+      "httpStatus": 429,
+      "retryable": true,
+      "message": "Too many requests; back off before retry.",
+      "clientAction": "exponential_backoff"
+    },
+    "SERVER_UNAVAILABLE": {
+      "httpStatus": 503,
+      "retryable": true,
+      "message": "Server temporarily unavailable.",
+      "clientAction": "exponential_backoff"
+    },
+    "INTERNAL_ERROR": {
+      "httpStatus": 500,
+      "retryable": true,
+      "message": "Unexpected server error.",
+      "clientAction": "exponential_backoff"
+    }
+  },
+  "compatibilityMatrix": {
+    "journal-health/v1": {
+      "minClientVersion": "0.0.18",
+      "maxClientVersion": null,
+      "serverVersions": ["1.0.0"],
+      "supportedRecordTypes": [
+        "daily_metrics",
+        "metric_day_snapshot",
+        "sleep_night",
+        "nap",
+        "meal",
+        "activity",
+        "body_measurement",
+        "event",
+        "mood",
+        "note"
+      ],
+      "errorCodeStability": "additive_only",
+      "breakingChangePolicy": "new_major_contract_required"
+    }
+  },
+  "clientHandling": {
+    "retryable": ["RATE_LIMITED", "SERVER_UNAVAILABLE", "INTERNAL_ERROR"],
+    "terminal": [
+      "UPGRADE_REQUIRED",
+      "CONTRACT_MISMATCH",
+      "SCHEMA_VALIDATION_FAILED",
+      "UNAUTHORIZED",
+      "FORBIDDEN",
+      "VERSION_CONFLICT",
+      "CONTENT_CONFLICT",
+      "NATURAL_KEY_COLLISION",
+      "INVARIANT_VIOLATION",
+      "PAYLOAD_TOO_LARGE"
+    ],
+    "successDedup": ["DUPLICATE_OP"]
+  }
+}

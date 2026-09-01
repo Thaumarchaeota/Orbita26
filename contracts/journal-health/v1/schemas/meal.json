@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/schemas/meal.json",
+  "title": "meal snapshot",
+  "type": "object",
+  "required": [
+    "id",
+    "localDate",
+    "source",
+    "revision",
+    "payload",
+    "naturalKey",
+    "createdAtUtc",
+    "updatedAtUtc"
+  ],
+  "properties": {
+    "id": { "$ref": "_common.json#/$defs/uuid" },
+    "localDate": { "$ref": "_common.json#/$defs/localDate" },
+    "source": { "$ref": "_common.json#/$defs/source" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "payload": {
+      "type": "object",
+      "required": ["text", "kcal"],
+      "properties": {
+        "slot": {
+          "type": "string",
+          "enum": ["breakfast", "lunch", "dinner", "snack"]
+        },
+        "text": { "type": "string" },
+        "kcal": { "type": "number", "minimum": 0 },
+        "occurredAtUtc": { "type": "integer" },
+        "items": { "type": "array", "items": { "type": "object" } }
+      },
+      "additionalProperties": true
+    },
+    "naturalKey": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "_common.json#/$defs/uuid" }
+      },
+      "additionalProperties": false
+    },
+    "createdAtUtc": { "$ref": "_common.json#/$defs/rfc3339Utc" },
+    "updatedAtUtc": { "$ref": "_common.json#/$defs/rfc3339Utc" },
+    "deletedAtUtc": {
+      "oneOf": [{ "$ref": "_common.json#/$defs/rfc3339Utc" }, { "type": "null" }]
+    }
+  },
+  "additionalProperties": false
+}

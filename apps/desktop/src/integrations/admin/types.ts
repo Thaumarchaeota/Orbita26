@@ -1,4 +1,4 @@
-export type InsightDestinationId = "health" | "journal" | "finance" | "work";
+export type InsightDestinationId = "health" | "journal" | "finance" | "work" | "timeline" | "settings";
 
 export type InsightDisposeReason = "host-dispose" | "data-dir-change";
 
@@ -21,6 +21,7 @@ export type InsightDestination = {
   kind: "domain" | "workspace";
   label: string;
   icon: string;
+  showInNav?: boolean;
   mount: (root: HTMLElement, ctx: InsightHostContext) => InsightDestinationHandle;
 };
 

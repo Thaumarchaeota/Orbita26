@@ -120,7 +120,6 @@ export type TodayPanelRefresh = {
   repaintFull: () => void | Promise<void>;
   optimisticMeals: (date: string, meals: MealEntry[]) => () => void;
   optimisticMealPatches: (patches: { date: string; meals: MealEntry[] }[]) => () => void;
-  optimisticHydration: (date: string, ml: number) => () => void;
   optimisticEvent: (entry: Record<string, unknown>, existingId?: string) => () => void;
   optimisticMood: (entry: Record<string, unknown>, existingId?: string) => () => void;
 };
@@ -250,67 +249,5 @@ export function openMealDialog(
         }
       })();
     }
-  });
-}
-
-export function openHydrationDialog(root: HTMLElement, date: string, currentMl: number, panel: TodayPanelRefresh) {
-  if (!getSettings().dataDir) {
-    alert("请先在设置中配置数据存储位置");
-    return;
-  }
-  const backdrop = document.createElement("div");
-  backdrop.className = "dialog-backdrop";
-  backdrop.innerHTML = `
-    <form class="dialog-panel">
-      <div class="dialog-title">喝水</div>
-      <div class="dialog-field"><label>日期</label><input type="date" id="hydDate" value="${date}"></div>
-      <div class="dialog-field"><label>毫升 ml</label><input type="number" id="hydMl" min="0" step="50" value="${currentMl > 0 ? currentMl : ""}"></div>
-      <div class="dialog-actions">
-        <button type="button" class="dialog-btn" data-action="cancel">取消</button>
-        <button type="submit" class="dialog-btn dialog-btn-primary">保存</button>
-      </div>
-    </form>
-  `;
-  root.appendChild(backdrop);
-  const motion = bindDialog(backdrop);
-  const close = async () => {
-    await motion.close();
-    backdrop.remove();
-  };
-  backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close());
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close();
-  });
-  void motion.open();
-  backdrop.querySelector("form")!.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const d = backdrop.querySelector<HTMLInputElement>("#hydDate")!.value;
-    const ml = Number(backdrop.querySelector<HTMLInputElement>("#hydMl")!.value);
-    if (!Number.isFinite(ml) || ml < 0) {
-      alert("请填写有效毫升数");
-      return;
-    }
-    const { entries } = await journalList({ date: d });
-    const daily = entries.find((en) => en.kind === "daily" && en.date === d);
-    const prevData =
-      daily?.data && typeof daily.data === "object" ? { ...(daily.data as Record<string, unknown>) } : {};
-    const rounded = Math.round(ml);
-    const rollback = panel.optimisticHydration(d, rounded);
-    await close();
-    panel.refreshRings();
-    void (async () => {
-      try {
-        await journalUpsert({
-          id: daily?.id ? String(daily.id) : "",
-          kind: "daily",
-          date: d,
-          data: { ...prevData, hydrationMl: rounded },
-        });
-        window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-      } catch (err) {
-        rollback();
-        alert(String(err));
-      }
-    })();
   });
 }

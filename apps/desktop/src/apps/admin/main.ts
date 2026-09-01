@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import "../../ui/admin-shell.css";
+import "../../ui/ticktick-icon-btn.css";
 import { mountAdminShell, registerDefaultAdminTabs } from "../../integrations/admin";
 import { isTauri } from "../../core/data/client";
 import { initSettings } from "../../core/settings";

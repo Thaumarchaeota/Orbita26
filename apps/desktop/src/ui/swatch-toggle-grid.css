@@ -1,0 +1,68 @@
+.orbita-swatch-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--swatch-toggle-cols, 2), minmax(0, 1fr));
+  column-gap: 8px;
+  row-gap: 8px;
+}
+
+.orbita-swatch-toggle-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 8px 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--admin-hover, #f3f4f6);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  color: var(--admin-text, #374151);
+  overflow: hidden;
+  text-align: left;
+  transition: background 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.orbita-swatch-toggle-cell.is-on {
+  background: var(--admin-surface, #fff);
+  box-shadow: inset 0 0 0 1px var(--admin-border, #d1d5db);
+}
+
+.orbita-swatch-toggle-cell.is-off {
+  opacity: 0.45;
+}
+
+.orbita-swatch-toggle-stripe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+}
+
+.orbita-swatch-toggle-label {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orbita-swatch-toggle-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbita-swatch-toggle-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

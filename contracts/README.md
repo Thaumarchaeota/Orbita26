@@ -1,3 +1,12 @@
 # Orbita contracts
 
-存放版本化 API、schema 和脱敏测试样例，是桌面、Android 与 sync 的唯一共享工程边界。不得提交用户数据、SQLite 文件、凭据、token 或运行环境配置。
+Versioned API schemas, canonical hash rules, and sanitized test fixtures shared by desktop, Android, and `services/sync`. **No user data, credentials, tokens, or SQLite files.**
+
+## journal-health/v1
+
+See [`journal-health/v1/README.md`](journal-health/v1/README.md).
+
+```bash
+python contracts/tools/validate-fixtures.py
+```
+

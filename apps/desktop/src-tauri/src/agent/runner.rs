@@ -100,6 +100,9 @@ fn build_agent_system_prompt(app: &AppHandle) -> String {
          - 滴答改期：只改 dueOn/dueTime 时，startDate 会按相同天数平移；若平移后 start 晚于 due，则与 due 对齐为同一时刻；用户另行指定 start 时以其为准。\n\
          - 生活区：journal_snapshot 查今日摘要；journal_list 查明细；写操作会弹确认框。\n\
          - 睡眠：date 为醒来日；跨夜入睡（如 23:00→07:00）用 journal_set_sleep，系统自动把入睡归到前一天。\n\
+         - journal_set_sleep 在当日已有佳明睡眠时会失败，勿尝试覆盖\n\
+         - 餐食 id 为 UUID（daily.data.meals[].id），不是 journal/YYYY.json 路径\n\
+         - journal_add_meal 未填 at 时默认当前北京时间，无 at 的餐食不会出现在 Health 时间轨道\n\
          - garmin_sync：days 默认 7，用户指定则用其值（1-30）；需已登录。\n\
          - garmin_login：仅用户明确要求重新登录时使用；会触发 SSO。\n\
          - bkeasy_summary 查今日/本月支出；beancount_add_transaction 尚未实现勿假装成功。\n\
@@ -167,6 +170,41 @@ fn tool_summary(name: &str, ok: bool, result: &str) -> String {
             if let Some(id) = v.get("deleted").and_then(|t| t.as_str()) {
                 return format!("已删除：{id}");
             }
+        }
+        if name == "journal_add_meal" {
+            if let Some(meals) = v
+                .get("data")
+                .and_then(|d| d.get("meals"))
+                .and_then(|m| m.as_array())
+            {
+                if let Some(meal) = meals.last() {
+                    let kcal = meal.get("kcal").and_then(|k| k.as_i64()).unwrap_or(0);
+                    let text = meal.get("text").and_then(|t| t.as_str()).unwrap_or("");
+                    let items: Vec<&str> = meal
+                        .get("items")
+                        .and_then(|i| i.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|x| x.as_str())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    let label = if !text.is_empty() {
+                        text.to_string()
+                    } else if !items.is_empty() {
+                        items.join("、")
+                    } else {
+                        "餐食".to_string()
+                    };
+                    return format!("已记录餐食：{label}（{kcal} kcal）");
+                }
+            }
+        }
+        if name == "journal_update_meal" {
+            return "已更新餐食记录".into();
+        }
+        if name == "journal_delete_meal" {
+            return "已删除餐食记录".into();
         }
         if name == "garmin_sync" {
             if let (Some(d), Some(e)) = (

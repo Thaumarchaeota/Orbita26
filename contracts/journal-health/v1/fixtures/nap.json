@@ -1,0 +1,21 @@
+{
+  "id": "00000000-0000-4000-8000-000000000004",
+  "localDate": "2026-01-15",
+  "source": "garmin",
+  "revision": 1,
+  "externalKey": "garmin:1704070800:1704072600:1800",
+  "payload": {
+    "start": 1704070800,
+    "end": 1704072600,
+    "duration": 1800,
+    "source": "garmin"
+  },
+  "naturalKey": {
+    "localDate": "2026-01-15",
+    "source": "garmin",
+    "externalKey": "garmin:1704070800:1704072600:1800"
+  },
+  "createdAtUtc": "2026-01-15T08:00:00Z",
+  "updatedAtUtc": "2026-01-15T08:00:00Z",
+  "deletedAtUtc": null
+}

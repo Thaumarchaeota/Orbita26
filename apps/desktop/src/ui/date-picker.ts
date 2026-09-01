@@ -14,6 +14,7 @@ export type DatePickerOptions = {
   value?: string;
   placeholder?: string;
   compact?: boolean;
+  showChevron?: boolean;
   onChange?: (value: string) => void;
 };
 
@@ -30,15 +31,14 @@ export function mountDatePicker(
   options: DatePickerOptions = {},
 ): DatePickerHandle {
   const placeholder = options.placeholder ?? "yyyy-mm-dd";
+  const showChevron = options.showChevron !== false;
   let value = options.value ?? "";
   let draft = value;
   container.innerHTML = `
-    <div class="orbita-date-picker${options.compact ? " is-compact" : ""}">
+    <div class="orbita-date-picker${options.compact ? " is-compact" : ""}${showChevron ? "" : " is-no-chevron"}">
       <div class="orbita-date-picker-trigger">
         <input type="text" class="orbita-date-picker-input" placeholder="${escAttr(placeholder)}" autocomplete="off" />
-        <button type="button" class="orbita-date-picker-chevron-btn" aria-label="打开日历">
-          ${CHEVRON_SVG}
-        </button>
+        ${showChevron ? `<button type="button" class="orbita-date-picker-chevron-btn" aria-label="打开日历">${CHEVRON_SVG}</button>` : ""}
       </div>
       <div class="orbita-date-picker-menu scroll-slim motion-popover"></div>
     </div>`;
@@ -46,14 +46,14 @@ export function mountDatePicker(
   const root = container.querySelector<HTMLElement>(".orbita-date-picker")!;
   const trigger = root.querySelector<HTMLElement>(".orbita-date-picker-trigger")!;
   const input = root.querySelector<HTMLInputElement>(".orbita-date-picker-input")!;
-  const chevronBtn = root.querySelector<HTMLButtonElement>(".orbita-date-picker-chevron-btn")!;
+  const chevronBtn = root.querySelector<HTMLButtonElement>(".orbita-date-picker-chevron-btn");
   const menu = root.querySelector<HTMLElement>(".orbita-date-picker-menu")!;
   input.readOnly = true;
   const portal = mountPopoverPortal({
     anchor: trigger,
     popover: menu,
     onOpenChange: (open) => {
-      chevronBtn.classList.toggle("is-open", open);
+      chevronBtn?.classList.toggle("is-open", open);
       trigger.classList.toggle("is-open", open);
     },
   });
@@ -94,13 +94,13 @@ export function mountDatePicker(
     void close();
   };
 
-  chevronBtn.addEventListener("click", (e) => {
+  chevronBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
     openPicker();
   });
 
   trigger.addEventListener("click", (e) => {
-    if (e.target === chevronBtn) return;
+    if (chevronBtn && e.target === chevronBtn) return;
     openPicker();
   });
 

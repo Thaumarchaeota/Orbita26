@@ -20,6 +20,7 @@ mod favicon;
 mod file_type_icon;
 mod garmin;
 mod hwmon;
+mod journal_db;
 mod journal;
 mod ledger_sidecar;
 mod obsidian;
@@ -104,7 +105,7 @@ pub fn run() {
                 match event {
                     WindowEvent::CloseRequested { api, .. } => {
                         api.prevent_close();
-                        window_shell::detach_from_taskbar(&win_for_close);
+                        window_shell::hide_to_tray(&win_for_close);
                     }
                     WindowEvent::Focused(false) => {
                         *blur_at.lock().unwrap() = Some(Instant::now());
@@ -194,6 +195,8 @@ pub fn run() {
             commands::garmin_status,
             commands::garmin_sync,
             commands::garmin_login,
+            commands::health_overview_query,
+            commands::health_sync_status,
             commands::capture_screen,
             commands::capture_copy_clipboard,
             commands::capture_save_file,

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/compatibility-matrix.json",
+  "title": "Journal Health v1 protocol version negotiation",
+  "negotiation": {
+    "preferred": "journal-health/v1",
+    "fallback": [],
+    "unsupportedResponse": {
+      "errorCode": "UPGRADE_REQUIRED",
+      "httpStatus": 426
+    }
+  },
+  "versions": [
+    {
+      "contractVersion": "journal-health/v1",
+      "status": "current",
+      "introducedIn": "0.0.18",
+      "deprecatedAfter": null,
+      "removedAfter": null,
+      "minSyncService": "1.0.0",
+      "maxBatchSize": 100,
+      "maxSnapshotBytes": 1048576,
+      "canonicalHashAlgorithm": "sha256",
+      "canonicalRulesDoc": "canonical/canonical-rules.md"
+    }
+  ],
+  "clientRules": {
+    "advertiseVersions": ["journal-health/v1"],
+    "acceptServerVersions": ["journal-health/v1"],
+    "onUnknownServerVersion": "reject_with_upgrade_required",
+    "onDeprecatedVersion": "warn_and_continue_until_removed"
+  },
+  "serverRules": {
+    "acceptClientVersions": ["journal-health/v1"],
+    "onUnknownClientVersion": "respond_upgrade_required",
+    "preserveOutboxOnUpgradeRequired": true
+  },
+  "recordTypeMatrix": {
+    "journal-health/v1": {
+      "daily_metrics": { "read": true, "writeManual": true, "writeGarmin": "collector_only" },
+      "metric_day_snapshot": { "read": true, "writeManual": false, "writeGarmin": "collector_only" },
+      "sleep_night": { "read": true, "writeManual": true, "writeGarmin": "collector_only" },
+      "nap": { "read": true, "writeManual": true, "writeGarmin": "collector_only" },
+      "meal": { "read": true, "writeManual": true, "writeGarmin": false },
+      "activity": { "read": true, "writeManual": true, "writeGarmin": "collector_only" },
+      "body_measurement": { "read": true, "writeManual": false, "writeGarmin": "collector_only" },
+      "event": { "read": true, "writeManual": true, "writeGarmin": false },
+      "mood": { "read": true, "writeManual": true, "writeGarmin": false },
+      "note": { "read": true, "writeManual": true, "writeGarmin": false }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { normalizeMealSlot, parseMeals, mealEntryToArgs, mealSlotRowHtml, bindMealSlotRow, type MealSlot } from "../../core/data/meals";
+import { normalizeMealSlot, parseMeals, mealEntryToArgs, mealSlotLabel, mealSlotRowHtml, bindMealSlotRow, type MealSlot } from "../../core/data/meals";
 import { MOOD_EMOJI_PRESETS } from "../../core/data/mood-emojis";
 import { escHtml } from "../../core/html";
 import { bindDialog } from "../../ui/motion";
@@ -48,7 +48,7 @@ async function loadMealById(date: string, id: string) {
 }
 
 async function hydrateMealArgs(name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
-  if (name !== "journal_update_meal") return args;
+  if (name !== "journal_update_meal" && name !== "journal_delete_meal") return args;
   const date = str(args, "date", beijingToday());
   const id = str(args, "id");
   if (!id) return args;
@@ -172,10 +172,19 @@ function formFields(name: string, args: Record<string, unknown>): string {
       return mealFormFields(args, false);
     case "journal_update_meal":
       return mealFormFields(args, true);
-    case "journal_delete_meal":
+    case "journal_delete_meal": {
+      if (str(args, "slot")) {
+        const slot = normalizeMealSlot(str(args, "slot", "snack"));
+        const label = str(args, "text") || strArr(args, "items").join("、") || "餐食";
+        return `
+        <input type="hidden" name="id" value="${escHtml(str(args, "id"))}">
+        <div class="dialog-field"><label>日期</label><input type="date" name="date" value="${escHtml(str(args, "date", today))}"></div>
+        <p class="settings-hint">${escHtml(mealSlotLabel(slot))} · ${escHtml(label)}（${num(args, "kcal", 0)} kcal）</p>`;
+      }
       return `
         <div class="dialog-field"><label>日期</label><input type="date" name="date" value="${escHtml(str(args, "date", today))}"></div>
         <div class="dialog-field"><label>ID</label><input type="text" name="id" value="${escHtml(str(args, "id"))}"></div>`;
+    }
     case "journal_delete_entry":
       return `<div class="dialog-field"><label>条目 ID</label><input type="text" name="id" value="${escHtml(str(args, "id"))}"></div>`;
     case "garmin_sync":

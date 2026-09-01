@@ -308,21 +308,14 @@ describe("admin shell §7.2 regression", () => {
   });
 });
 
-describe("admin settings dialog layout", () => {
-  const adminCssPath = resolve(dirname(fileURLToPath(import.meta.url)), "../../ui/admin-shell.css");
+describe("insight settings page layout", () => {
+  const cssPath = resolve(dirname(fileURLToPath(import.meta.url)), "./settings/insight-settings.css");
 
-  it("keeps scrollable body and fixed footer on short windows", () => {
-    const css = readFileSync(adminCssPath, "utf8");
-    const backdrop = css.match(/\.admin-settings-backdrop\s*\{[^}]+\}/s)?.[0] ?? "";
-    const body = css.match(/\.admin-settings-body\s*\{[^}]+\}/s)?.[0] ?? "";
-    const footer = css.match(/\.admin-settings-footer\s*\{[^}]+\}/s)?.[0] ?? "";
-    const dialog = css.match(/\.admin-settings-dialog\s*\{[^}]+\}/s)?.[0] ?? "";
-    expect(backdrop).toMatch(/overflow-y:\s*auto/);
-    expect(backdrop).toMatch(/padding:/);
-    expect(body).toMatch(/overflow-y:\s*auto/);
-    expect(body).toMatch(/min-height:\s*0/);
-    expect(footer).toMatch(/flex-shrink:\s*0/);
-    expect(dialog).toMatch(/max-height:/);
-    expect(dialog).toMatch(/flex-shrink:\s*0/);
+  it("uses scrollable body and fixed footer", () => {
+    const css = readFileSync(cssPath, "utf8");
+    expect(css).toMatch(/\.insight-settings-body\s*\{[^}]+\}/s);
+    expect(css).toMatch(/overflow-y:\s*auto/);
+    expect(css).toMatch(/\.insight-settings-footer\s*\{[^}]+\}/s);
+    expect(css).toMatch(/flex-shrink:\s*0/);
   });
 });

@@ -11,7 +11,8 @@ import { getSettings } from "../../core/settings";
 import { isPrivacyMode, PRIVACY_MODE_EVT, togglePrivacyMode } from "../../core/privacy-mode";
 import { escHtml } from "../../core/html";
 import { bindDialog } from "../../ui/motion";
-import { beijingToday, dateTimeToUnix, formatGarminError, garminSync, journalConfigured, journalDelete, journalList, journalUpsert, syncFromDate, unixToTimeParts } from "./client";
+import { beijingToday, dateTimeToUnix, healthSyncStatus, journalConfigured, journalDelete, journalList, journalUpsert, syncFromDate, unixToTimeParts, bindJournalChanged } from "./client";
+import { bindGarminSyncButton, garminSyncButtonMarkup } from "./garmin-sync-button";
 import {
   buildSleepTip,
   calorieRingHtml,
@@ -23,7 +24,9 @@ import {
   SLEEP_GOAL_H,
   type SleepStages,
 } from "./life-rings";
-import { deleteMeal, openHydrationDialog, openMealDialog, type TodayPanelRefresh } from "./meals-dialog";
+import { deleteMeal, openMealDialog, type TodayPanelRefresh } from "./meals-dialog";
+
+const MEAL_UNDO_MS = 5000;
 
 type NapEntry = { start?: number; end?: number; duration?: number; source?: string };
 
@@ -106,8 +109,6 @@ function renderSleepRing(el: HTMLElement, sleepRingBtn: HTMLButtonElement, night
 
 const TODAY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1.75" fill="currentColor" stroke="none"/></svg>`;
 const MEAL_ICON = "🍽";
-const REFRESH_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>`;
-const REFRESH_DONE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path class="ticktick-check-path" d="M7.5 12.2l2.6 2.6 5.4-5.4"/></svg>`;
 const EVENT_ICON = "📌";
 const MOOD_ADD_ICON = "✨";
 const EDIT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
@@ -208,10 +209,7 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
           <span class="privacy-toggle-show">${EYE_SVG}</span>
           <span class="privacy-toggle-hide">${EYE_OFF_SVG}</span>
         </button>
-        <button type="button" class="ticktick-icon-btn" id="todayGarminSync" data-tip="同步佳明">
-          <span class="ticktick-refresh-icon">${REFRESH_SVG}</span>
-          <span class="ticktick-refresh-done">${REFRESH_DONE_SVG}</span>
-        </button>
+        ${garminSyncButtonMarkup({ id: "todayGarminSync" })}
       </div>
     </div>
     <div class="today-panel">
@@ -224,9 +222,9 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
           <div class="life-ring-btn life-ring-static" id="calorieRing">
             <div id="calorieRingGraphic"></div>
           </div>
-          <button type="button" class="life-ring-btn" id="hydrationRing">
+          <div class="life-ring-btn life-ring-readonly" id="hydrationRing">
             <div id="hydrationRingGraphic"></div>
-          </button>
+          </div>
         </div>
       </div>
       <div class="today-lower">
@@ -246,6 +244,32 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
   `;
 
   const listEl = container.querySelector<HTMLElement>("#recordsList")!;
+
+  const mealUndoToast = document.createElement("div");
+  mealUndoToast.className = "ticktick-undo-toast";
+  mealUndoToast.setAttribute("aria-hidden", "true");
+  mealUndoToast.innerHTML =
+    '<div class="ticktick-undo-pill"><span class="ticktick-undo-msg">已删除餐食</span><button type="button" class="ticktick-undo-btn">撤销</button></div>';
+  container.appendChild(mealUndoToast);
+  const mealUndoMsg = mealUndoToast.querySelector<HTMLElement>(".ticktick-undo-msg")!;
+  const mealUndoBtn = mealUndoToast.querySelector<HTMLButtonElement>(".ticktick-undo-btn")!;
+  let mealUndoTimer = 0;
+  let pendingMealDelete: { date: string; meal: MealEntry; rollback: () => void } | null = null;
+
+  const clearMealUndo = () => {
+    window.clearTimeout(mealUndoTimer);
+    mealUndoTimer = 0;
+    pendingMealDelete = null;
+    mealUndoToast.classList.remove("is-visible");
+    mealUndoToast.setAttribute("aria-hidden", "true");
+  };
+
+  mealUndoBtn.addEventListener("click", () => {
+    const pending = pendingMealDelete;
+    if (!pending) return;
+    clearMealUndo();
+    pending.rollback();
+  });
   const sleepRing = container.querySelector<HTMLButtonElement>("#sleepRing")!;
   const syncBtn = container.querySelector<HTMLButtonElement>("#todayGarminSync")!;
   const privacyBtn = container.querySelector<HTMLButtonElement>("#todayPrivacyToggle")!;
@@ -323,18 +347,37 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
         const date = beijingToday();
         let rollback = () => {};
         if (item.kind === "meal") {
+          const meal = item.entry;
           const meals = cachedMeals.filter((m) => m.id !== item.id);
           rollback = panelApi.optimisticMeals(date, meals);
-        } else {
-          const snap = snapshotState();
-          cachedEntries = cachedEntries.filter((e) => e.id !== item.id);
-          rollback = () => restoreState(snap);
-          refreshFeed(cachedEntries, cachedMeals);
+          clearMealUndo();
+          pendingMealDelete = { date, meal, rollback };
+          mealUndoMsg.textContent = "已删除餐食";
+          mealUndoToast.classList.add("is-visible");
+          mealUndoToast.setAttribute("aria-hidden", "false");
+          mealUndoTimer = window.setTimeout(() => {
+            const pending = pendingMealDelete;
+            clearMealUndo();
+            if (!pending) return;
+            void (async () => {
+              try {
+                await deleteMeal(pending.date, pending.meal.id);
+                window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+              } catch (err) {
+                pending.rollback();
+                alert(String(err));
+              }
+            })();
+          }, MEAL_UNDO_MS);
+          return;
         }
+        const snap = snapshotState();
+        cachedEntries = cachedEntries.filter((e) => e.id !== item.id);
+        rollback = () => restoreState(snap);
+        refreshFeed(cachedEntries, cachedMeals);
         void (async () => {
           try {
-            if (item.kind === "meal") await deleteMeal(date, item.id);
-            else await journalDelete(item.id);
+            await journalDelete(item.id);
             window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
           } catch (err) {
             rollback();
@@ -364,8 +407,18 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     }
   }
 
-  function refreshLastSync(entries: PanelEntry[]) {
-    setLastSync(garminLastFetchedAt(entries));
+  async function refreshLastSync() {
+    try {
+      const status = await healthSyncStatus();
+      if (status.lastSuccessAt) {
+        const ms = Date.parse(status.lastSuccessAt);
+        setLastSync(Number.isFinite(ms) ? Math.floor(ms / 1000) : garminLastFetchedAt(cachedSyncEntries));
+        return;
+      }
+    } catch {
+      /* fallback below */
+    }
+    setLastSync(garminLastFetchedAt(cachedSyncEntries));
   }
 
   async function repaintFull() {
@@ -401,7 +454,7 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     cachedSyncEntries = syncEntries as PanelEntry[];
     const daily = entries.find((e) => e.kind === "daily" && e.date === date);
     cachedMeals = parseMeals(daily?.data);
-    refreshLastSync(cachedSyncEntries);
+    refreshLastSync();
     refreshRings(cachedEntries, goals);
     refreshFeed(cachedEntries, cachedMeals);
   }
@@ -426,12 +479,6 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
       cachedMeals = parseMeals(daily?.data);
       refreshRings(cachedEntries, getSettings().ui.lifeRingGoals);
       refreshFeed(cachedEntries, cachedMeals);
-      return () => restoreState(snap);
-    },
-    optimisticHydration: (date, ml) => {
-      const snap = snapshotState();
-      upsertDailyData(date, (data) => ({ ...data, hydrationMl: ml }));
-      refreshRings(cachedEntries, getSettings().ui.lifeRingGoals);
       return () => restoreState(snap);
     },
     optimisticEvent: (next, existingId) => {
@@ -472,53 +519,20 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
   });
   syncPrivacyBtn();
 
-  const hydrationRing = container.querySelector<HTMLButtonElement>("#hydrationRing")!;
-
-  hydrationRing.addEventListener("click", () => {
-    const date = beijingToday();
-    void journalList({ date }).then(({ entries }) => {
-      const d = entries.find((e) => e.kind === "daily" && e.date === date);
-      const parsed = parseDailyData(d?.data);
-      openHydrationDialog(dialogRoot, date, parsed?.hydrationMl ?? 0, panelApi);
-    });
-  });
-
   sleepRing.addEventListener("click", () => openSleepDialog(dialogRoot));
 
-  syncBtn.addEventListener("click", () => void runGarminSync());
-
-  let syncing = false;
-
-  async function runGarminSync() {
-    if (syncing) return;
-    syncing = true;
-    syncBtn.disabled = true;
-    syncBtn.classList.remove("is-success");
-    syncBtn.classList.add("is-spinning");
-    try {
-      const res = await garminSync({ from: syncFromDate(7), to: beijingToday() });
-      if (res.ok) {
-        syncBtn.classList.add("is-success");
-        window.setTimeout(() => syncBtn.classList.remove("is-success"), 1600);
-        window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-        void repaintFull();
-      } else {
-        alert(formatGarminError(res.reason, res.message));
-      }
-    } catch (e) {
-      alert(String(e));
-    } finally {
-      syncing = false;
-      syncBtn.classList.remove("is-spinning");
-      syncBtn.disabled = false;
-    }
-  }
+  const unbindGarminSync = bindGarminSyncButton(syncBtn, {
+    onSuccess: () => {
+      window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+      void repaintFull();
+    },
+  });
 
   container.querySelector("#addEventBtn")!.addEventListener("click", () => openEventDialog(dialogRoot, null, panelApi));
   container.querySelector("#addMoodBtn")!.addEventListener("click", () => openMoodDialog(dialogRoot, null, panelApi));
   container.querySelector("#addMealBtn")!.addEventListener("click", () => openMealDialog(dialogRoot, null, panelApi));
 
-  window.addEventListener("orbita:journal-changed", () => void repaintFull());
+  const unbindJournal = bindJournalChanged(() => void repaintFull());
   window.addEventListener("orbita:ui-prefs", () => panelApi.refreshRings());
   window.addEventListener(PRIVACY_MODE_EVT, () => {
     syncPrivacyBtn();

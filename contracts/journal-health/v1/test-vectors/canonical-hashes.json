@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://orbita.local/contracts/journal-health/v1/test-vectors/canonical-hashes.json",
+  "title": "Canonical hash test vectors",
+  "description": "Cross-language SHA-256 fixtures. Each vector: canonical UTF-8 JSON string and expected lowercase hex digest.",
+  "algorithm": "sha256",
+  "canonicalRules": "canonical/canonical-rules.md",
+  "vectors": [
+    {
+      "id": "empty-object",
+      "description": "Minimal payload edge case",
+      "input": {},
+      "canonical": "{}",
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "id": "metric-payload-hr",
+      "recordType": "metric_day_snapshot",
+      "description": "Heart-rate day snapshot payload",
+      "input": {
+        "samples": [
+          { "t": 1704067200, "v": 72 },
+          { "t": 1704067260, "v": 74 }
+        ],
+        "coverage": 1.0
+      },
+      "canonical": "{\"coverage\":1,\"samples\":[{\"t\":1704067200,\"v\":72},{\"t\":1704067260,\"v\":74}]}",
+      "sha256": "f6325732bdc23a621024bc7bed7ae54196c7687f18a0eb10d4cd74499e87892c"
+    },
+    {
+      "id": "activity-payload-running",
+      "recordType": "activity",
+      "description": "Garmin running activity normalized payload",
+      "input": {
+        "sport": "running",
+        "duration": 3600,
+        "metrics": {
+          "startTime": 1704067200,
+          "distance": 10000
+        }
+      },
+      "canonical": "{\"duration\":3600,\"metrics\":{\"distance\":10000,\"startTime\":1704067200},\"sport\":\"running\"}",
+      "sha256": "47b91700c651b8182b32d2751f40a2139f7dbb2d418dccaa711175c198cad3b3"
+    },
+    {
+      "id": "body-measurement-payload",
+      "recordType": "body_measurement",
+      "description": "Garmin weight measurement",
+      "input": {
+        "weightKg": 70.5,
+        "source": "garmin",
+        "externalId": "garmin-weight-2026-01-15-1704067200"
+      },
+      "canonical": "{\"externalId\":\"garmin-weight-2026-01-15-1704067200\",\"source\":\"garmin\",\"weightKg\":70.5}",
+      "sha256": "9d36dfec71ebeb9bf6615ff98837e97d2c18e72324e40a56adcbd74e017a12d8"
+    },
+    {
+      "id": "nap-payload-garmin",
+      "recordType": "nap",
+      "description": "Garmin nap payload",
+      "input": {
+        "start": 1704070800,
+        "end": 1704072600,
+        "duration": 1800,
+        "source": "garmin"
+      },
+      "canonical": "{\"duration\":1800,\"end\":1704072600,\"source\":\"garmin\",\"start\":1704070800}",
+      "sha256": "9ae9857b35f390a1aa8c68ebfe7ca3f4624086efb1964d4e759468229c879915"
+    },
+    {
+      "id": "daily-metrics-data",
+      "recordType": "daily_metrics",
+      "description": "Daily rollup data object only",
+      "input": {
+        "steps": 8000,
+        "hydrationMl": 1800,
+        "activeCalories": 450
+      },
+      "canonical": "{\"activeCalories\":450,\"hydrationMl\":1800,\"steps\":8000}",
+      "sha256": "84944a9090e2896137f5ae4571bdecd9f001591dd69433a6ca5819d6ab581671"
+    },
+    {
+      "id": "sleep-night-payload",
+      "recordType": "sleep_night",
+      "description": "Night sleep summary",
+      "input": {
+        "sleepStartUtc": 1704067200,
+        "sleepEndUtc": 1704092400,
+        "score": 82
+      },
+      "canonical": "{\"score\":82,\"sleepEndUtc\":1704092400,\"sleepStartUtc\":1704067200}",
+      "sha256": "1b8053380561ec2e599669676abff895df4b3fb35f32d2cfff32c55da1f92f2f"
+    },
+    {
+      "id": "spo2-payload-with-parser-rev",
+      "recordType": "metric_day_snapshot",
+      "description": "SpO2 payload includes parserRev in hash input",
+      "input": {
+        "samples": [{ "t": 1704067200, "v": 98, "src": "sleep_offset" }],
+        "coverage": 0.5,
+        "parserRev": 5
+      },
+      "canonical": "{\"coverage\":0.5,\"parserRev\":5,\"samples\":[{\"src\":\"sleep_offset\",\"t\":1704067200,\"v\":98}]}",
+      "sha256": "13dfe519f8276ec7a518357b76053c448b4c0c40018ab657c42234451d51330f"
+    },
+    {
+      "id": "utf16-key-order",
+      "description": "Non-BMP UTF-16 surrogate ordering differs from UTF-8 scalar ordering.",
+      "input": { "\uE000": 1, "😀": 2 },
+      "canonical": "{\"😀\":2,\"\":1}",
+      "sha256": "28c95d1bbb2209223307e62f489020e8f9e0cfa16adf2daf6d88127a1e8dd22a"
+    },
+    {
+      "id": "ecmascript-number-boundaries",
+      "description": "JCS fixed/scientific notation boundaries and integral float normalization.",
+      "input": { "a": 0.000001, "b": 1e21, "c": 1e-7, "d": 1.0 },
+      "canonical": "{\"a\":0.000001,\"b\":1e+21,\"c\":1e-7,\"d\":1}",
+      "sha256": "4f0a8553e764339635172379f811b22071c8247d3c60bedc5c3069fca225fdeb"
+    }
+  ]
+}

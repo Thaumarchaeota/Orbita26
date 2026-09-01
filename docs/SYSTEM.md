@@ -57,4 +57,6 @@ docs/            # 全产品的现行文档
 
 `apps/desktop`、`apps/android` 与 `services/sync` 各自维护构建依赖、运行时、发布版本和 CI，不共享实现代码。`contracts/` 是跨端共享的工程边界，不得存放用户数据、SQLite 文件、token、凭据或环境配置。
 
-未来三端各自维护本地数据库副本，只经 API 同步记录、版本、删除标记及确认结果；不得传输、挂载或复制 SQLite 文件。Finance 仍以 `.bean` 为唯一账本真源，`orbita-sync` 不得并发改写它。
+未来三端各自维护本地数据库副本，只经 API 同步记录、版本、删除标记及确认结果；不得传输、挂载或复制 SQLite 文件。当前 Finance 仍以 `.bean` 为唯一账本真源，`orbita-sync` 不得并发改写它。
+
+目标架构中，所有可同步的 Archive Object 与独立 data-root 都先写入各端本地 SQLite，并以同一个通用 Sync Core 同步完整 aggregate；Component 与严格子 Data 随父 aggregate 原子传输。Garmin 只是在授权 connector 入口上特殊，不是第二套同步；未来 Finance v2 的 Transaction / Posting 也复用这个 Core。Observation、缓存、投影、outbox、凭据和本机 `.bean` materialization 不同步。对象的 MD detail 如进入同步，随对象 aggregate 传内容与 manifest，不以本机文件路径为同步身份。

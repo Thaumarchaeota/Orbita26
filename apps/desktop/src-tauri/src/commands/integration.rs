@@ -1,5 +1,6 @@
 use crate::bkeasy;
 use crate::garmin;
+use crate::journal_db;
 use crate::ledger_sidecar;
 use crate::hwmon;
 use crate::journal;
@@ -91,4 +92,17 @@ pub async fn garmin_login(
     tauri::async_runtime::spawn_blocking(move || garmin::garmin_login(&app, req))
         .await
         .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub fn health_overview_query(
+    app: tauri::AppHandle,
+    req: journal_db::HealthOverviewRequest,
+) -> Result<journal_db::HealthOverviewResponse, String> {
+    journal_db::health_overview_query(&app, req)
+}
+
+#[tauri::command]
+pub fn health_sync_status(app: tauri::AppHandle) -> Result<journal_db::HealthSyncStatus, String> {
+    journal_db::health_sync_status(&app)
 }

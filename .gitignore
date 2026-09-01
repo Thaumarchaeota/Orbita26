@@ -1,6 +1,9 @@
 reference/
 docs_legacy/
 
+# local SSH / infra notes (may contain host-specific details)
+docs/ssh.md
+
 scripts/env.ps1
 scripts/test_dida365.py
 scripts/fix-logo.py
