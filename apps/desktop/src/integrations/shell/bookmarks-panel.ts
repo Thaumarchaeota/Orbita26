@@ -2,7 +2,8 @@ import { isTauri } from "../../core/data/client";
 import type { BookmarkEntry, BookmarkLink } from "../../core/data/types";
 import { normalizeUrl } from "../../core/url";
 import { hideHoverTip } from "../../ui/hover-tip";
-import { mountContextMenu, type MenuItemDef } from "../../ui/context-menu";
+import { getConfirmDialog } from "../shell/dialog";
+import { showCommandMenuAt, type MenuItemDef } from "../../ui/command-menu-popover";
 import {
   cacheFavicon,
   deleteFavicon,
@@ -106,7 +107,7 @@ export function mountBookmarksPanel(container: HTMLElement, root: HTMLElement) {
   const addFolderBtn = container.querySelector<HTMLButtonElement>("#bookmarksAddFolderBtn")!;
   const promptBookmark = mountBookmarkDialog(root);
   const promptFolder = mountFolderRenameDialog(root);
-  const ctxMenu = mountContextMenu(new AbortController().signal);
+  const confirmRemove = getConfirmDialog();
 
   let items = stripBookmarkSlots(sortBookmarksBySlot(loadBookmarks()));
   const expanded = new Set<string>();
@@ -180,7 +181,7 @@ export function mountBookmarksPanel(container: HTMLElement, root: HTMLElement) {
 
   const menuItems = (): MenuItemDef[] => [
     { action: "edit", label: "编辑" },
-    { action: "remove", label: "删除", danger: true, confirm: true },
+    { action: "remove", label: "删除", danger: true },
   ];
 
   const editEntry = async (loc: NonNullable<ReturnType<typeof locateBookmarkEntry>>, trigger: HTMLElement) => {
@@ -260,10 +261,21 @@ export function mountBookmarksPanel(container: HTMLElement, root: HTMLElement) {
     const loc = locateBookmarkEntry(items, row.dataset.id);
     if (!loc) return;
     const id = row.dataset.id;
-    ctxMenu.show(e.clientX, e.clientY, menuItems(), (action, trigger) => {
-      if (action === "edit") void editEntry(loc, trigger);
-      if (action === "remove") setItems(removeBookmarkEntry(items, id));
-    });
+    showCommandMenuAt(
+      e.clientX,
+      e.clientY,
+      menuItems().map((item) => ({ value: item.action, label: item.label, danger: item.danger })),
+      (action) => {
+        if (action === "edit") void editEntry(loc, row);
+        if (action === "remove") {
+          void (async () => {
+            if (!(await confirmRemove("删除确认", "确定删除该书签？", row))) return;
+            setItems(removeBookmarkEntry(items, id));
+          })();
+        }
+      },
+      { returnFocus: row },
+    );
     e.stopPropagation();
   });
 

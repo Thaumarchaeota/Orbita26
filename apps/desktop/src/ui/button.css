@@ -1,0 +1,39 @@
+.orbita-button {
+  box-sizing: border-box;
+  /* Match the flight-entry continue button: 320px rail minus its 1px border and 16px/24px padding. */
+  width: var(--orbita-button-width, 279px);
+  height: var(--orbita-button-height, 54px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-primary);
+  color: var(--insight-on-primary);
+  font: inherit;
+  font-size: var(--orbita-button-font-size, var(--insight-font-body));
+  font-weight: var(--insight-weight-medium);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.orbita-button:hover:not(:disabled) {
+  border-color: var(--insight-primary-hover);
+  background: var(--insight-primary-hover);
+  color: var(--insight-on-primary);
+}
+
+.orbita-button:focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+  border-color: var(--insight-primary);
+}
+
+.orbita-button:disabled {
+  background: var(--insight-state-control-disabled);
+  color: var(--insight-state-control-disabled-foreground);
+  border-color: transparent;
+  cursor: not-allowed;
+}

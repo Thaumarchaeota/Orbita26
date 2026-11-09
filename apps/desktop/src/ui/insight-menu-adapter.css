@@ -1,0 +1,124 @@
+/* Insight-only menu treatment. Geometry and palette stay owned by the theme tokens. */
+html[data-insight-theme] .local-ctx-menu.is-insight {
+  min-width: 144px;
+  padding: 3px;
+  border: var(--insight-border-width, 1px) solid var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm, 3px);
+  background: var(--insight-surface-elevated, var(--insight-card-bg));
+  box-shadow: var(--insight-shadow-panel, 0 8px 24px rgba(15, 23, 42, 0.08));
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item {
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: var(--insight-radius-sm, 6px);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item:hover,
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item:focus-visible {
+  background: var(--insight-control-hover, var(--insight-nav-hover));
+  outline: none;
+}
+
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item:focus-visible {
+  box-shadow: 0 0 0 2px var(--insight-focus-ring);
+}
+
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item:disabled {
+  color: var(--insight-text-disabled);
+  cursor: default;
+  opacity: 1;
+}
+
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item.is-danger {
+  color: var(--insight-danger, #c0393b);
+  background-image: none;
+}
+
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item.is-danger:hover:not(.is-confirm),
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item.is-danger:focus-visible:not(.is-confirm) {
+  background: var(--insight-danger-surface, #fef2f2);
+  color: var(--insight-danger, #c0393b);
+}
+
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item.is-danger.is-confirm,
+html[data-insight-theme] .local-ctx-menu.is-insight .local-ctx-item.is-danger.is-confirm:hover {
+  background: var(--insight-danger, #c0393b);
+  color: #fff;
+}
+
+html[data-insight-theme] .orbita-cascading-menu {
+  min-width: 216px;
+  border: var(--insight-border-width, 1px) solid var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm, 3px);
+  background: var(--insight-surface-elevated, var(--insight-card-bg));
+  box-shadow: var(--insight-shadow-panel, 0 8px 24px rgba(15, 23, 42, 0.08));
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .orbita-cascading-menu-submenu {
+  border: var(--insight-border-width, 1px) solid var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm, 3px);
+  background: var(--insight-surface-elevated, var(--insight-card-bg));
+  box-shadow: var(--insight-shadow-panel, 0 8px 24px rgba(15, 23, 42, 0.08));
+}
+
+html[data-insight-theme] .orbita-cascading-menu-row,
+html[data-insight-theme] .orbita-cascading-menu-submenu-option {
+  color: var(--insight-text-primary);
+  border-radius: var(--insight-radius-xs, 4px);
+}
+
+html[data-insight-theme] .orbita-cascading-menu-row:hover:not(:disabled),
+html[data-insight-theme] .orbita-cascading-menu-row:focus-visible,
+html[data-insight-theme] .orbita-cascading-menu-row.is-open,
+html[data-insight-theme] .orbita-cascading-menu-submenu-option:hover,
+html[data-insight-theme] .orbita-cascading-menu-submenu-option:focus-visible,
+html[data-insight-theme] .orbita-cascading-menu-submenu-option.is-selected {
+  background: var(--insight-control-hover, var(--insight-nav-hover));
+  outline: none;
+}
+
+html[data-insight-theme] .orbita-cascading-menu-row:focus-visible,
+html[data-insight-theme] .orbita-cascading-menu-submenu-option:focus-visible {
+  box-shadow: 0 0 0 2px var(--insight-focus-ring);
+}
+
+html[data-insight-theme] .orbita-cascading-menu-row:disabled,
+html[data-insight-theme] .orbita-cascading-menu-submenu-option:disabled {
+  color: var(--insight-text-disabled);
+  opacity: 1;
+}
+
+html[data-insight-theme] .orbita-cascading-menu-submenu-option.is-selected {
+  color: var(--insight-primary);
+  background: var(--insight-control-selected, var(--insight-nav-active));
+}
+
+html[data-insight-theme] .orbita-cascading-menu-row-value,
+html[data-insight-theme] .orbita-cascading-menu-chevron,
+html[data-insight-theme] .orbita-cascading-menu-submenu-sub,
+html[data-insight-theme] .orbita-cascading-menu-empty {
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .orbita-cascading-menu-footer,
+html[data-insight-theme] .orbita-cascading-menu-search {
+  border-color: var(--insight-divider, var(--insight-border-subtle));
+}
+
+html[data-insight-theme] .orbita-cascading-menu-search-input {
+  border-color: var(--insight-input-border, var(--insight-border-subtle));
+  border-radius: var(--insight-radius-xs, 4px);
+  background: var(--insight-surface-sunken, var(--insight-surface-subtle));
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .orbita-cascading-menu-search-input:focus-visible {
+  border-color: var(--insight-primary);
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 0;
+}

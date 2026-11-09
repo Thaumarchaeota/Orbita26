@@ -11,6 +11,7 @@ import {
   writeSettings,
 } from "./client";
 import { applyFontPrefs } from "./fonts";
+import { normalizeHealthTrackAxisPrefs } from "./health-track-axis";
 import { applyThemePrefs, prefsFromTheme } from "./theme-prefs";
 import type { AppSettings, AppTheme, UiPrefs } from "./types";
 
@@ -28,8 +29,8 @@ export async function loadSettings(): Promise<AppSettings> {
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
   const next = { ...settings, version: Math.max(settings.version, 1) };
-  cached = next;
   await writeSettings(next);
+  cached = next;
   window.dispatchEvent(new CustomEvent("orbita:settings-changed"));
 }
 
@@ -65,6 +66,10 @@ export async function patchSettings(patch: Partial<AppSettings>): Promise<AppSet
             ...current.integrations.credentials.ai.entries,
             ...(patch.integrations?.credentials?.ai?.entries ?? {}),
           },
+        },
+        variflight: {
+          ...current.integrations.credentials.variflight,
+          ...(patch.integrations?.credentials?.variflight ?? {}),
         },
       },
     },

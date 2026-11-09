@@ -1,8 +1,6 @@
-import { MOOD_EMOJI_PRESETS } from "../../core/data/mood-emojis";
-import { parseDailyData } from "../../core/data/life-ring-metrics";
+import { mountDecoupledDatePicker } from "../../ui/decoupled-date-picker";
 import {
   mealSlotLabel,
-  parseMeals,
   sumMealsBySlot,
   totalMealKcal,
   type MealEntry,
@@ -10,8 +8,24 @@ import {
 import { getSettings } from "../../core/settings";
 import { isPrivacyMode, PRIVACY_MODE_EVT, togglePrivacyMode } from "../../core/privacy-mode";
 import { escHtml } from "../../core/html";
+import { bindBackdropPressDismiss } from "../../ui/backdrop-dismiss";
 import { bindDialog } from "../../ui/motion";
-import { beijingToday, dateTimeToUnix, healthSyncStatus, journalConfigured, journalDelete, journalList, journalUpsert, syncFromDate, unixToTimeParts, bindJournalChanged } from "./client";
+import {
+  beijingToday,
+  healthListMeals,
+  healthOverviewQuery,
+  healthSyncStatus,
+  journalConfigured,
+  unixToTimeParts,
+  bindJournalChanged,
+  type HealthOverviewResponse,
+} from "./client";
+import {
+  journalArchiveCreateNote,
+  journalArchiveListEntries,
+  journalArchiveUpdateNote,
+  type JournalEntrySnapshot,
+} from "./archive-client";
 import { bindGarminSyncButton, garminSyncButtonMarkup } from "./garmin-sync-button";
 import {
   buildSleepTip,
@@ -24,11 +38,19 @@ import {
   SLEEP_GOAL_H,
   type SleepStages,
 } from "./life-rings";
+import { archiveMealToEntry, type MealEntryWithRevision } from "./meals-archive";
 import { deleteMeal, openMealDialog, type TodayPanelRefresh } from "./meals-dialog";
 
 const MEAL_UNDO_MS = 5000;
 
 type NapEntry = { start?: number; end?: number; duration?: number; source?: string };
+
+type NightData = {
+  sleep?: number;
+  wake?: number;
+  score?: number;
+  stages?: SleepStages;
+};
 
 function napTotalSeconds(naps: NapEntry[]): number {
   return naps.reduce((sum, n) => {
@@ -56,30 +78,40 @@ function formatGarminLastSync(ts: number): string {
   return `${date} ${time}`;
 }
 
-function garminLastFetchedAt(entries: { kind?: string; source?: string; fetchedAt?: number }[]): number | null {
-  let max = 0;
-  for (const e of entries) {
-    if (e.kind !== "daily" || e.source !== "garmin") continue;
-    if (typeof e.fetchedAt === "number" && e.fetchedAt > max) max = e.fetchedAt;
-  }
-  return max > 0 ? max : null;
+function beijingDayUtcRange(date: string): { from: number; to: number } {
+  const from = Math.floor(Date.parse(`${date}T00:00:00+08:00`) / 1000);
+  return { from, to: from + 86400 };
 }
 
-type NightData = {
-  sleep?: number;
-  wake?: number;
-  score?: number;
-  stages?: SleepStages;
-};
+function overviewToNightAndNaps(overview: HealthOverviewResponse | null): { night?: NightData; naps: NapEntry[] } {
+  if (!overview) return { naps: [] };
+  const nightBlock = overview.track.sleepBlocks.find((b) => !b.isNap);
+  const naps: NapEntry[] = overview.track.sleepBlocks
+    .filter((b) => b.isNap)
+    .map((b) => ({ start: b.startUtc, end: b.endUtc, source: b.source }));
+  if (!nightBlock) return { naps };
+  const totals = nightBlock.stageTotals;
+  return {
+    night: {
+      sleep: nightBlock.startUtc,
+      wake: nightBlock.endUtc,
+      score: nightBlock.score ?? undefined,
+      stages: totals
+        ? { deep: totals.deep, light: totals.light, rem: totals.rem, awake: totals.awake }
+        : undefined,
+    },
+    naps,
+  };
+}
 
-function renderSleepRing(el: HTMLElement, sleepRingBtn: HTMLButtonElement, night?: NightData, naps: NapEntry[] = []) {
+function renderSleepRing(el: HTMLElement, sleepRingEl: HTMLElement, night?: NightData, naps: NapEntry[] = []) {
   const napSec = napTotalSeconds(naps);
   const nightSec = nightSleepSeconds(night);
   const totalSec = nightSec + napSec;
   const stages = night?.stages ?? { deep: 0, light: 0, rem: 0 };
   const stageTotal = sleepStageTotalSeconds(stages);
 
-  sleepRingBtn.dataset.tip = buildSleepTip(nightSec, night?.score, napSec);
+  sleepRingEl.dataset.tip = buildSleepTip(nightSec, night?.score, napSec);
 
   if (stageTotal > 0) {
     el.innerHTML = sleepStageRingHtml({
@@ -109,66 +141,57 @@ function renderSleepRing(el: HTMLElement, sleepRingBtn: HTMLButtonElement, night
 
 const TODAY_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="15" r="1.75" fill="currentColor" stroke="none"/></svg>`;
 const MEAL_ICON = "🍽";
-const EVENT_ICON = "📌";
-const MOOD_ADD_ICON = "✨";
+const NOTE_ICON = "📝";
+const DOC_ICON = "📄";
 const EDIT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 const DEL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
 const EYE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
 const EYE_OFF_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>`;
 
 type FeedItem =
-  | { kind: "event"; id: string; icon: string; text: string; entry: Record<string, unknown> }
-  | { kind: "mood"; id: string; icon: string; text: string; entry: Record<string, unknown> }
+  | { kind: "note"; id: string; icon: string; text: string; entry: JournalEntrySnapshot }
+  | { kind: "document"; id: string; icon: string; text: string; entry: JournalEntrySnapshot }
   | { kind: "meal"; id: string; icon: string; text: string; entry: MealEntry };
 
-const KIND_ORDER = { event: 0, mood: 1, meal: 2 } as const;
+const KIND_ORDER = { note: 0, document: 1, meal: 2 } as const;
+
+function archiveEntryBeijingDate(startedAt: string): string {
+  const ts = Math.floor(Date.parse(startedAt) / 1000);
+  if (!Number.isFinite(ts)) return "";
+  return unixToTimeParts(ts).date;
+}
+
+function archiveEntryFeedText(entry: JournalEntrySnapshot): string {
+  if (entry.kind === "document") {
+    const title = String(entry.title ?? "").trim();
+    if (title) return title;
+    const summary = String(entry.summary ?? "").trim();
+    return summary || "—";
+  }
+  const text = String(entry.text ?? "").trim();
+  const line = text.split(/\r?\n/)[0]?.trim();
+  return line || String(entry.title ?? "").trim() || "—";
+}
 
 function feedAt(item: FeedItem): string {
   if (item.kind === "meal") return item.entry.at ?? "99:99";
-  const at = item.entry.at;
-  return typeof at === "string" && at ? at : "99:99";
+  const ts = Math.floor(Date.parse(item.entry.startedAt) / 1000);
+  return Number.isFinite(ts) ? unixToTimeParts(ts).time : "99:99";
 }
 
-type PanelEntry = {
-  kind?: string;
-  id?: string;
-  date?: string;
-  remark?: string;
-  data?: unknown;
-  primary?: boolean;
-  at?: unknown;
-  fetchedAt?: number;
-  source?: string;
-};
-
 function buildFeedItems(
-  entries: PanelEntry[],
+  entries: JournalEntrySnapshot[],
   meals: MealEntry[],
 ): FeedItem[] {
   const items: FeedItem[] = entries
-    .filter((e) => (e.kind === "event" || e.kind === "mood") && !e.primary)
-    .map((e) => {
-      if (e.kind === "event") {
-        const text = String(e.remark ?? "").trim() || "—";
-        return {
-          kind: "event" as const,
-          id: String(e.id),
-          icon: EVENT_ICON,
-          text,
-          entry: e as Record<string, unknown>,
-        };
-      }
-      const data = (e.data ?? {}) as { emoji?: string; note?: string };
-      const emoji = data.emoji || "🙂";
-      const note = String(data.note ?? "").trim();
-      return {
-        kind: "mood" as const,
-        id: String(e.id),
-        icon: emoji,
-        text: note || "—",
-        entry: e as Record<string, unknown>,
-      };
-    });
+    .filter((e) => e.kind === "note" || e.kind === "document")
+    .map((e) => ({
+      kind: e.kind as "note" | "document",
+      id: e.id,
+      icon: e.kind === "document" ? DOC_ICON : NOTE_ICON,
+      text: archiveEntryFeedText(e),
+      entry: e,
+    }));
   for (const m of meals) {
     const body = m.text || m.items.join("、") || "—";
     items.push({
@@ -189,13 +212,21 @@ function buildFeedItems(
 }
 
 function feedItemHtml(item: FeedItem): string {
+  const actions =
+    item.kind === "meal"
+      ? `<span class="today-feed-actions">
+      <button type="button" class="today-feed-act" data-action="edit" data-tip="编辑">${EDIT_SVG}</button>
+      <button type="button" class="today-feed-act" data-action="del" data-tip="删除">${DEL_SVG}</button>
+    </span>`
+      : item.kind === "note"
+        ? `<span class="today-feed-actions">
+      <button type="button" class="today-feed-act" data-action="edit" data-tip="编辑">${EDIT_SVG}</button>
+    </span>`
+        : "";
   return `<div class="today-feed-item" data-id="${escHtml(item.id)}" data-kind="${item.kind}">
     <span class="today-feed-icon" aria-hidden="true">${item.icon}</span>
     <span class="today-feed-text">${escHtml(item.text)}</span>
-    <span class="today-feed-actions">
-      <button type="button" class="today-feed-act" data-action="edit" data-tip="编辑">${EDIT_SVG}</button>
-      <button type="button" class="today-feed-act" data-action="del" data-tip="删除">${DEL_SVG}</button>
-    </span>
+    ${actions}
   </div>`;
 }
 
@@ -216,9 +247,9 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
       <div class="today-block">
         <span class="today-section-title">健康</span>
         <div class="life-rings" id="lifeRings">
-          <button type="button" class="life-ring-btn" id="sleepRing">
+          <div class="life-ring-btn life-ring-static" id="sleepRing">
             <div id="sleepRingGraphic"></div>
-          </button>
+          </div>
           <div class="life-ring-btn life-ring-static" id="calorieRing">
             <div id="calorieRingGraphic"></div>
           </div>
@@ -226,14 +257,14 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
             <div id="hydrationRingGraphic"></div>
           </div>
         </div>
+        <p class="settings-hint" id="overviewError" hidden></p>
       </div>
       <div class="today-lower">
         <div class="today-feed">
           <div class="today-feed-toolbar">
             <span class="today-section-title">记录</span>
             <div class="today-feed-adds">
-              <button type="button" class="today-feed-add" id="addEventBtn" data-tip="记事件"><span class="today-feed-add-icon">${EVENT_ICON}</span></button>
-              <button type="button" class="today-feed-add" id="addMoodBtn" data-tip="记心情"><span class="today-feed-add-icon">${MOOD_ADD_ICON}</span></button>
+              <button type="button" class="today-feed-add" id="addNoteBtn" data-tip="记随记"><span class="today-feed-add-icon">${NOTE_ICON}</span></button>
               <button type="button" class="today-feed-add" id="addMealBtn" data-tip="记吃饭"><span class="today-feed-add-icon">${MEAL_ICON}</span></button>
             </div>
           </div>
@@ -270,7 +301,8 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     clearMealUndo();
     pending.rollback();
   });
-  const sleepRing = container.querySelector<HTMLButtonElement>("#sleepRing")!;
+  const sleepRing = container.querySelector<HTMLElement>("#sleepRing")!;
+  const overviewErrorEl = container.querySelector<HTMLElement>("#overviewError")!;
   const syncBtn = container.querySelector<HTMLButtonElement>("#todayGarminSync")!;
   const privacyBtn = container.querySelector<HTMLButtonElement>("#todayPrivacyToggle")!;
   const lastSyncEl = container.querySelector<HTMLElement>("#garminLastSync")!;
@@ -278,58 +310,56 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
   const calorieGraphic = container.querySelector("#calorieRingGraphic")!;
   const hydrationGraphic = container.querySelector("#hydrationRingGraphic")!;
 
-  let cachedEntries: PanelEntry[] = [];
-  let cachedMeals: MealEntry[] = [];
-  let cachedSyncEntries: PanelEntry[] = [];
+  let cachedArchiveEntries: JournalEntrySnapshot[] = [];
+  let cachedArchiveError: string | null = null;
+  let cachedMealsError: string | null = null;
+  let cachedMeals: MealEntryWithRevision[] = [];
+  let cachedOverview: HealthOverviewResponse | null = null;
+  let cachedOverviewError: string | null = null;
+
+  async function loadArchiveMeals(date: string): Promise<MealEntryWithRevision[]> {
+    const { meals } = await healthListMeals({ localDateFrom: date, localDateTo: date });
+    return meals.filter((m) => !m.deletedAt).map((m) => archiveMealToEntry(m, date));
+  }
 
   function snapshotState() {
-    return { entries: [...cachedEntries], meals: [...cachedMeals] };
+    return { meals: [...cachedMeals] };
   }
 
-  function restoreState(snap: { entries: PanelEntry[]; meals: MealEntry[] }) {
-    cachedEntries = snap.entries;
+  function restoreState(snap: { meals: MealEntry[] }) {
     cachedMeals = snap.meals;
-    refreshRings(cachedEntries, getSettings().ui.lifeRingGoals);
-    refreshFeed(cachedEntries, cachedMeals);
+    refreshRings();
+    refreshFeed(cachedArchiveEntries, cachedMeals, cachedArchiveError, cachedMealsError);
   }
 
-  function upsertDailyData(date: string, patch: (data: Record<string, unknown>) => Record<string, unknown>) {
-    const idx = cachedEntries.findIndex((e) => e.kind === "daily" && e.date === date);
-    if (idx >= 0) {
-      const e = cachedEntries[idx];
-      const prevData = e.data && typeof e.data === "object" ? { ...(e.data as Record<string, unknown>) } : {};
-      cachedEntries = cachedEntries.map((en, i) => (i === idx ? { ...en, data: patch(prevData) } : en));
-      return;
+  function refreshRings() {
+    if (cachedOverviewError) {
+      overviewErrorEl.hidden = false;
+      overviewErrorEl.textContent = cachedOverviewError;
+    } else {
+      overviewErrorEl.hidden = true;
+      overviewErrorEl.textContent = "";
     }
-    cachedEntries = [...cachedEntries, { kind: "daily", date, data: patch({}) }];
-  }
+    if (!cachedOverview && cachedOverviewError) return;
 
-  function refreshRings(entries: PanelEntry[], goals: ReturnType<typeof getSettings>["ui"]["lifeRingGoals"]) {
-    const date = beijingToday();
-    const routine = entries.find((e) => e.kind === "routine");
-    const routineData =
-      routine?.data && typeof routine.data === "object"
-        ? (routine.data as { night?: NightData; naps?: NapEntry[] })
-        : undefined;
-    const night = routineData?.night;
-    const naps = routineData?.naps ?? [];
+    const goals = getSettings().ui.lifeRingGoals;
+    const { night, naps } = overviewToNightAndNaps(cachedOverview);
     renderSleepRing(sleepGraphic as HTMLElement, sleepRing, night, naps);
-
-    const daily = entries.find((e) => e.kind === "daily" && e.date === date);
-    const todayDaily = parseDailyData(daily?.data);
-    const meals = parseMeals(daily?.data);
+    const meals = cachedMeals;
     const slotKcal = sumMealsBySlot(meals);
     const intakeKcal = totalMealKcal(meals);
+    const waterCard = cachedOverview?.daySummary.cards.find((c) => c.id === "water");
+    const hydrationMl = waterCard?.value ? Number(waterCard.value) : 0;
     calorieGraphic.innerHTML = calorieRingHtml({
       intakeKcal,
-      totalCalories: todayDaily?.totalCalories ?? 0,
-      activeCalories: todayDaily?.activeCalories ?? 0,
+      totalCalories: cachedOverview?.daySummary.energy.burnKcal ?? 0,
+      activeCalories: 0,
       slotKcal,
       goalIntake: goals.goalIntake,
       goalExp: goals.goalExp,
     });
     hydrationGraphic.innerHTML = hydrationRingHtml({
-      hydrationMl: todayDaily?.hydrationMl ?? 0,
+      hydrationMl: Number.isFinite(hydrationMl) ? hydrationMl : 0,
       goalHydration: goals.goalHydration,
     });
   }
@@ -338,10 +368,21 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     listEl.querySelectorAll<HTMLElement>(".today-feed-item").forEach((row) => {
       const item = feedItems.find((e) => e.id === row.dataset.id && e.kind === row.dataset.kind);
       if (!item) return;
+      if (item.kind === "note") {
+        const openEdit = () => openNoteDialog(dialogRoot, item.entry);
+        row.querySelector('[data-action="edit"]')?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openEdit();
+        });
+        row.addEventListener("click", (e) => {
+          if ((e.target as HTMLElement).closest(".today-feed-act")) return;
+          openEdit();
+        });
+        return;
+      }
+      if (item.kind !== "meal") return;
       row.querySelector('[data-action="edit"]')!.addEventListener("click", () => {
-        if (item.kind === "event") openEventDialog(dialogRoot, item.entry, panelApi);
-        else if (item.kind === "mood") openMoodDialog(dialogRoot, item.entry, panelApi);
-        else openMealDialog(dialogRoot, item.entry, panelApi, beijingToday());
+        openMealDialog(dialogRoot, item.entry, panelApi, beijingToday());
       });
       row.querySelector('[data-action="del"]')!.addEventListener("click", () => {
         const date = beijingToday();
@@ -361,7 +402,7 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
             if (!pending) return;
             void (async () => {
               try {
-                await deleteMeal(pending.date, pending.meal.id);
+                await deleteMeal(pending.date, pending.meal.id, pending.meal.revision);
                 window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
               } catch (err) {
                 pending.rollback();
@@ -371,38 +412,37 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
           }, MEAL_UNDO_MS);
           return;
         }
-        const snap = snapshotState();
-        cachedEntries = cachedEntries.filter((e) => e.id !== item.id);
-        rollback = () => restoreState(snap);
-        refreshFeed(cachedEntries, cachedMeals);
-        void (async () => {
-          try {
-            await journalDelete(item.id);
-            window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-          } catch (err) {
-            rollback();
-            alert(String(err));
-          }
-        })();
       });
     });
   }
 
-  function refreshFeed(entries: PanelEntry[], meals: MealEntry[]) {
-    cachedEntries = entries;
+  function refreshFeed(
+    entries: JournalEntrySnapshot[],
+    meals: MealEntry[],
+    archiveError: string | null = cachedArchiveError,
+    mealsError: string | null = cachedMealsError,
+  ) {
+    cachedArchiveEntries = entries;
     cachedMeals = meals;
+    cachedArchiveError = archiveError;
+    cachedMealsError = mealsError;
+    if (archiveError) {
+      listEl.innerHTML = `<p class="settings-hint">${escHtml(archiveError)}</p>`;
+      return;
+    }
     const feedItems = buildFeedItems(entries, meals);
+    const mealHint = mealsError ? `<p class="settings-hint">${escHtml(mealsError)}</p>` : "";
     if (isPrivacyMode()) {
-      listEl.innerHTML = `<button type="button" class="today-feed-private" id="privacyUnlockBtn">🔒 已隐藏 · 点击显示</button>`;
+      listEl.innerHTML = `${mealHint}<button type="button" class="today-feed-private" id="privacyUnlockBtn">🔒 已隐藏 · 点击显示</button>`;
       listEl.querySelector("#privacyUnlockBtn")!.addEventListener("click", () => {
         togglePrivacyMode();
         syncPrivacyBtn();
-        refreshFeed(cachedEntries, cachedMeals);
+        refreshFeed(cachedArchiveEntries, cachedMeals, cachedArchiveError, cachedMealsError);
       });
     } else {
       listEl.innerHTML = feedItems.length
-        ? feedItems.map(feedItemHtml).join("")
-        : `<div class="today-feed-empty">点 📌、✨ 或 🍽 记一笔</div>`;
+        ? `${mealHint}${feedItems.map(feedItemHtml).join("")}`
+        : `${mealHint}<div class="today-feed-empty">点 📝 或 🍽 记一笔</div>`;
       bindFeedRows(feedItems);
     }
   }
@@ -412,13 +452,13 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
       const status = await healthSyncStatus();
       if (status.lastSuccessAt) {
         const ms = Date.parse(status.lastSuccessAt);
-        setLastSync(Number.isFinite(ms) ? Math.floor(ms / 1000) : garminLastFetchedAt(cachedSyncEntries));
+        setLastSync(Number.isFinite(ms) ? Math.floor(ms / 1000) : null);
         return;
       }
     } catch {
-      /* fallback below */
+      /* keep dash */
     }
-    setLastSync(garminLastFetchedAt(cachedSyncEntries));
+    setLastSync(null);
   }
 
   async function repaintFull() {
@@ -427,9 +467,14 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     if (!journalConfigured(getSettings())) {
       listEl.innerHTML = `<p class="settings-hint">请配置今日记录目录</p>`;
       setLastSync(null);
-      cachedEntries = [];
+      cachedArchiveEntries = [];
+      cachedArchiveError = null;
+      cachedMealsError = null;
       cachedMeals = [];
-      cachedSyncEntries = [];
+      cachedOverview = null;
+      cachedOverviewError = null;
+      overviewErrorEl.hidden = true;
+      overviewErrorEl.textContent = "";
       sleepGraphic.innerHTML = sleepStageRingHtml({
         stages: { deep: 0, light: 0, rem: 0 },
         goalHours: SLEEP_GOAL_H,
@@ -439,7 +484,7 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
         intakeKcal: 0,
         totalCalories: 0,
         activeCalories: 0,
-        slotKcal: { breakfast: 0, lunch: 0, dinner: 0, snack: 0 },
+        slotKcal: { breakfast: 0, lunch: 0, dinner: 0, late_night: 0, coffee: 0, beverage: 0, snack: 0, other: 0 },
         goalIntake: goals.goalIntake,
         goalExp: goals.goalExp,
       });
@@ -448,59 +493,65 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     }
 
     const date = beijingToday();
-    const { entries } = await journalList({ date });
-    const { entries: syncEntries } = await journalList({ from: syncFromDate(30), to: date });
-    cachedEntries = entries;
-    cachedSyncEntries = syncEntries as PanelEntry[];
-    const daily = entries.find((e) => e.kind === "daily" && e.date === date);
-    cachedMeals = parseMeals(daily?.data);
+    const { from, to } = beijingDayUtcRange(date);
+    let archiveError: string | null = null;
+    try {
+      const { entries } = await journalArchiveListEntries();
+      cachedArchiveEntries = entries.filter(
+        (e) =>
+          !e.deletedAt &&
+          (e.kind === "note" || e.kind === "document") &&
+          archiveEntryBeijingDate(e.startedAt) === date,
+      );
+    } catch (err) {
+      archiveError = String(err);
+      cachedArchiveEntries = [];
+    }
+    let mealsError: string | null = null;
+    try {
+      cachedMeals = await loadArchiveMeals(date);
+      cachedMealsError = null;
+    } catch (err) {
+      mealsError = String(err);
+      cachedMealsError = mealsError;
+    }
+    try {
+      cachedOverview = await healthOverviewQuery({
+        selectedDate: date,
+        trackFromUtc: from,
+        trackToUtc: to,
+        trendDays: 1,
+      });
+      cachedOverviewError = null;
+    } catch (err) {
+      cachedOverviewError = String(err);
+    }
     refreshLastSync();
-    refreshRings(cachedEntries, goals);
-    refreshFeed(cachedEntries, cachedMeals);
+    refreshRings();
+    refreshFeed(cachedArchiveEntries, cachedMeals, archiveError, mealsError);
   }
 
   const panelApi: TodayPanelRefresh = {
     cachedMealsForDate: (date) => {
       if (date === beijingToday()) return cachedMeals;
-      const daily = cachedEntries.find((e) => e.kind === "daily" && e.date === date);
-      return parseMeals(daily?.data);
+      return [];
     },
-    refreshRings: () => refreshRings(cachedEntries, getSettings().ui.lifeRingGoals),
-    refreshFeed: () => refreshFeed(cachedEntries, cachedMeals),
+    refreshRings,
+    refreshFeed: () => refreshFeed(cachedArchiveEntries, cachedMeals, cachedArchiveError, cachedMealsError),
     repaintFull,
     optimisticMeals: (date, meals) => panelApi.optimisticMealPatches([{ date, meals }]),
     optimisticMealPatches: (patches) => {
       const snap = snapshotState();
-      for (const { date, meals } of patches) {
-        upsertDailyData(date, (data) => ({ ...data, meals }));
-      }
       const today = beijingToday();
-      const daily = cachedEntries.find((e) => e.kind === "daily" && e.date === today);
-      cachedMeals = parseMeals(daily?.data);
-      refreshRings(cachedEntries, getSettings().ui.lifeRingGoals);
-      refreshFeed(cachedEntries, cachedMeals);
-      return () => restoreState(snap);
-    },
-    optimisticEvent: (next, existingId) => {
-      const snap = snapshotState();
-      if (existingId) {
-        cachedEntries = cachedEntries.map((e) => (e.id === existingId ? { ...e, ...next, id: existingId } : e));
-      } else {
-        cachedEntries = [...cachedEntries, next];
+      for (const { date, meals } of patches) {
+        if (date === today) cachedMeals = meals;
       }
-      refreshFeed(cachedEntries, cachedMeals);
+      refreshRings();
+      refreshFeed(cachedArchiveEntries, cachedMeals, cachedArchiveError, cachedMealsError);
       return () => restoreState(snap);
     },
-    optimisticMood: (next, existingId) => {
-      const snap = snapshotState();
-      if (existingId) {
-        cachedEntries = cachedEntries.map((e) => (e.id === existingId ? { ...e, ...next, id: existingId } : e));
-      } else {
-        cachedEntries = [...cachedEntries, next];
-      }
-      refreshFeed(cachedEntries, cachedMeals);
-      return () => restoreState(snap);
-    },
+    optimisticEvent: () => () => {},
+    optimisticMood: () => () => {},
   };
 
   function setLastSync(ts: number | null) {
@@ -515,11 +566,9 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
   privacyBtn.addEventListener("click", () => {
     togglePrivacyMode();
     syncPrivacyBtn();
-    refreshFeed(cachedEntries, cachedMeals);
+    refreshFeed(cachedArchiveEntries, cachedMeals, cachedArchiveError, cachedMealsError);
   });
   syncPrivacyBtn();
-
-  sleepRing.addEventListener("click", () => openSleepDialog(dialogRoot));
 
   const unbindGarminSync = bindGarminSyncButton(syncBtn, {
     onSuccess: () => {
@@ -528,104 +577,42 @@ export function mountTodayPanel(container: HTMLElement, dialogRoot: HTMLElement)
     },
   });
 
-  container.querySelector("#addEventBtn")!.addEventListener("click", () => openEventDialog(dialogRoot, null, panelApi));
-  container.querySelector("#addMoodBtn")!.addEventListener("click", () => openMoodDialog(dialogRoot, null, panelApi));
+  container.querySelector("#addNoteBtn")!.addEventListener("click", () => openNoteDialog(dialogRoot, null));
   container.querySelector("#addMealBtn")!.addEventListener("click", () => openMealDialog(dialogRoot, null, panelApi));
 
   const unbindJournal = bindJournalChanged(() => void repaintFull());
   window.addEventListener("orbita:ui-prefs", () => panelApi.refreshRings());
   window.addEventListener(PRIVACY_MODE_EVT, () => {
     syncPrivacyBtn();
-    refreshFeed(cachedEntries, cachedMeals);
+    refreshFeed(cachedArchiveEntries, cachedMeals, cachedArchiveError, cachedMealsError);
   });
   void repaintFull();
 }
 
-function napEntryLabel(nap: NapEntry, index: number): string {
-  if (nap.source === "garmin") return `小睡 ${index + 1} · 佳明`;
-  return `小睡 ${index + 1}`;
+function noteDateToStartedAt(date: string, time: string): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  const utc = Date.UTC(y, m - 1, d, hh - 8, mm, 0);
+  return new Date(utc).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
-function napEntryHtml(id: string, nap?: NapEntry, index = 0): string {
-  let startVal = "";
-  let endVal = "";
-  let durVal = "";
-  if (nap?.start) startVal = unixToTimeParts(nap.start).time;
-  if (nap?.end) endVal = unixToTimeParts(nap.end).time;
-  if (!startVal && !endVal && typeof nap?.duration === "number" && nap.duration > 0) {
-    durVal = String(Math.round(nap.duration / 60));
-  }
-  return `<div class="nap-entry" data-nap-id="${escHtml(id)}">
-    <div class="nap-entry-head">
-      <span class="nap-entry-title">${escHtml(napEntryLabel(nap ?? {}, index))}</span>
-      <button type="button" class="nap-entry-del" data-tip="删除">${DEL_SVG}</button>
-    </div>
-    <div class="nap-entry-fields">
-      <div class="dialog-field nap-entry-field"><label>开始</label><input type="time" class="nap-start" value="${startVal}"></div>
-      <div class="dialog-field nap-entry-field"><label>结束</label><input type="time" class="nap-end" value="${endVal}"></div>
-      <div class="dialog-field nap-entry-field nap-entry-field--dur"><label>时长(分)</label><input type="number" class="nap-dur" min="1" step="1" value="${durVal}" placeholder="仅时长"></div>
-    </div>
-  </div>`;
-}
-
-function bindNapEntry(row: HTMLElement) {
-  row.querySelector(".nap-entry-del")!.addEventListener("click", () => row.remove());
-}
-
-function renderNapList(listEl: HTMLElement, naps: NapEntry[]) {
-  if (!naps.length) {
-    listEl.innerHTML = `<div class="nap-list-empty">暂无小睡，点下方添加</div>`;
-    return;
-  }
-  listEl.innerHTML = naps.map((nap, i) => napEntryHtml(`nap-${i}`, nap, i)).join("");
-  listEl.querySelectorAll<HTMLElement>(".nap-entry").forEach(bindNapEntry);
-}
-
-function collectNapsFromForm(form: HTMLElement, date: string): NapEntry[] {
-  const naps: NapEntry[] = [];
-  form.querySelectorAll<HTMLElement>(".nap-entry").forEach((row) => {
-    const startT = row.querySelector<HTMLInputElement>(".nap-start")!.value;
-    const endT = row.querySelector<HTMLInputElement>(".nap-end")!.value;
-    const durMin = Number(row.querySelector<HTMLInputElement>(".nap-dur")!.value);
-    if (startT && endT) {
-      naps.push({ start: dateTimeToUnix(date, startT), end: dateTimeToUnix(date, endT), source: "manual" });
-      return;
-    }
-    if (startT || endT) return;
-    if (Number.isFinite(durMin) && durMin > 0) {
-      naps.push({ duration: Math.round(durMin * 60), source: "manual" });
-    }
-  });
-  return naps;
-}
-
-function openSleepDialog(root: HTMLElement) {
-  if (!journalConfigured(getSettings())) {
-    alert("请先在设置中配置数据存储位置");
-    return;
-  }
+function openNoteDialog(root: HTMLElement, entry: JournalEntrySnapshot | null) {
+  const isEdit = entry?.kind === "note";
+  const startedTs = entry ? Math.floor(Date.parse(entry.startedAt) / 1000) : NaN;
+  const startedParts = Number.isFinite(startedTs) ? unixToTimeParts(startedTs) : null;
+  const defaultDate = startedParts?.date || beijingToday();
+  const defaultTime = startedParts?.time || "12:00";
 
   const backdrop = document.createElement("div");
   backdrop.className = "dialog-backdrop";
-  const today = beijingToday();
   backdrop.innerHTML = `
-    <form class="dialog-panel" id="sleepForm">
-      <div class="dialog-title">睡眠</div>
-      <div class="settings-tabs">
-        <button type="button" class="settings-tab is-active" data-tab="night">睡眠</button>
-        <button type="button" class="settings-tab" data-tab="nap">午睡</button>
-      </div>
-      <div class="dialog-field"><label>日期</label><input type="date" id="sleepDate" value="${today}"></div>
-      <div class="dialog-tab-panels">
-        <div class="dialog-tab-panel is-active" data-panel="night">
-          <div class="dialog-field"><label>入睡</label><input type="time" id="sleepStart"></div>
-          <div class="dialog-field"><label>醒来</label><input type="time" id="sleepEnd"></div>
-        </div>
-        <div class="dialog-tab-panel" data-panel="nap">
-          <div class="nap-list" id="napList"></div>
-          <button type="button" class="dialog-btn nap-add-btn" id="napAddBtn">添加小睡</button>
-        </div>
-      </div>
+    <form class="dialog-panel" id="noteForm">
+      <div class="dialog-title">${isEdit ? "编辑随记" : "新随记"}</div>
+      <p class="settings-hint" id="noteError" hidden></p>
+      <div class="dialog-field"><label>日期</label><div id="noteDateMount"></div></div>
+      <div class="dialog-field"><label>标题</label><input type="text" id="noteTitle" value="${isEdit ? escHtml(entry?.title ?? "") : ""}" placeholder="可选"></div>
+      <div class="dialog-field"><label>正文</label><textarea id="noteText" rows="4" required>${isEdit ? escHtml(entry?.text ?? "") : ""}</textarea></div>
+      <div class="dialog-field"><label>心情</label><input type="text" id="noteMood" value="${isEdit ? escHtml(entry?.mood ?? "") : ""}" placeholder="可选"></div>
       <div class="dialog-actions">
         <button type="button" class="dialog-btn" data-action="cancel">取消</button>
         <button type="submit" class="dialog-btn dialog-btn-primary">保存</button>
@@ -634,215 +621,64 @@ function openSleepDialog(root: HTMLElement) {
   `;
   root.appendChild(backdrop);
   const motion = bindDialog(backdrop);
-  const form = backdrop.querySelector<HTMLFormElement>("#sleepForm")!;
-  const napListEl = backdrop.querySelector<HTMLElement>("#napList")!;
-  const dateInput = form.querySelector<HTMLInputElement>("#sleepDate")!;
-  const sleepStartInput = form.querySelector<HTMLInputElement>("#sleepStart")!;
-  const sleepEndInput = form.querySelector<HTMLInputElement>("#sleepEnd")!;
-
-  async function loadRoutine(date: string) {
-    const { entries } = await journalList({ date });
-    const routine = entries.find((e) => e.kind === "routine" && e.date === date);
-    const data = routine?.data && typeof routine.data === "object"
-      ? (routine.data as { night?: { sleep?: number; wake?: number }; naps?: NapEntry[] })
-      : undefined;
-    const night = data?.night;
-    sleepStartInput.value = night?.sleep ? unixToTimeParts(night.sleep).time : "";
-    sleepEndInput.value = night?.wake ? unixToTimeParts(night.wake).time : "";
-    renderNapList(napListEl, data?.naps ?? []);
-  }
-
-  backdrop.querySelectorAll<HTMLButtonElement>(".settings-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      if (tab.classList.contains("is-active")) return;
-      backdrop.querySelectorAll(".settings-tab").forEach((t) => t.classList.remove("is-active"));
-      tab.classList.add("is-active");
-      const name = tab.dataset.tab!;
-      backdrop.querySelectorAll<HTMLElement>(".dialog-tab-panel").forEach((panel) => {
-        panel.classList.toggle("is-active", panel.dataset.panel === name);
-      });
-    });
+  const form = backdrop.querySelector<HTMLFormElement>("#noteForm")!;
+  const errorEl = backdrop.querySelector<HTMLElement>("#noteError")!;
+  const datePicker = mountDecoupledDatePicker({ defaultTrigger: { container: form.querySelector("#noteDateMount")! },
+    value: defaultDate,
   });
+  const titleInput = form.querySelector<HTMLInputElement>("#noteTitle")!;
+  const textInput = form.querySelector<HTMLTextAreaElement>("#noteText")!;
+  const moodInput = form.querySelector<HTMLInputElement>("#noteMood")!;
+
+  const showError = (msg: string) => {
+    errorEl.hidden = false;
+    errorEl.textContent = msg;
+  };
 
   const close = async () => {
+    datePicker.dispose();
     await motion.close();
     backdrop.remove();
   };
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close());
-  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) void close(); });
-
+  bindBackdropPressDismiss(backdrop, () => void close());
   void motion.open();
 
-  dateInput.addEventListener("change", () => void loadRoutine(dateInput.value));
-  backdrop.querySelector("#napAddBtn")!.addEventListener("click", () => {
-    if (napListEl.querySelector(".nap-list-empty")) napListEl.innerHTML = "";
-    const index = napListEl.querySelectorAll(".nap-entry").length;
-    const wrap = document.createElement("div");
-    wrap.innerHTML = napEntryHtml(`nap-new-${Date.now()}`, undefined, index);
-    const row = wrap.firstElementChild as HTMLElement;
-    napListEl.appendChild(row);
-    bindNapEntry(row);
-  });
-
-  void loadRoutine(today);
-
-  form.addEventListener("submit", async (e) => {
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const date = dateInput.value;
-    const sleepT = sleepStartInput.value;
-    const wakeT = sleepEndInput.value;
-    const naps = collectNapsFromForm(form, date);
-    for (const row of form.querySelectorAll<HTMLElement>(".nap-entry")) {
-      const startT = row.querySelector<HTMLInputElement>(".nap-start")!.value;
-      const endT = row.querySelector<HTMLInputElement>(".nap-end")!.value;
-      const durMin = row.querySelector<HTMLInputElement>(".nap-dur")!.value;
-      if ((startT && !endT) || (!startT && endT)) {
-        alert("每条小睡的开始与结束须同时填写，或只填时长");
-        return;
-      }
-      if (!startT && !endT && !durMin) {
-        alert("请完善小睡条目或删除空行");
-        return;
-      }
+    const text = textInput.value.trim();
+    if (!text) {
+      showError("正文不能为空");
+      return;
     }
-    try {
-      const { entries } = await journalList({ date });
-      const existing = entries.find((en) => en.kind === "routine" && en.date === date);
-      const prevData = existing?.data && typeof existing.data === "object"
-        ? { ...(existing.data as Record<string, unknown>) }
-        : {};
-      const prevNight = prevData.night && typeof prevData.night === "object"
-        ? { ...(prevData.night as Record<string, unknown>) }
-        : {};
-      const data: Record<string, unknown> = { ...prevData, naps };
-      if (sleepT && wakeT) {
-        data.night = {
-          ...prevNight,
-          sleep: dateTimeToUnix(date, sleepT),
-          wake: dateTimeToUnix(date, wakeT),
-          source: "manual",
-        };
-      } else if (sleepT || wakeT) {
-        alert("入睡与醒来须同时填写");
-        return;
-      }
-      await journalUpsert({
-        id: existing?.id ?? "",
-        kind: "routine",
-        date,
-        tz: "Asia/Shanghai",
-        data,
-      });
-      await close();
-      window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-    } catch (err) {
-      alert(String(err));
-    }
-  });
-}
-
-function openEventDialog(root: HTMLElement, entry: Record<string, unknown> | null, panel: TodayPanelRefresh) {
-  const backdrop = document.createElement("div");
-  backdrop.className = "dialog-backdrop";
-  backdrop.innerHTML = `
-    <form class="dialog-panel">
-      <div class="dialog-title">${entry ? "编辑事件" : "新事件"}</div>
-      <div class="dialog-field"><label>日期</label><input type="date" id="evDate" value="${beijingToday()}"></div>
-      <div class="dialog-field"><label>备注</label><input type="text" id="evRemark" value="${entry ? escHtml(String(entry.remark ?? "")) : ""}"></div>
-      <div class="dialog-actions">
-        <button type="button" class="dialog-btn" data-action="cancel">取消</button>
-        <button type="submit" class="dialog-btn dialog-btn-primary">保存</button>
-      </div>
-    </form>
-  `;
-  root.appendChild(backdrop);
-  const motion = bindDialog(backdrop);
-  const close = async () => { await motion.close(); backdrop.remove(); };
-  backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close());
-  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) void close(); });
-  void motion.open();
-  if (entry?.date) backdrop.querySelector<HTMLInputElement>("#evDate")!.value = String(entry.date);
-  backdrop.querySelector("form")!.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const date = backdrop.querySelector<HTMLInputElement>("#evDate")!.value;
-    const remark = backdrop.querySelector<HTMLInputElement>("#evRemark")!.value.trim();
-    const existingId = entry?.id ? String(entry.id) : undefined;
-    const payload = { id: existingId ?? "", kind: "event" as const, date, at: null, remark };
-    const rollback = panel.optimisticEvent(
-      { ...payload, id: existingId ?? `tmp-${Date.now()}` },
-      existingId,
-    );
-    await close();
+    errorEl.hidden = true;
+    errorEl.textContent = "";
+    const startedAt = noteDateToStartedAt(datePicker.getValue(), defaultTime);
+    const title = titleInput.value.trim();
+    const mood = moodInput.value.trim();
     void (async () => {
       try {
-        await journalUpsert(payload);
+        if (isEdit && entry) {
+          await journalArchiveUpdateNote({
+            id: entry.id,
+            expectedRevision: entry.revision,
+            text,
+            title: title || null,
+            startedAt,
+            mood: mood || null,
+          });
+        } else {
+          await journalArchiveCreateNote({
+            startedAt,
+            text,
+            title: title || undefined,
+            mood: mood || undefined,
+          });
+        }
+        await close();
         window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
       } catch (err) {
-        rollback();
-        alert(String(err));
-      }
-    })();
-  });
-}
-
-function openMoodDialog(root: HTMLElement, entry: Record<string, unknown> | null, panel: TodayPanelRefresh) {
-  const backdrop = document.createElement("div");
-  backdrop.className = "dialog-backdrop";
-  const data = (entry?.data ?? {}) as { emoji?: string; note?: string };
-  backdrop.innerHTML = `
-    <form class="dialog-panel">
-      <div class="dialog-title">${entry ? "编辑心情" : "新心情"}</div>
-      <div class="dialog-field"><label>日期</label><input type="date" id="mdDate" value="${beijingToday()}"></div>
-      <div class="primary-mood-grid">
-        ${MOOD_EMOJI_PRESETS.map((em) => `<button type="button" class="primary-mood-opt${data.emoji === em ? " is-active" : ""}" data-emoji="${em}">${em}</button>`).join("")}
-      </div>
-      <input type="hidden" id="mdEmoji" value="${data.emoji ?? MOOD_EMOJI_PRESETS[0]}">
-      <div class="dialog-field"><label>简记</label><input type="text" id="mdNote" value="${escHtml(data.note ?? "")}"></div>
-      <div class="dialog-actions">
-        <button type="button" class="dialog-btn" data-action="cancel">取消</button>
-        <button type="submit" class="dialog-btn dialog-btn-primary">保存</button>
-      </div>
-    </form>
-  `;
-  root.appendChild(backdrop);
-  const motion = bindDialog(backdrop);
-  const emojiInput = backdrop.querySelector<HTMLInputElement>("#mdEmoji")!;
-  backdrop.querySelectorAll<HTMLButtonElement>(".primary-mood-opt").forEach((b) => {
-    b.addEventListener("click", () => {
-      backdrop.querySelectorAll(".primary-mood-opt").forEach((x) => x.classList.remove("is-active"));
-      b.classList.add("is-active");
-      emojiInput.value = b.dataset.emoji!;
-    });
-  });
-  const close = async () => { await motion.close(); backdrop.remove(); };
-  backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close());
-  backdrop.addEventListener("click", (e) => { if (e.target === backdrop) void close(); });
-  void motion.open();
-  if (entry?.date) backdrop.querySelector<HTMLInputElement>("#mdDate")!.value = String(entry.date);
-  backdrop.querySelector("form")!.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const date = backdrop.querySelector<HTMLInputElement>("#mdDate")!.value;
-    const existingId = entry?.id ? String(entry.id) : undefined;
-    const data = { emoji: emojiInput.value, note: backdrop.querySelector<HTMLInputElement>("#mdNote")!.value.trim() };
-    const payload = {
-      id: existingId ?? "",
-      kind: "mood" as const,
-      date,
-      primary: false,
-      data,
-    };
-    const rollback = panel.optimisticMood(
-      { ...payload, id: existingId ?? `tmp-${Date.now()}` },
-      existingId,
-    );
-    await close();
-    void (async () => {
-      try {
-        await journalUpsert(payload);
-        window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-      } catch (err) {
-        rollback();
-        alert(String(err));
+        showError(String(err));
       }
     })();
   });

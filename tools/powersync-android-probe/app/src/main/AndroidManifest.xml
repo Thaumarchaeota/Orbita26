@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Keep the offline probe boundary even when a transitive HTTP library declares this permission.
+         See docs/plans/powersync-windows-isolated-validation.md (second-stage D). -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <application
+        android:name=".ProbeApplication"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:label="Orbita synthetic PowerSync probe"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name=".SeedActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".RecoverActivity" android:exported="true" />
+    </application>
+</manifest>

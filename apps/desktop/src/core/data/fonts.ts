@@ -114,6 +114,10 @@ export function applyFontPrefs(fonts: FontPrefs, root: HTMLElement = document.do
   root.style.setProperty("--font-literature", resolveFontStack(fonts.literature, baseStack));
   root.style.setProperty("--font-note", resolveFontStack(fonts.note, baseStack));
   root.style.setProperty("--font-ai", resolveFontStack(fonts.ai, baseStack));
+  root.style.setProperty(
+    "--font-code",
+    '"Ubuntu Mono", ui-monospace, "Cascadia Code", Consolas, monospace',
+  );
   root.style.setProperty("--font-finance", resolveFontStack(fonts.finance, baseStack));
   root.style.setProperty("--font-finance-chrome", FONT_STACKS.ubuntuBold);
   root.style.setProperty("--font-finance-chrome-weight", "700");

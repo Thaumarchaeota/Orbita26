@@ -29,6 +29,30 @@ export function setTriStateMarker(el: HTMLElement, state: TriState): void {
   }
 }
 
+export function createChoiceCheckbox(state?: TriState): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "orbita-choice-checkbox";
+  btn.setAttribute("role", "checkbox");
+  setTriStateMarker(btn, state ?? "unchecked");
+  return btn;
+}
+
+export function createChoiceRadio(checked = false, options?: { variant?: "default" | "card" }): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "orbita-choice-radio";
+  if (options?.variant === "card") btn.classList.add("orbita-choice-radio-card");
+  btn.setAttribute("role", "radio");
+  setChoiceRadio(btn, checked);
+  return btn;
+}
+
+export function setChoiceRadio(el: HTMLElement, checked: boolean): void {
+  el.classList.toggle("is-checked", checked);
+  el.setAttribute("aria-checked", String(checked));
+}
+
 export function readTriStateMarker(el: HTMLElement): TriState {
   if (el.classList.contains("is-checked")) return "checked";
   if (el.classList.contains("is-indeterminate")) return "indeterminate";

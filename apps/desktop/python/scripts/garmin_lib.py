@@ -877,6 +877,40 @@ def fetch_activities(client, from_date: str, to_date: str, max_pages: int = 15):
     return activities
 
 
+def fetch_activities_with_evidence(client, from_date: str, to_date: str, max_pages: int = 15):
+    """Fetch a bounded activity list and report whether the final page was observed.
+
+    An empty/short page is explicit terminal evidence. Hitting the page cap is never
+    reported complete, even when the last page happens to be short due to provider quirks.
+    """
+    activities = []
+    start, limit = 0, 20
+    url = client.garmin_connect_activities
+    params = {"startDate": from_date, "start": "0", "limit": str(limit), "endDate": to_date}
+    seen_offsets = set()
+    terminal = False
+    pages = 0
+    for _ in range(max_pages):
+        if start in seen_offsets:
+            break
+        seen_offsets.add(start)
+        params["start"] = str(start)
+        page = client.connectapi(url, params=params)
+        pages += 1
+        if not isinstance(page, list):
+            break
+        activities.extend(page)
+        if len(page) < limit:
+            terminal = True
+            break
+        start += limit
+    ids = [str(x.get("activityId") or x.get("activityIdDTO") or x.get("id") or "") for x in activities]
+    duplicate_ids = len([x for x in ids if x]) != len(set(x for x in ids if x))
+    return activities, {"pages": pages, "terminalPageObserved": terminal,
+                        "offsets": sorted(seen_offsets), "duplicateActivityIds": duplicate_ids,
+                        "complete": terminal and not duplicate_ids}
+
+
 def values_array_from(raw, *keys):
     if not isinstance(raw, dict):
         return None

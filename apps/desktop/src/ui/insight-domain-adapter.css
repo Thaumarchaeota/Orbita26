@@ -1,0 +1,323 @@
+/*
+ * Default geometry and surface adapter for the non-Chat Insight domains.
+ * Domain colors (health metrics, activity status, timeline strokes and chart
+ * series) remain owned by their page styles and are intentionally untouched.
+ */
+
+html[data-insight-theme] :is(
+  .health-app,
+  .timeline-app,
+  .journal-entry-page,
+  .insight-web-page,
+  .admin-home-page,
+  .project-page,
+  .work-page
+) {
+  color: var(--insight-text-primary);
+}
+
+/* Health page chrome and ordinary controls. Track/canvas geometry is excluded. */
+html[data-insight-theme] :is(
+  .health-section,
+  .health-summary,
+  .health-activity-section
+) {
+  border-color: var(--insight-divider);
+}
+
+html[data-insight-theme] :is(
+  .health-date-nav,
+  .health-trend-tab,
+  .health-btn,
+  .health-activity-search,
+  .health-activity-type-filter
+) {
+  border-radius: var(--insight-radius-sm);
+  border-color: var(--insight-input-border);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(
+  .health-date-nav:hover:not(:disabled),
+  .health-trend-tab:hover:not(:disabled),
+  .health-btn:hover:not(:disabled)
+) {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] :is(
+  .health-trend-tab.is-active,
+  .health-btn-primary
+) {
+  background: var(--insight-primary);
+  border-color: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] :is(
+  .health-trend-tab.is-active:hover,
+  .health-btn-primary:hover:not(:disabled)
+) {
+  background: var(--insight-primary-hover);
+}
+
+html[data-insight-theme] :is(
+  .health-summary-card,
+  .health-activity-list,
+  .health-activity-card,
+  .health-activity-chart,
+  .health-activity-detail-panel
+) {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-md);
+  background: var(--insight-surface-panel);
+}
+
+html[data-insight-theme] :is(
+  .health-activity-row:hover,
+  .health-activity-table tr:hover
+) {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .health-activity-badge {
+  border-radius: var(--insight-radius-xs);
+}
+
+html[data-insight-theme] :is(
+  .health-date-nav,
+  .health-trend-tab,
+  .health-btn,
+  .health-activity-search,
+  .health-activity-type-filter,
+  .health-activity-row,
+  .health-activity-detail-actions button
+):focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] :is(
+  .health-activity-search,
+  .health-activity-type-filter
+):focus {
+  border-color: var(--insight-primary);
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Journal entry page. The inline page stylesheet is intentionally overridden
+ * only for the opt-in style; hidden/read-only behavior is unchanged. */
+html[data-insight-theme] .journal-entry-page {
+  background: var(--insight-surface-page);
+}
+
+html[data-insight-theme] :is(
+  .journal-entry-deleted,
+  .journal-entry-status,
+  .journal-entry-meta input:disabled,
+  .journal-entry-editor:disabled,
+  .journal-entry-ai-input:disabled
+) {
+  color: var(--insight-text-disabled);
+}
+
+html[data-insight-theme] :is(
+  .journal-entry-title,
+  .journal-entry-meta input,
+  .journal-entry-editor,
+  .journal-entry-preview,
+  .journal-entry-ai-input
+) {
+  border-color: var(--insight-border-subtle);
+  background: var(--insight-surface-panel);
+}
+
+html[data-insight-theme] :is(
+  .journal-entry-title,
+  .journal-entry-meta input,
+  .journal-entry-editor,
+  .journal-entry-preview,
+  .journal-entry-ai-input
+) {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(
+  .journal-entry-title,
+  .journal-entry-meta input,
+  .journal-entry-editor,
+  .journal-entry-ai-input
+):focus {
+  border-color: var(--insight-primary);
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] :is(
+  .journal-entry-editor,
+  .journal-entry-preview
+) {
+  border-radius: var(--insight-radius-md);
+}
+
+html[data-insight-theme] .journal-entry-btn {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .journal-entry-btn:hover:not(:disabled) {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .journal-entry-btn-primary {
+  border-color: var(--insight-primary);
+  background: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] .journal-entry-btn-primary:hover:not(:disabled) {
+  background: var(--insight-primary-hover);
+}
+
+html[data-insight-theme] :is(
+  .action-track-time-chip,
+  .action-track-exec-bar,
+  .action-track-editor-panel
+) {
+  border-color: var(--insight-border-subtle);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .action-track-block {
+  border-color: var(--action-stroke, var(--insight-primary));
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(.action-track-card .health-track-card-legend, .action-track-time-chip) {
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] :is(
+  .journal-entry-btn,
+  .journal-entry-title,
+  .journal-entry-meta input,
+  .journal-entry-editor,
+  .journal-entry-ai-input
+):focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Web and home page surfaces. */
+html[data-insight-theme] .insight-web-bar {
+  border-bottom: var(--insight-border-width) solid var(--insight-divider);
+}
+
+html[data-insight-theme] .insight-web-open {
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm);
+  padding: 5px 9px;
+  background: var(--insight-surface-panel);
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .insight-web-open:hover {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .insight-web-open:focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .insight-web-frame {
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+}
+
+/* Timeline dialogs/forms only. Track cards, markers, blocks and canvas are
+ * deliberately absent so time-axis shape and drag hit targets do not change. */
+html[data-insight-theme] :is(
+  .action-dialog-panel,
+  .journal-track-editor-panel
+) {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-panel);
+  background: var(--insight-surface-panel);
+  box-shadow: var(--insight-shadow-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(
+  .action-dialog-panel .dialog-field input,
+  .action-dialog-panel .dialog-field select,
+  .action-dialog-style select,
+  .action-dialog-target-kind,
+  .action-dialog-target-trigger,
+  .journal-track-editor-panel textarea
+) {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(
+  .action-dialog-panel .dialog-field input:focus,
+  .action-dialog-panel .dialog-field select:focus,
+  .action-dialog-style select:focus,
+  .action-dialog-target-kind:focus-visible,
+  .action-dialog-target-trigger:focus-visible,
+  .journal-track-editor-panel textarea:focus
+) {
+  border-color: var(--insight-primary);
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .action-dialog-target-kind.is-active {
+  border-color: var(--insight-primary);
+  background: var(--insight-control-selected);
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] :is(
+  .action-dialog-panel .dialog-btn,
+  .journal-track-editor-panel .dialog-btn
+) {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(
+  .action-dialog-panel .dialog-btn:hover:not(:disabled),
+  .journal-track-editor-panel .dialog-btn:hover:not(:disabled)
+) {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] :is(
+  .action-dialog-panel .dialog-btn-primary,
+  .journal-track-editor-panel .dialog-btn-primary
+) {
+  border-color: var(--insight-primary);
+  background: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] :is(
+  .action-dialog-panel .dialog-btn-primary:hover:not(:disabled),
+  .journal-track-editor-panel .dialog-btn-primary:hover:not(:disabled)
+) {
+  background: var(--insight-primary-hover);
+}

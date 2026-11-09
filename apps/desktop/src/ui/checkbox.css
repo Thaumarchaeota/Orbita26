@@ -1,0 +1,123 @@
+.orbita-checkbox {
+  --c1: var(--insight-primary, #4b78b8);
+  --c2: color-mix(in srgb, var(--c1) 55%, #fff);
+  --k: 1;
+  --fg: var(--insight-text-primary, #1d1d1f);
+  --orbita-checkbox-size: 18px;
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+  width: var(--orbita-checkbox-size);
+  height: var(--orbita-checkbox-size);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.45em;
+  background: transparent;
+  font-size: calc(var(--orbita-checkbox-size) / 1.6);
+  line-height: 0;
+  color: var(--insight-on-primary, #fff);
+  cursor: pointer;
+  overflow: visible;
+}
+
+.orbita-checkbox__face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fg) 25%, transparent);
+  transition: all calc(0.3s / var(--k)) cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.orbita-checkbox svg {
+  width: 70%;
+  height: 70%;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.orbita-checkbox svg path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset calc(0.3s / var(--k)) cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.orbita-checkbox__face i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.3em;
+  height: 0.3em;
+  margin: -0.15em;
+  border-radius: 50%;
+  background: var(--c2);
+  opacity: 0;
+  pointer-events: none;
+  font-style: normal;
+}
+
+.orbita-checkbox__face i:nth-child(odd) {
+  background: var(--c1);
+}
+
+.orbita-checkbox.is-checked .orbita-checkbox__face {
+  background: var(--c1);
+  box-shadow: inset 0 0 0 2px var(--c1);
+  transform: scale(1.05);
+}
+
+.orbita-checkbox.is-checked svg path {
+  stroke-dashoffset: 0;
+}
+
+.orbita-checkbox.is-checking.is-checked .orbita-checkbox__face i {
+  animation: orbita-checkbox-burst calc(0.6s / var(--k)) cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@keyframes orbita-checkbox-burst {
+  0% {
+    opacity: 1;
+    transform: rotate(calc(var(--i) * 45deg)) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(calc(var(--i) * 45deg)) translateY(-1.8em) scale(0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbita-checkbox__face,
+  .orbita-checkbox svg path {
+    transition: none;
+  }
+
+  .orbita-checkbox.is-checked .orbita-checkbox__face {
+    transform: none;
+  }
+
+  .orbita-checkbox.is-checking.is-checked .orbita-checkbox__face i,
+  .orbita-checkbox.is-checking.is-checked svg path {
+    animation: none;
+  }
+}
+
+.orbita-checkbox:focus-visible {
+  outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, #4b78b8));
+  outline-offset: 2px;
+}
+
+.orbita-checkbox:disabled {
+  cursor: default;
+  opacity: 0.55;
+}

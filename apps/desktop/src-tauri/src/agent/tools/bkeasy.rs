@@ -23,7 +23,7 @@ impl AgentTool for BkeasySummaryTool {
     fn requires_confirm(&self) -> bool {
         false
     }
-    fn execute(&self, app: &AppHandle, _args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, _args: Value) -> Result<String, String> {
         let res = bkeasy::bkeasy_summary(app)?;
         serde_json::to_string(&res).map_err(|e| e.to_string())
     }
@@ -57,7 +57,7 @@ impl AgentTool for BeancountAddTransaction {
     fn requires_confirm(&self) -> bool {
         true
     }
-    fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, args: Value) -> Result<String, String> {
         let date = args
             .get("date")
             .and_then(|v| v.as_str())

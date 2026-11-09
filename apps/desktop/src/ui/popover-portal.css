@@ -3,3 +3,7 @@
   z-index: var(--orbita-popover-z, 205);
   pointer-events: auto;
 }
+
+.orbita-popover-portal-item[hidden] {
+  display: none !important;
+}

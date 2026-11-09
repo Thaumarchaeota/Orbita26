@@ -1,19 +1,14 @@
 import { escAttr, escHtml } from "../../core/html";
+import { mountDecoupledDatePicker } from "../../ui/decoupled-date-picker";
+import { mountDecoupledTimePicker } from "../../ui/decoupled-time-picker";
 import { closePopover, isPopoverOpen, openPopover } from "../../ui/motion";
 import { CHEVRON_SVG } from "../ai/icons";
-import {
-  WEEKDAYS,
-  buildCalendarDays,
-  formatDateLabel,
-  formatDateValue,
-  monthLabel,
-  parseDateValue,
-} from "./calendar";
+import { formatDateLabel } from "./calendar";
 
 export type PickerItem = { value: string; label: string };
 
 export type PickerGroup = {
-  register: (handle: { close: () => Promise<void>; menu: HTMLElement }) => void;
+  register: (handle: { close: () => Promise<void>; menu: HTMLElement }) => () => void;
   closeOthers: (keep?: HTMLElement) => Promise<void>;
 };
 
@@ -22,15 +17,16 @@ export function createPickerGroup(): PickerGroup {
   return {
     register(handle) {
       members.push(handle);
+      return () => {
+        const index = members.indexOf(handle);
+        if (index >= 0) members.splice(index, 1);
+      };
     },
     async closeOthers(keep) {
       await Promise.all(members.filter((m) => m.menu !== keep).map((m) => m.close()));
     },
   };
 }
-
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-const MINUTES = ["00", "15", "30", "45"];
 
 function pickerShell(label: string, id: string) {
   return `
@@ -120,7 +116,7 @@ export function mountListPicker(
   };
 }
 
-export function mountDatePicker(
+export function mountTaskDateField(
   parent: HTMLElement,
   label: string,
   id: string,
@@ -129,103 +125,23 @@ export function mountDatePicker(
 ) {
   parent.insertAdjacentHTML("beforeend", pickerShell(label, id));
   const root = parent.querySelector<HTMLElement>(`[data-picker="${id}"]`)!;
-  const btn = root.querySelector<HTMLButtonElement>(".ticktick-picker-btn")!;
+  const trigger = root.querySelector<HTMLButtonElement>(".ticktick-picker-btn")!;
   const labelEl = root.querySelector<HTMLElement>(".ticktick-picker-label")!;
-  const menu = root.querySelector<HTMLElement>(".ticktick-picker-menu")!;
-  menu.classList.add("ticktick-date-menu");
-  let value = initial;
-  let year = parseDateValue(initial)?.getFullYear() ?? new Date().getFullYear();
-  let month = parseDateValue(initial)?.getMonth() ?? new Date().getMonth();
-
-  const syncLabel = () => {
-    labelEl.textContent = formatDateLabel(value);
-  };
-
-  const paint = () => {
-    const today = new Date();
-    const cells = buildCalendarDays(year, month);
-    menu.innerHTML = `
-      <div class="ticktick-mini-cal">
-        <div class="ticktick-mini-cal-head">
-          <button type="button" class="ticktick-mini-cal-nav" data-dir="-1">‹</button>
-          <span>${monthLabel(year, month)}</span>
-          <button type="button" class="ticktick-mini-cal-nav" data-dir="1">›</button>
-        </div>
-        <div class="ticktick-mini-cal-week">${WEEKDAYS.map((d) => `<span>${d}</span>`).join("")}</div>
-        <div class="ticktick-mini-cal-grid">
-          ${cells
-            .map((d) => {
-              if (!d) return `<span class="ticktick-mini-cal-cell is-empty"></span>`;
-              const v = formatDateValue(d);
-              const active = v === value;
-              const isToday = d.toDateString() === today.toDateString();
-              return `<button type="button" class="ticktick-mini-cal-cell${active ? " is-active" : ""}${isToday ? " is-today" : ""}" data-value="${v}">${d.getDate()}</button>`;
-            })
-            .join("")}
-        </div>
-      </div>
-    `;
-  };
-
-  const close = async () => {
-    if (isPopoverOpen(menu)) {
-      await closePopover(menu);
-      btn.classList.remove("is-open");
-    }
-  };
-  group?.register({ close, menu });
-
-  btn.addEventListener("click", async (e) => {
-    if (isPopoverOpen(menu)) {
-      void close();
-      return;
-    }
-    const parsed = parseDateValue(value);
-    if (parsed) {
-      year = parsed.getFullYear();
-      month = parsed.getMonth();
-    }
-    await group?.closeOthers(menu);
-    paint();
-    btn.classList.add("is-open");
-    void openPopover(menu, e.currentTarget as HTMLElement);
-  });
-
-  menu.addEventListener("click", async (e) => {
-    const nav = (e.target as HTMLElement).closest<HTMLButtonElement>(".ticktick-mini-cal-nav");
-    if (nav) {
-      const dir = Number(nav.dataset.dir);
-      month += dir;
-      if (month < 0) {
-        month = 11;
-        year -= 1;
-      } else if (month > 11) {
-        month = 0;
-        year += 1;
-      }
-      paint();
-      return;
-    }
-    const cell = (e.target as HTMLElement).closest<HTMLButtonElement>(".ticktick-mini-cal-cell");
-    if (!cell?.dataset.value) return;
-    value = cell.dataset.value;
-    syncLabel();
-    await close();
-  });
-
-  syncLabel();
-  return {
-    getValue: () => value,
-    setValue: (v: string) => {
-      value = v;
-      syncLabel();
-    },
-    close,
-    root,
-  };
+  trigger.setAttribute("aria-haspopup", "dialog");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-label", label);
+  const controller = new AbortController();
+  const sync = () => { labelEl.textContent = formatDateLabel(picker.getValue()); };
+  const picker = mountDecoupledDatePicker({ anchor: trigger, value: initial, onChange: sync, onOpenChange: (open) => { trigger.setAttribute("aria-expanded", String(open)); trigger.classList.toggle("is-open", open); } });
+  const close = () => picker.close();
+  const unregister = group?.register({ close, menu: root });
+  sync();
+  trigger.addEventListener("click", async () => { await group?.closeOthers(root); picker.open(); }, { signal: controller.signal });
+  const dispose = () => { controller.abort(); unregister?.(); picker.dispose(); };
+  return { getValue: picker.getValue, setValue: (v: string) => { picker.setValue(v); sync(); }, close, dispose, root };
 }
 
-export function mountTimePicker(
+export function mountTaskTimeField(
   parent: HTMLElement,
   label: string,
   id: string,
@@ -234,73 +150,21 @@ export function mountTimePicker(
 ) {
   parent.insertAdjacentHTML("beforeend", pickerShell(label, id));
   const root = parent.querySelector<HTMLElement>(`[data-picker="${id}"]`)!;
-  const btn = root.querySelector<HTMLButtonElement>(".ticktick-picker-btn")!;
+  const trigger = root.querySelector<HTMLButtonElement>(".ticktick-picker-btn")!;
   const labelEl = root.querySelector<HTMLElement>(".ticktick-picker-label")!;
-  const menu = root.querySelector<HTMLElement>(".ticktick-picker-menu")!;
-  menu.classList.add("ticktick-time-menu");
-  let value = initial || "09:00";
-
-  const syncLabel = () => {
-    labelEl.textContent = value;
-  };
-
-  const paint = () => {
-    const [hh, mm] = value.split(":");
-    menu.innerHTML = `
-      <div class="ticktick-time-grid">
-        <div class="ticktick-time-col scroll-slim">
-          ${HOURS.map((h) => `<button type="button" class="ticktick-time-item${h === hh ? " active" : ""}" data-part="h" data-value="${h}">${h}</button>`).join("")}
-        </div>
-        <div class="ticktick-time-col scroll-slim">
-          ${MINUTES.map((m) => `<button type="button" class="ticktick-time-item${m === mm ? " active" : ""}" data-part="m" data-value="${m}">${m}</button>`).join("")}
-        </div>
-      </div>
-    `;
-    const activeH = menu.querySelector<HTMLElement>(".ticktick-time-col .active");
-    activeH?.scrollIntoView({ block: "center" });
-  };
-
-  const close = async () => {
-    if (isPopoverOpen(menu)) {
-      await closePopover(menu);
-      btn.classList.remove("is-open");
-    }
-  };
-  group?.register({ close, menu });
-
-  btn.addEventListener("click", async (e) => {
-    if (isPopoverOpen(menu)) {
-      void close();
-      return;
-    }
-    await group?.closeOthers(menu);
-    paint();
-    btn.classList.add("is-open");
-    void openPopover(menu, e.currentTarget as HTMLElement);
-  });
-
-  menu.addEventListener("click", async (e) => {
-    const item = (e.target as HTMLElement).closest<HTMLButtonElement>(".ticktick-time-item");
-    if (!item) return;
-    const [curH, curM] = value.split(":");
-    if (item.dataset.part === "h") value = `${item.dataset.value}:${curM}`;
-    else value = `${curH}:${item.dataset.value}`;
-    syncLabel();
-    paint();
-  });
-
-  syncLabel();
-  return {
-    getValue: () => value,
-    setValue: (v: string) => {
-      value = v;
-      syncLabel();
-    },
-    close,
-    root,
-  };
+  const controller = new AbortController();
+  const sync = () => { labelEl.textContent = picker.getValue(); };
+  const picker = mountDecoupledTimePicker({ anchor: trigger, value: initial || "09:00", onChange: sync, onOpenChange: (open) => { trigger.setAttribute("aria-expanded", String(open)); trigger.classList.toggle("is-open", open); } });
+  const close = () => picker.close();
+  const unregister = group?.register({ close, menu: root });
+  sync();
+  trigger.setAttribute("aria-haspopup", "dialog");
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.setAttribute("aria-label", label);
+  trigger.addEventListener("click", async () => { await group?.closeOthers(root); picker.open(); }, { signal: controller.signal });
+  const dispose = () => { controller.abort(); unregister?.(); picker.dispose(); };
+  return { getValue: picker.getValue, setValue: (v: string) => { picker.setValue(v); sync(); }, close, dispose, root };
 }
-
 export function mountToggle(parent: HTMLElement, label: string, id: string, initial = false) {
   parent.insertAdjacentHTML(
     "beforeend",

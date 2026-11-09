@@ -1,0 +1,29 @@
+.orbita-select-field {
+  min-width: 0;
+}
+
+.orbita-select-field-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.orbita-select-field-trigger {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--insight-border-color);
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-surface-bg);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+  color: var(--insight-text-primary);
+  cursor: pointer;
+}
+

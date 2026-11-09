@@ -1,0 +1,101 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+
+const browser=await chromium.launch({headless:true});
+try {
+  const page=await browser.newPage({viewport:{width:1000,height:950}});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/__travel-split-qa',route=>route.fulfill({contentType:'text/html; charset=utf-8',body:`<!doctype html>
+  <html data-insight-theme="cold"><head><meta charset="utf-8"><link rel="stylesheet" href="/src/ui/theme-base.css"><link rel="stylesheet" href="/src/ui/admin-shell.css"><link rel="stylesheet" href="/src/integrations/admin/tabs/task/task.css"></head>
+  <body><div id="host" style="position:relative;margin-left:80px;width:500px;height:850px;--arrangement-hour-height:56px"><div class="arrangement-days" style="position:relative;height:1600px"><div class="arrangement-day" data-date="2026-10-28" style="position:absolute;left:0;top:0;width:500px;height:1600px"></div></div></div>
+  <button id="outside" style="position:fixed;right:20px;top:20px">外部</button><script type="module">
+  import {createTravelWeekLayer} from '/src/integrations/admin/tabs/task/travel/week-interaction.ts';
+  import {loadSettings} from '/src/core/data/settings.ts';await loadSettings();
+  const iso=h=>'2026-10-28T'+String(h).padStart(2,'0')+':00:00.000Z';
+  const action=(id,start,end)=>({id,revision:1,plannedStartAt:iso(start),plannedEndAt:iso(end),ended:false,actual:{start:{atUtc:null,pendingAtUtc:null},end:{atUtc:null,pendingAtUtc:null}}});
+  const point=(pointId,hour,front,rear)=>({pointId,plannedAtUtc:iso(hour),attachmentKind:'action',role:front&&rear?'start':rear?'start':'end',ownerActionId:rear||front,ownerCheckpointId:null,frontActionId:front,rearActionId:rear,location:'接合地点',actionLabel:'抵达',note:'备注',actualFrontEndAtUtc:null,actualRearStartAtUtc:null,actualAtUtc:null});
+  window.snap={item:{id:'trip',revision:1,completed:false,cancelled:false},profile:{cancelledAtUtc:null},actions:[action('front',10,11),action('rear',11,12)],canonicalPoints:[point('start',10,null,'front'),point('join',11,'front','rear'),point('end',12,'rear',null)],checkpoints:[],transportations:[],capabilities:{canEditPlan:true,canEditStructure:true}};
+  window.snap.segments=window.snap.actions.map(a=>({actionId:a.id,transportationId:null,plannedStartAt:a.plannedStartAt,plannedEndAt:a.plannedEndAt}));
+  window.writes=[];window.generation=1;window.editing='trip';window.dataDir='isolated-split-fixture';
+  const controller={getPlanEditGeneration:()=>window.generation,getState:()=>({expectedDataDir:window.dataDir,currentSnapshot:window.snap}),queueEditPlan:(item,payload)=>window.writes.push({item,payload})};
+  const host=document.querySelector('#host');
+  window.layer=createTravelWeekLayer(host,{getTravelListWeek:()=>({items:[{itemId:'trip'}]}),getTravelSnapshot:()=>window.snap,getTravelEditMode:()=>({editingItemId:window.editing,selectedItemId:'trip'}),getTravelController:()=>controller,onTravelError:m=>{window.lastError=m;},onTravelExitEdit:()=>{window.editing=null;},zone:()=>({baseOffset:'+00:00',replacements:[]})});
+  window.render=()=>{window.layer.syncLines(56);window.layer.renderIntoDays(56,[{date:'2026-10-28',start:Date.parse(iso(0)),end:Date.parse('2026-10-29T00:00:00Z')}]);};
+  host.addEventListener('pointerdown',e=>window.layer.tryPointerDown(e));host.addEventListener('pointermove',e=>window.layer.onPointerMove(e));host.addEventListener('pointerup',e=>window.layer.onPointerUp(e));
+  document.addEventListener('keydown',e=>{if(e.defaultPrevented||document.querySelector('.orbita-standard-popover.is-open'))return;window.layer.onKeyDown(e);});window.render();window.ready=true;
+  </script></body></html>`}));
+  await page.goto('http://127.0.0.1:1420/__travel-split-qa');await page.waitForFunction(()=>window.ready);
+  const drag=async(zone)=>{
+    const point=page.locator('[data-travel-point="join"]');const rect=await point.boundingBox();
+    const body=await page.locator('.arrangement-days').boundingBox();
+    const fraction=zone==='frontEnd'?1/6:zone==='rearStart'?5/6:1/2;
+    await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height*fraction);await page.mouse.down();
+    await page.mouse.move(rect.x+rect.width/2,body.y+(zone==='frontEnd'?10.5:11.5)*56,{steps:4});await page.mouse.up();
+  };
+  await drag('frontEnd');
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  await page.locator('.orbita-standard-popover.is-open').getByText(/：复制两端$/).waitFor();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  assert.equal(await page.evaluate(()=>window.editing),'trip');
+  await drag('frontEnd');await page.locator('.orbita-standard-popover.is-open').getByText(/：给前段$/).click();
+  await page.waitForFunction(()=>window.writes.length===1);
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),1);
+  const front=await page.evaluate(()=>window.writes[0]);
+  assert.equal(front.payload.edit.zone,'frontEnd');assert.equal(front.payload.edit.splitPolicies.movingFrontEnd,'front');
+  await page.keyboard.press('Escape');await page.evaluate(()=>{window.editing='trip';window.writes=[];window.render();});
+  await drag('rearStart');await page.locator('.orbita-standard-popover.is-open').getByText(/：给后段$/).click();
+  await page.waitForFunction(()=>window.writes.length===1);
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),1);
+  const rear=await page.evaluate(()=>window.writes[0]);
+  assert.equal(rear.payload.edit.zone,'rearStart');assert.equal(rear.payload.edit.splitPolicies.movingRearStart,'rear');
+  await page.keyboard.press('Escape');await page.evaluate(()=>{window.editing='trip';window.writes=[];window.render();});
+  await drag('frontEnd');await page.evaluate(()=>{window.generation++;});await page.locator('.orbita-standard-popover.is-open').getByText(/：复制两端$/).click();
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  await page.evaluate(()=>{window.generation=1;window.render();});
+  await drag('frontEnd');await page.locator('#outside').click();
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  await drag('frontEnd');await page.evaluate(()=>{window.dataDir='another-fixture';});
+  await page.locator('.orbita-standard-popover.is-open').getByText(/：复制两端$/).click();
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  await page.evaluate(()=>{window.dataDir='isolated-split-fixture';window.render();});
+  await drag('frontEnd');await page.evaluate(()=>{window.editing='other-trip';window.render();});
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  await page.evaluate(()=>{window.editing='trip';window.render();});
+  await drag('both');
+  assert.equal(await page.evaluate(()=>window.writes.length),1);
+  assert.equal(await page.locator('.orbita-standard-popover.is-open').count(),0);
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>{
+    window.editing='trip';window.writes=[];
+    const iso=h=>'2026-10-28T'+String(h).padStart(2,'0')+':00:00.000Z';
+    const tail={...structuredClone(window.snap.actions[1]),id:'tail',plannedStartAt:iso(12),plannedEndAt:iso(13)};
+    window.snap.actions.push(tail);window.snap.segments.push({actionId:'tail',transportationId:null,plannedStartAt:iso(12),plannedEndAt:iso(13)});
+    window.snap.canonicalPoints[2].rearActionId='tail';window.snap.canonicalPoints[2].ownerActionId='tail';
+    window.snap.canonicalPoints.push({...structuredClone(window.snap.canonicalPoints[2]),pointId:'tail-end',plannedAtUtc:iso(13),frontActionId:'tail',rearActionId:null});window.render();
+  });
+  const segment=await page.locator('[data-travel-segment="rear"]').boundingBox();
+  await page.keyboard.down('Alt');await page.mouse.move(segment.x+segment.width/2,segment.y+segment.height/2);await page.mouse.down();
+  await page.mouse.move(segment.x+segment.width/2,segment.y+segment.height/2+28,{steps:4});await page.mouse.up();await page.keyboard.up('Alt');
+  await page.locator('.orbita-standard-popover.is-open').getByText('后段起点：给前段',{exact:true}).click();
+  await page.locator('.orbita-standard-popover.is-open').getByText('前段终点：给后段',{exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  await page.locator('.orbita-standard-popover.is-open').getByText('前段终点：给后段',{exact:true}).click();
+  await page.waitForFunction(()=>window.writes.length===1,undefined,{timeout:3000}).catch(async error=>{throw Error(error.message+' '+JSON.stringify(await page.evaluate(()=>({writes:window.writes,error:window.lastError,editing:window.editing,generation:window.generation,body:document.body.textContent,active:[...document.querySelectorAll('.orbita-standard-popover.is-open')].map(n=>n.textContent)}))));});
+  const detached=await page.evaluate(()=>window.writes[0].payload.edit);
+  assert.equal(detached.kind,'moveDetached');assert.deepEqual(detached.splitPolicies,{movingRearStart:'front',movingFrontEnd:'rear'});
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  await page.keyboard.press('Escape');await page.evaluate(()=>{window.editing='trip';window.writes=[];window.render();});
+  await drag('frontEnd');await page.evaluate(()=>window.layer.dispose());
+  await page.waitForFunction(()=>!document.querySelector('.orbita-standard-popover.is-open'));
+  assert.equal(await page.evaluate(()=>window.writes.length),0);
+  assert.deepEqual(errors,[]);
+  console.log('PASS: real pointer hit regions defer split writes until choice; Escape cancels without exiting; front/rear policies and generation guard work.');
+}finally{await browser.close();}

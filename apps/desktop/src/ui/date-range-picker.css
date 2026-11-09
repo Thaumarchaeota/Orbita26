@@ -9,7 +9,7 @@
   gap: 8px;
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
   border-radius: var(--finance-control-radius, 8px);
   background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
   color: var(--ledger-text);
@@ -49,7 +49,7 @@
   background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
   border: 1px solid color-mix(in srgb, var(--ledger-border) 70%, transparent);
   border-radius: var(--finance-control-radius, 8px);
-  box-shadow: var(--finance-popover-shadow, 0 2px 8px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.12));
+  box-shadow: var(--finance-popover-shadow, 0 2px 8px var(--insight-shadow-color-6, rgba(0, 0, 0, 0.06)), 0 12px 32px var(--insight-shadow-color-12, rgba(0, 0, 0, 0.12)));
   padding: 0;
   overflow: hidden;
 }
@@ -59,11 +59,11 @@
   flex-wrap: wrap;
   gap: 4px;
   padding: 8px;
-  border-bottom: 1px solid var(--ledger-border, #e5e7eb);
+  border-bottom: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
 }
 
 .orbita-date-range-shortcut {
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
   background: var(--ledger-surface, #fff);
   border-radius: 999px;
   padding: 4px 10px;
@@ -78,4 +78,112 @@
 
 .orbita-date-range-panel .orbita-mini-cal {
   padding: 8px;
+}
+
+html[data-insight-theme] .orbita-date-range-picker {
+  --orbita-picker-surface: var(--insight-surface-elevated, var(--insight-card-bg, #fff));
+  --orbita-picker-surface-subtle: var(--insight-surface-sunken, var(--insight-surface-subtle, #f1f5f9));
+  --orbita-picker-border: var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  --orbita-picker-text: var(--insight-text-primary, #243044);
+  --orbita-picker-muted: var(--insight-text-secondary, #66758a);
+  --orbita-picker-hover: var(--insight-control-hover, #eef2f7);
+  --orbita-picker-selected: var(--insight-control-selected, #e6eef9);
+  --orbita-picker-accent: var(--insight-primary, #4b78b8);
+  --orbita-picker-focus: var(--insight-focus-ring, color-mix(in srgb, var(--insight-primary, #4b78b8) 30%, transparent));
+}
+
+html[data-insight-theme] .orbita-date-range-picker-btn,
+html[data-insight-theme] .orbita-date-range-picker-menu {
+  border-color: var(--orbita-picker-border);
+  border-radius: var(--insight-radius-md, 4px);
+  background-color: var(--orbita-picker-surface);
+  color: var(--orbita-picker-text);
+  box-shadow: var(--insight-shadow-panel, 0 4px 12px var(--insight-shadow-color-14));
+}
+
+html[data-insight-theme] .orbita-date-range-picker-menu {
+  --orbita-picker-surface: var(--insight-surface-elevated, var(--insight-card-bg, #fff));
+  --orbita-picker-surface-subtle: var(--insight-surface-sunken, var(--insight-surface-subtle, #f1f5f9));
+  --orbita-picker-border: var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  --orbita-picker-text: var(--insight-text-primary, #243044);
+  --orbita-picker-muted: var(--insight-text-secondary, #66758a);
+  --orbita-picker-hover: var(--insight-control-hover, #eef2f7);
+  --orbita-picker-selected: var(--insight-control-selected, #e6eef9);
+  --orbita-picker-accent: var(--insight-primary, #4b78b8);
+}
+
+html[data-insight-theme] .orbita-date-range-picker-btn:hover,
+html[data-insight-theme] .orbita-date-range-picker-btn.is-open {
+  border-color: var(--orbita-picker-accent);
+  background-color: var(--orbita-picker-hover);
+}
+
+html[data-insight-theme] .orbita-date-range-picker-btn:focus-visible,
+html[data-insight-theme] .orbita-date-range-shortcut:focus-visible {
+  outline: 2px solid var(--orbita-picker-accent);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .orbita-date-range-picker-label.is-placeholder,
+html[data-insight-theme] .orbita-date-range-picker-chevron svg {
+  color: var(--orbita-picker-muted);
+}
+
+html[data-insight-theme] .orbita-date-range-shortcuts {
+  border-bottom-color: var(--orbita-picker-border);
+}
+
+html[data-insight-theme] .orbita-date-range-shortcut {
+  border-color: var(--orbita-picker-border);
+  border-radius: var(--insight-radius-xs, 2px);
+  background: var(--orbita-picker-surface);
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] .orbita-date-range-shortcut:hover {
+  background: var(--orbita-picker-hover);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-head,
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-cell {
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-nav {
+  border-radius: var(--insight-radius-xs, 2px);
+  color: var(--orbita-picker-muted);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-nav:hover,
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-cell:hover:not(.is-active):not(.is-empty) {
+  background: var(--orbita-picker-hover);
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-week {
+  color: var(--orbita-picker-muted);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-cell {
+  border-radius: var(--insight-radius-xs, 2px);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-cell.is-today {
+  color: var(--orbita-picker-accent);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-cell.is-in-range:not(.is-active) {
+  background: var(--orbita-picker-selected);
+  color: var(--orbita-picker-accent);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-cell.is-active {
+  background: var(--orbita-picker-accent);
+  color: var(--insight-on-primary, #fff);
+}
+
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-nav:focus-visible,
+html[data-insight-theme] .orbita-date-range-picker .orbita-mini-cal-cell:focus-visible {
+  outline: 2px solid var(--orbita-picker-accent);
+  outline-offset: 1px;
 }

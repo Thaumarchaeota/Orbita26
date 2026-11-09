@@ -9,6 +9,10 @@ edition = "2021"
 name = "orbita_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Explicit integration-test seam only; never enabled by the desktop runtime.
+finance-v2-test-support = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -19,15 +23,17 @@ tauri-plugin-dialog = "2"
 tauri-plugin-frame = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 base64 = "0.22"
 image = "0.25"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "stream"] }
 futures-util = "0.3"
 tokio = { version = "1", features = ["sync", "macros", "time"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+chrono-tz = { version = "0.10.4", default-features = false, features = ["std"] }
 uuid = { version = "1", features = ["v4"] }
 sha2 = "0.10"
+zip = "2"
 regex = "1"
 url = "2"
 sysinfo = "0.33"

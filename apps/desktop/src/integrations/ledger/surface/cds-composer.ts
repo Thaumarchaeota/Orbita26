@@ -1,3 +1,5 @@
+import { mountDecoupledDatePicker, type DecoupledDatePickerHandle } from "../../../ui/decoupled-date-picker";
+import { mountDecoupledTimePicker, type DecoupledTimePickerHandle } from "../../../ui/decoupled-time-picker";
 import {
   DEFAULT_CURRENCY,
   REMARK_MAX_LENGTH,
@@ -10,8 +12,6 @@ import {
   validateOpenCurrency,
 } from "../domain/account-validate";
 import { buildPostingsFromSimple } from "../domain/entry";
-import { mountDatePicker, type DatePickerHandle } from "../../../ui/date-picker";
-import { mountTimePicker, type TimePickerHandle } from "../../../ui/time-picker";
 import { mountAccountSelect, type AccountSelectHandle } from "../ui/account-select";
 import { mountCdsAdvancedComposer } from "./cds-composer-advanced";
 import { getTagsFromBox, initTagInput, setTagsInBox } from "./cds-tag-input";
@@ -190,8 +190,8 @@ export function mountCdsComposerForm(
 
   let categoryPicker: AccountSelectHandle;
   let accountPicker: AccountSelectHandle;
-  let datePicker: DatePickerHandle;
-  let timePicker: TimePickerHandle;
+  let datePicker: DecoupledDatePickerHandle;
+  let timePicker: DecoupledTimePickerHandle;
   const advancedComposer = mountCdsAdvancedComposer(advancedMount, signal);
   initTagInput(tagField, tagBox, signal);
 
@@ -289,7 +289,6 @@ export function mountCdsComposerForm(
   categoryPicker = mountAccountSelect(categoryMount, {
     groups: [TYPE_CONFIG.expense.categoryGroup],
     displayMode: "default",
-    placeholder: "请选择",
     onChange: () => {
       markDirty();
       syncSimpleCurrency();
@@ -298,14 +297,13 @@ export function mountCdsComposerForm(
   accountPicker = mountAccountSelect(accountMount, {
     groups: TYPE_CONFIG.expense.accountGroup,
     displayMode: "default",
-    placeholder: "请选择",
     onChange: () => {
       markDirty();
       syncSimpleCurrency();
     },
   });
-  datePicker = mountDatePicker(dateMount, { value: "", compact: true, onChange: markDirty });
-  timePicker = mountTimePicker(timeMount, { placeholder: "时间", onChange: markDirty });
+  datePicker = mountDecoupledDatePicker({ defaultTrigger: { container: dateMount }, value: "", onChange: markDirty });
+  timePicker = mountDecoupledTimePicker({ defaultTrigger: { container: timeMount }, onChange: markDirty });
 
   for (const [tab, btn] of tabBtns) {
     btn.addEventListener(

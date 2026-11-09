@@ -101,3 +101,49 @@
   text-align: center;
   pointer-events: none;
 }
+
+/* Insight owns this adaptation through the document style marker; the base
+ * ledger rules above remain the shared fallback for Panel and Finance. */
+html[data-insight-theme] .orbita-simple-select-btn {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-xs);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .orbita-simple-select-btn:hover {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .orbita-simple-select-btn:focus-visible,
+html[data-insight-theme] .orbita-simple-select-option:focus-visible {
+  outline: 2px solid var(--insight-primary);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--insight-focus-ring);
+}
+
+html[data-insight-theme] .orbita-simple-select-label.is-placeholder,
+html[data-insight-theme] .orbita-simple-select-chevron svg,
+html[data-insight-theme] .orbita-simple-select-option:disabled {
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .orbita-simple-select-menu {
+  background: var(--insight-surface-elevated);
+  border-color: var(--insight-divider);
+  border-radius: var(--insight-radius-sm);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .orbita-simple-select-option {
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .orbita-simple-select-option:hover:not(:disabled) {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .orbita-simple-select-option.is-selected {
+  background: var(--insight-control-selected);
+  color: var(--insight-primary);
+}

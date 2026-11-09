@@ -1,0 +1,154 @@
+.travel-week-trip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 100%;
+  pointer-events: none;
+  color: var(--travel-color, var(--insight-primary));
+  z-index: 6;
+}
+
+.travel-week-segment {
+  position: absolute;
+  left: 0;
+  width: 24px;
+  pointer-events: auto;
+  cursor: grab;
+  isolation: isolate;
+}
+
+.travel-week-segment:active {
+  cursor: grabbing;
+}
+
+.travel-week-point {
+  position: absolute;
+  left: 0;
+  z-index: 1;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.travel-week-empty-circle {
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 2.5px solid currentColor;
+  border-radius: 50%;
+  background: var(--insight-surface-page);
+  display: block;
+}
+
+.travel-week-point:active {
+  cursor: grabbing;
+}
+
+.travel-week-point[data-travel-shared="1"] {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--travel-color, var(--insight-primary)) 22%, transparent) 0%,
+    color-mix(in srgb, var(--travel-color, var(--insight-primary)) 22%, transparent) 33%,
+    transparent 33%,
+    transparent 67%,
+    color-mix(in srgb, var(--travel-color, var(--insight-primary)) 22%, transparent) 67%,
+    color-mix(in srgb, var(--travel-color, var(--insight-primary)) 22%, transparent) 100%
+  );
+  border-radius: 4px;
+}
+
+.travel-week-point.is-circle {
+  background: transparent;
+}
+
+.travel-week-point svg {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.travel-week-trip.is-selected .travel-week-segment {
+  filter: drop-shadow(0 0 2px var(--travel-color, var(--insight-primary)));
+}
+
+.travel-week-trip.is-selected .travel-week-point svg {
+  filter: drop-shadow(0 0 2px var(--travel-color, var(--insight-primary)));
+}
+
+.travel-week-dash line {
+  stroke-width: var(--travel-stroke, 2.5px);
+}
+
+.arrangement-week .arrangement-day > .arrangement-week-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--insight-surface-page) 70%, transparent);
+  opacity: 0;
+  transition: opacity 480ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@supports (backdrop-filter: blur(3px)) {
+  .arrangement-week .arrangement-day > .arrangement-week-glass {
+    background: color-mix(in srgb, var(--insight-surface-page) 36%, transparent);
+    backdrop-filter: blur(3px);
+  }
+}
+
+.arrangement-week.is-travel-editing .arrangement-day > .arrangement-week-glass {
+  opacity: 1;
+  transition: opacity 640ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrangement-week .arrangement-day > .arrangement-week-glass,
+  .arrangement-week.is-travel-editing .arrangement-day > .arrangement-week-glass {
+    transition: none;
+  }
+}
+
+.arrangement-week.is-travel-editing .week-health-event {
+  z-index: 3;
+}
+
+.arrangement-week.is-travel-editing .travel-week-trip,
+.arrangement-week.is-travel-editing .travel-week-foreground {
+  z-index: 7;
+  pointer-events: auto;
+}
+
+.travel-week-time-float {
+  position: fixed;
+  z-index: 80;
+  min-width: 12rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--insight-border, rgba(255, 255, 255, 0.12));
+  background: var(--insight-surface-elevated, var(--insight-surface));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.travel-week-time-float label {
+  font-size: 0.75rem;
+  color: var(--insight-text-muted);
+}
+
+.travel-week-time-trigger-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}

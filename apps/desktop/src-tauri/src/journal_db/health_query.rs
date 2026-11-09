@@ -90,6 +90,7 @@ pub struct MealEvent {
     pub id: String,
     pub occurred_at_utc: i64,
     pub meal_type: Option<String>,
+    pub icon_key: Option<String>,
     pub description: Option<String>,
     pub kcal: Option<f64>,
 }
@@ -637,6 +638,7 @@ fn read_track(conn: &Connection, from_utc: i64, to_utc: i64) -> Result<HealthTra
                 id,
                 occurred_at_utc: occurred,
                 meal_type: meal.get("slot").and_then(|v| v.as_str()).map(str::to_string),
+                icon_key: None,
                 description: meal.get("text").and_then(|v| v.as_str()).map(str::to_string),
                 kcal: meal.get("kcal").and_then(|v| v.as_f64()),
             });

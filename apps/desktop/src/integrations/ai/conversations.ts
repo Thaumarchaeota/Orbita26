@@ -6,6 +6,10 @@ import { defaultAiConfig, getAiConfig, type AiConfig } from "./config";
 export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
+  reasoning?: string;
+  createdAt?: string;
+  sources?: { title: string; url: string }[];
+  searchStatus?: string;
 };
 
 export type ConversationMeta = {
@@ -13,6 +17,8 @@ export type ConversationMeta = {
   title: string;
   updatedAt: string;
 };
+
+export type ThinkingEffort = "off" | "low" | "medium" | "high";
 
 export type Conversation = {
   id: string;
@@ -22,6 +28,8 @@ export type Conversation = {
   activeEntryId: string;
   activeModel: string;
   updatedAt: string;
+  titleLocked?: boolean;
+  thinkingEffort?: ThinkingEffort;
 };
 
 const WEB_CONV_LEGACY = "orbita.data.ai.conversations";
@@ -71,6 +79,7 @@ export function newConversation(config?: AiConfig): Conversation {
     activeEntryId: ai.activeEntryId,
     activeModel: ai.activeModel,
     updatedAt: nowIso(),
+    thinkingEffort: "off",
   };
 }
 
@@ -155,11 +164,101 @@ export function titleFromMessage(text: string): string {
   return t.length > 8 ? `${t.slice(0, 8)}…` : t;
 }
 
-export async function uniqueConversationTitle(base: string, excludeId?: string): Promise<string> {
-  const list = await listConversations();
+export async function uniqueConversationTitle(
+  base: string,
+  excludeId?: string,
+  source?: ConversationMeta[],
+): Promise<string> {
+  const list = source ?? (await listConversations());
   const used = new Set(list.filter((c) => c.id !== excludeId).map((c) => c.title));
   if (!used.has(base)) return base;
   let n = 2;
   while (used.has(`${base} ${n}`)) n++;
   return `${base} ${n}`;
+}
+
+function insightWebKey(): string {
+  try {
+    const dir = getSettings().dataDir.trim() || "orbita-data";
+    return `orbita.data.stores.${dir}.ai.insight.conversations`;
+  } catch {
+    return "orbita.data.ai.insight.conversations";
+  }
+}
+
+function readInsightWebConversations(): Conversation[] {
+  try {
+    const raw = localStorage.getItem(insightWebKey());
+    if (raw) return JSON.parse(raw) as Conversation[];
+  } catch {
+    /* ignore */
+  }
+  return [];
+}
+
+function writeInsightWebConversations(conversations: Conversation[]) {
+  localStorage.setItem(insightWebKey(), JSON.stringify(conversations));
+}
+
+async function migrateInsightWebToDisk(): Promise<void> {
+  if (!isTauri()) return;
+  const web = readInsightWebConversations();
+  if (web.length === 0) return;
+  for (const conv of web) {
+    try {
+      await invoke<Conversation>("read_insight_ai_conversation", { id: conv.id });
+    } catch {
+      try {
+        await invoke("write_insight_ai_conversation", { conversation: conv });
+      } catch {
+        /* keep web copy if disk write fails */
+        return;
+      }
+    }
+  }
+  localStorage.removeItem(insightWebKey());
+}
+
+export async function listInsightConversations(): Promise<ConversationMeta[]> {
+  if (isTauri()) {
+    await migrateInsightWebToDisk();
+    return invoke<ConversationMeta[]>("list_insight_ai_conversations");
+  }
+  return readInsightWebConversations()
+    .map((c) => ({ id: c.id, title: c.title, updatedAt: c.updatedAt }))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function loadInsightConversation(id: string): Promise<Conversation> {
+  if (isTauri()) {
+    return invoke<Conversation>("read_insight_ai_conversation", { id });
+  }
+  const found = readInsightWebConversations().find((c) => c.id === id);
+  if (!found) throw new Error("conversation not found");
+  return found;
+}
+
+export async function saveInsightConversation(conversation: Conversation): Promise<void> {
+  conversation.updatedAt = nowIso();
+  if (isTauri()) {
+    await invoke("write_insight_ai_conversation", { conversation });
+    return;
+  }
+  const all = readInsightWebConversations();
+  const idx = all.findIndex((c) => c.id === conversation.id);
+  if (idx >= 0) all[idx] = conversation;
+  else all.push(conversation);
+  writeInsightWebConversations(all);
+}
+
+export async function deleteInsightConversation(id: string): Promise<void> {
+  if (isTauri()) {
+    await invoke("delete_insight_ai_conversation", { id });
+    return;
+  }
+  writeInsightWebConversations(readInsightWebConversations().filter((c) => c.id !== id));
+}
+
+export async function uniqueInsightConversationTitle(base: string, excludeId?: string): Promise<string> {
+  return uniqueConversationTitle(base, excludeId, await listInsightConversations());
 }

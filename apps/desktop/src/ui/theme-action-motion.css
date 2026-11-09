@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: #c9a227;
+  background: var(--insight-warning, #c9a227);
   color: #fff;
   border: none;
   box-shadow: none;
@@ -13,18 +13,28 @@
   cursor: default;
 }
 
-.orbita-action-spinner {
+.orbita-action-pending-loader {
+  display: flex;
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: orbita-action-spin 0.7s linear infinite;
+  gap: 4px;
+  align-items: center;
+  height: calc(var(--orbita-button-icon-size, 6px) * 2);
 }
 
-@keyframes orbita-action-spin {
-  to { transform: rotate(360deg); }
+.orbita-action-pending-loader span {
+  width: var(--orbita-button-icon-size, 6px);
+  height: var(--orbita-button-icon-size, 6px);
+  background: #fff;
+  border-radius: 50%;
+  animation: orbita-action-bounce 1s ease-in-out infinite;
+}
+
+.orbita-action-pending-loader span:nth-child(2) { animation-delay: 0.15s; }
+.orbita-action-pending-loader span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes orbita-action-bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(calc(var(--orbita-button-icon-size, 6px) * -1)); }
 }
 
 .orbita-action-btn.is-action-success,
@@ -32,10 +42,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #5a9a6a;
-  color: #fff;
+  background: var(--insight-success);
+  color: var(--insight-on-primary);
   border: none;
-  box-shadow: 0 3px 0 #4a7a5a;
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--insight-success) 72%, #000);
   opacity: 1;
   filter: none;
   cursor: default;
@@ -45,8 +55,8 @@
 .orbita-action-btn.is-action-success .ledger-btn-icon,
 .orbita-action-btn.is-action-success .btn-icon {
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: var(--orbita-button-icon-size, 18px);
+  height: var(--orbita-button-icon-size, 18px);
   animation: orbita-check-pop 0.55s ease;
 }
 
@@ -60,10 +70,10 @@
 
 .orbita-action-btn.is-action-error,
 .orbita-action-btn.is-action-error:disabled {
-  background: #c06060;
-  color: #fff;
-  border-color: #a05050;
-  box-shadow: 0 3px 0 #a05050;
+  background: var(--insight-danger);
+  color: var(--insight-on-primary);
+  border-color: var(--insight-danger);
+  box-shadow: 0 3px 0 color-mix(in srgb, var(--insight-danger) 72%, #000);
   opacity: 1;
   filter: none;
   cursor: default;
@@ -78,7 +88,7 @@
 }
 
 .orbita-action-reject {
-  outline: 2px solid #c06060;
+  outline: 2px solid var(--insight-danger);
   animation: orbita-reject-shake 0.45s ease;
 }
 
@@ -112,7 +122,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orbita-action-spinner,
+  .orbita-action-pending-loader span,
   .orbita-action-btn.is-action-success .orbita-action-icon,
   .orbita-action-btn.is-action-success .ledger-btn-icon,
   .orbita-action-btn.is-action-success .btn-icon,

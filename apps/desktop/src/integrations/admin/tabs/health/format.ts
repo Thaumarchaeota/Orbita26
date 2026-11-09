@@ -24,9 +24,60 @@ export function unixToLocal(ts: number): { date: string; time: string } {
   };
 }
 
+export const MAX_SESSION_SPAN_SEC = 18 * 3600;
+
+type SessionPeriod = { name: string; startMin: number; endMin: number; wrap: boolean };
+
+const SESSION_PERIODS: SessionPeriod[] = [
+  { name: "午夜", startMin: 0, endMin: 5 * 60, wrap: false },
+  { name: "晨间", startMin: 5 * 60, endMin: 10 * 60, wrap: false },
+  { name: "上午", startMin: 7 * 60, endMin: 13 * 60, wrap: false },
+  { name: "午间", startMin: 11 * 60, endMin: 14 * 60, wrap: false },
+  { name: "下午", startMin: 13 * 60, endMin: 20 * 60, wrap: false },
+  { name: "晚间", startMin: 19 * 60, endMin: 1 * 60, wrap: true },
+];
+
+function beijingMinutesOfDay(ts: number): number {
+  const { time } = unixToLocal(ts);
+  const [hh, mm] = time.split(":").map(Number);
+  return hh * 60 + mm;
+}
+
+function periodContainsStart(m: number, p: SessionPeriod): boolean {
+  return p.wrap ? m >= p.startMin || m < p.endMin : m >= p.startMin && m < p.endMin;
+}
+
+function periodContainsEnd(m: number, p: SessionPeriod): boolean {
+  return p.wrap ? m > p.startMin || m <= p.endMin : m > p.startMin && m <= p.endMin;
+}
+
+function minutesSincePeriodStart(m: number, p: SessionPeriod): number {
+  if (p.wrap) return m >= p.startMin ? m - p.startMin : m + 1440 - p.startMin;
+  return m - p.startMin;
+}
+
+export function defaultSessionTitle(startUtc: number, endUtc: number): string {
+  const md = unixToLocal(startUtc).date.slice(5);
+  const startMin = beijingMinutesOfDay(startUtc);
+  const endMin = beijingMinutesOfDay(endUtc);
+  let best: SessionPeriod | null = null;
+  let bestAge = Infinity;
+  for (const p of SESSION_PERIODS) {
+    if (!periodContainsStart(startMin, p)) continue;
+    const age = minutesSincePeriodStart(startMin, p);
+    if (age < bestAge) {
+      bestAge = age;
+      best = p;
+    }
+  }
+  if (best && periodContainsEnd(endMin, best)) return `${md} ${best.name}工作时间`;
+  return `${md}工作时间`;
+}
+
 const TRACK_SPAN_SEC = 26 * 3600;
 export const TRACK_DATA_PAD_DAYS = 4;
 export const TRACK_VIEW_SPAN_SEC = TRACK_SPAN_SEC;
+export const TRACK_MIN_VIEW_SPAN_SEC = 4 * 3600;
 
 export function beijingNowUnix(): number {
   return Math.floor(Date.now() / 1000);
@@ -66,6 +117,8 @@ export function defaultTrackWindow(date: string): { fromUtc: number; toUtc: numb
   };
 }
 
+export const TRACK_FUTURE_HORIZON_SEC = 10 * 365 * 86400;
+
 export function clampViewWindow(
   fromUtc: number,
   toUtc: number,
@@ -73,12 +126,38 @@ export function clampViewWindow(
   maxToUtc: number,
 ): { fromUtc: number; toUtc: number } {
   const span = toUtc - fromUtc;
-  const maxTo = Math.min(maxToUtc, beijingNowUnix());
+  const maxTo = maxToUtc;
   let nextTo = Math.min(toUtc, maxTo);
   let nextFrom = nextTo - span;
   if (nextFrom < minFromUtc) {
     nextFrom = minFromUtc;
     nextTo = Math.min(minFromUtc + span, maxTo);
+  }
+  return { fromUtc: Math.floor(nextFrom), toUtc: Math.ceil(nextTo) };
+}
+
+export function zoomViewWindow(
+  fromUtc: number,
+  toUtc: number,
+  anchorUtc: number,
+  factor: number,
+  minFromUtc: number,
+  maxToUtc: number,
+  minSpan = TRACK_MIN_VIEW_SPAN_SEC,
+  maxSpan = TRACK_VIEW_SPAN_SEC,
+): { fromUtc: number; toUtc: number } {
+  const span0 = Math.max(1, toUtc - fromUtc);
+  const span = Math.min(maxSpan, Math.max(minSpan, span0 * factor));
+  const t = Math.min(1, Math.max(0, (anchorUtc - fromUtc) / span0));
+  let nextFrom = anchorUtc - span * t;
+  let nextTo = nextFrom + span;
+  if (nextTo > maxToUtc) {
+    nextTo = maxToUtc;
+    nextFrom = nextTo - span;
+  }
+  if (nextFrom < minFromUtc) {
+    nextFrom = minFromUtc;
+    nextTo = Math.min(nextFrom + span, maxToUtc);
   }
   return { fromUtc: Math.floor(nextFrom), toUtc: Math.ceil(nextTo) };
 }

@@ -9,8 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test": "powershell -NoProfile -ExecutionPolicy Bypass -File ..\\..\\scripts\\test-session.ps1",
-    "test:run": "vitest run && node scripts/cds-scroll-chromium.mjs && node scripts/cds-motion-evidence.mjs",
-    "test:chromium-scroll": "node scripts/cds-scroll-chromium.mjs"
+    "test:run": "vitest run"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
@@ -26,6 +25,8 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "dompurify": "^3.4.12",
+    "katex": "^0.18.9",
+    "maplibre-gl": "6.13.0",
     "marked": "^18.0.7",
     "papaparse": "^5.5.4"
   }

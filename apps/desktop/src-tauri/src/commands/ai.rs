@@ -22,6 +22,11 @@ pub async fn ai_generate_title(request: ai::AiTitleRequest) -> Result<String, St
     ai::generate_title(request).await
 }
 
+#[tauri::command]
+pub async fn ai_complete(request: ai::AiCompleteRequest) -> Result<String, String> {
+    ai::complete(request).await
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentToolConfirmRequest {

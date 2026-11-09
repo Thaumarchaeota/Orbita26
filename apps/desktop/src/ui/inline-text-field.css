@@ -1,0 +1,54 @@
+.orbita-inline-text-field {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+.orbita-inline-text-field__display {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 1lh;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: inherit;
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.orbita-inline-text-field__display:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.orbita-inline-text-field__display.is-empty {
+  color: var(--orbita-inline-placeholder-color, var(--insight-text-placeholder));
+}
+.orbita-inline-text-field__input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 1lh;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+  resize: none;
+}
+.orbita-inline-text-field.is-content-sized .orbita-inline-text-field__input {
+  width: auto;
+  max-width: 100%;
+  field-sizing: content;
+}
+.orbita-inline-text-field__input::placeholder {
+  color: var(--orbita-inline-placeholder-color, var(--insight-text-placeholder));
+}

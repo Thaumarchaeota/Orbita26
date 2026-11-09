@@ -1,7 +1,8 @@
 import { getSettings, loadSettings, patchSettings } from "../../core/settings";
 import { escAttr, escHtml } from "../../core/html";
 import { closePopover, crossfadeSwap, isPopoverOpen, openPopover, type MotionTrigger } from "../../ui/motion";
-import { mountContextMenu } from "../../ui/context-menu";
+import { showCommandMenuAt } from "../../ui/command-menu-popover";
+import { getConfirmDialog } from "../shell/dialog";
 import { CHEVRON_SVG } from "../ai/icons";
 import {
   didaAuthStatus,
@@ -123,8 +124,7 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
   const taskDialog = mountTaskDialog(dialogRoot);
   const taskDetailDialog = mountTaskDetailDialog(dialogRoot);
   const playSuccess = mountSuccessToast(section);
-  const ctxAc = new AbortController();
-  const taskCtxMenu = mountContextMenu(ctxAc.signal);
+  const confirmDeleteTask = getConfirmDialog();
   registerTicktickProjectsProvider(() => projects);
 
   let projects: DidaProject[] = [];
@@ -521,14 +521,14 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
     if (!projectId || !taskId) return;
     const task = allTasks.find((t) => t.projectId === projectId && t.id === taskId);
     if (!task) return;
-    taskCtxMenu.show(
+    showCommandMenuAt(
       e.clientX,
       e.clientY,
       [
-        { action: "edit", label: "编辑" },
-        { action: "delete", label: "删除任务", danger: true, confirm: true },
+        { value: "edit", label: "编辑" },
+        { value: "delete", label: "删除任务", danger: true },
       ],
-      (action, trigger) => {
+      (action) => {
         if (action === "edit") {
           void taskDialog(
             {
@@ -542,12 +542,13 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
                 await refresh();
               },
             },
-            trigger,
+            row,
           );
           return;
         }
         if (action === "delete") {
           void (async () => {
+            if (!(await confirmDeleteTask("删除确认", "确定删除该任务？", row))) return;
             try {
               clearUndo();
               row.classList.remove("is-completing", "is-removing");
@@ -559,6 +560,7 @@ export function mountTicktickPanel(shellBody: HTMLElement, dialogRoot: HTMLEleme
           })();
         }
       },
+      { returnFocus: row },
     );
     e.stopPropagation();
   });

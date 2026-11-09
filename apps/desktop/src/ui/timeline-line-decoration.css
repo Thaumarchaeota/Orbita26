@@ -1,0 +1,115 @@
+/* Pure timeline connector visuals (geometry, dash, fade masks, segment glow). */
+.orbita-timeline-line-segment::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 1;
+  height: 100%;
+  width: 2.5px;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: currentColor;
+}
+.orbita-timeline-line-segment.is-planned::before {
+  display: none;
+}
+.orbita-timeline-dash {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  transform: translateX(-50%);
+  overflow: visible;
+}
+.orbita-timeline-line-segment.is-fade-start .orbita-timeline-dash {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--orbita-timeline-fade, 8px));
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--orbita-timeline-fade, 8px));
+}
+.orbita-timeline-line-segment.is-fade-end .orbita-timeline-dash {
+  -webkit-mask-image: linear-gradient(to top, transparent, #000 var(--orbita-timeline-fade, 8px));
+  mask-image: linear-gradient(to top, transparent, #000 var(--orbita-timeline-fade, 8px));
+}
+.orbita-timeline-line-segment.is-fade-start.is-fade-end .orbita-timeline-dash {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--orbita-timeline-fade, 8px),
+    #000 calc(100% - var(--orbita-timeline-fade, 8px)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--orbita-timeline-fade, 8px),
+    #000 calc(100% - var(--orbita-timeline-fade, 8px)),
+    transparent 100%
+  );
+}
+.orbita-timeline-line-segment::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 0;
+  height: 100%;
+  width: 2.5px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--orbita-timeline-glow-primary), var(--orbita-timeline-glow-primary));
+  filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease;
+}
+.orbita-timeline-line-group:hover .orbita-timeline-line-segment::after {
+  opacity: var(--orbita-timeline-glow-opacity);
+}
+.orbita-timeline-line-segment.is-fade-start::before {
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--orbita-timeline-fade, 8px));
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--orbita-timeline-fade, 8px));
+}
+.orbita-timeline-line-segment.is-fade-end::before {
+  -webkit-mask-image: linear-gradient(to top, transparent, #000 var(--orbita-timeline-fade, 8px));
+  mask-image: linear-gradient(to top, transparent, #000 var(--orbita-timeline-fade, 8px));
+}
+.orbita-timeline-line-segment.is-fade-start.is-fade-end::before {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--orbita-timeline-fade, 8px),
+    #000 calc(100% - var(--orbita-timeline-fade, 8px)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--orbita-timeline-fade, 8px),
+    #000 calc(100% - var(--orbita-timeline-fade, 8px)),
+    transparent 100%
+  );
+}
+.orbita-timeline-point.has-icon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 36%, var(--orbita-timeline-glow-primary) 0%, transparent 64%),
+    radial-gradient(circle at 68% 66%, var(--orbita-timeline-glow-primary) 0%, transparent 68%);
+  filter: blur(6px);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  transition: opacity 250ms ease, transform 250ms ease;
+}
+.orbita-timeline-point.has-icon:hover::after {
+  opacity: var(--orbita-timeline-glow-opacity);
+  transform: translate(-50%, -50%) scale(1);
+}

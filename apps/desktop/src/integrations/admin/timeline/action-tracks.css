@@ -1,0 +1,648 @@
+.health-track-card[data-track="4"] .health-track-canvas {
+  height: 180px;
+  pointer-events: none;
+}
+
+.action-track-card .health-track-card-plot {
+  padding: 8px 0;
+}
+
+.action-track-card.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.action-track-card .health-track-card-legend {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-muted, #6b7280);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.action-track-lanes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  bottom: 8px;
+  height: auto;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.action-track-lanes.is-edge-ew,
+.action-track-lanes.is-edge-ew * {
+  cursor: ew-resize !important;
+}
+
+.action-track-lanes.is-edge-ns,
+.action-track-lanes.is-edge-ns * {
+  cursor: ns-resize !important;
+}
+
+.action-track-legend-icon {
+  color: var(--admin-accent, #5b96d1);
+}
+
+.action-track-bg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.action-track-sessions {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.action-track-session-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed #eab308;
+  border-radius: 6px;
+  background: rgba(234, 179, 8, 0.12);
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.action-track-session-time-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: ew-resize;
+  z-index: 6;
+}
+
+.action-track-session-span-resize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12px;
+  cursor: ns-resize;
+  z-index: 6;
+}
+
+.action-track-session-time-resize.is-start {
+  left: 0;
+}
+
+.action-track-session-time-resize.is-end {
+  right: 0;
+}
+
+.action-track-time-chip {
+  position: absolute;
+  z-index: 9;
+  pointer-events: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--insight-surface-panel, #fff);
+  border: 1px solid var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
+  color: var(--insight-text-secondary, #6b7280);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px var(--insight-shadow-color-6);
+}
+
+.action-track-time-chip[data-edge="start"] {
+  transform: translate(-100%, 0);
+  margin-left: -6px;
+}
+
+.action-track-time-chip[data-edge="end"] {
+  transform: translate(0, 0);
+  margin-left: 6px;
+}
+
+.action-track-blocks {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.action-track-block {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: var(--action-fill, var(--admin-accent-bg, #ecf4fa));
+  border: 1px solid var(--action-stroke, var(--admin-accent, #5b96d1));
+  color: var(--insight-text-primary, var(--admin-text, #374151));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 2px 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.action-track-block.is-locked {
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.action-track-block.is-dragging,
+.action-track-block.is-resizing {
+  cursor: grabbing;
+  opacity: 0.92;
+  z-index: 10;
+}
+
+.action-track-block-resize {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 3;
+}
+
+.action-track-block-resize.is-start {
+  left: 0;
+}
+
+.action-track-block-resize.is-end {
+  right: 0;
+}
+
+.action-track-block[data-stroke="none"] {
+  border-style: none;
+}
+
+.action-track-block[data-stroke="solid"] {
+  border-style: solid;
+}
+
+.action-track-block[data-stroke="dashed"] {
+  border-style: dashed;
+}
+
+.action-track-block[data-stroke="dotted"] {
+  border-style: dotted;
+}
+
+.action-track-block[data-stroke="double"] {
+  border-style: double;
+  border-width: 3px;
+}
+
+.action-track-block[data-stroke="dash-dot"] {
+  border-style: solid;
+  border-image: repeating-linear-gradient(
+      90deg,
+      var(--action-stroke) 0 7px,
+      transparent 7px 10px,
+      var(--action-stroke) 10px 13px,
+      transparent 13px 18px
+    )
+    1;
+}
+
+.action-track-block[data-stroke="dash-dot-dot"] {
+  border-style: solid;
+  border-image: repeating-linear-gradient(
+      90deg,
+      var(--action-stroke) 0 7px,
+      transparent 7px 10px,
+      var(--action-stroke) 10px 13px,
+      transparent 13px 16px,
+      var(--action-stroke) 16px 19px,
+      transparent 19px 24px
+    )
+    1;
+}
+
+.action-track-create-preview {
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: rgba(91, 150, 209, 0.18);
+  border: 1px dashed var(--admin-accent, #5b96d1);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.action-track-create-preview.is-session {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: #eab308;
+  border-radius: 6px;
+}
+
+.action-track-error {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  margin: 0;
+  z-index: 6;
+  font-size: 11px;
+  color: #b91c1c;
+}
+
+.action-dialog-target-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.action-dialog-target-kind {
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--admin-border, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--admin-radius-sm, 6px);
+  background: var(--admin-surface, #fff);
+  cursor: pointer;
+}
+
+.action-dialog-target-kind.is-active {
+  background: var(--admin-accent-bg, #ecf4fa);
+  border-color: var(--admin-accent, #5b96d1);
+  color: var(--admin-accent, #5b96d1);
+  font-weight: 600;
+}
+
+.action-dialog-target-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.action-dialog-target-trigger {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--admin-border, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--admin-radius-sm, 6px);
+  background: var(--admin-surface, #fff);
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-dialog-target-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.action-dialog-when {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 108px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.action-dialog-style {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.action-dialog-panel .dialog-field .action-dialog-style input[type="color"] {
+  width: 40px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  border-radius: 8px;
+  background: var(--insight-control-surface-bg, #fff);
+  cursor: pointer;
+}
+
+.action-dialog-panel .dialog-field .action-dialog-style input[type="range"],
+.action-dialog-panel .dialog-field .action-dialog-style input[type="range"]:focus {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.action-dialog-style select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  border-radius: 8px;
+  background: var(--insight-control-surface-bg, #fff);
+  color: var(--insight-text-primary, #374151);
+  font-size: 13px;
+}
+
+.action-dialog-error {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+.action-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--insight-overlay-backdrop-soft);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.action-dialog-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.action-dialog-panel {
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  background: var(--insight-surface-panel, #fff);
+  border: 1px solid var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
+  border-radius: 18px;
+  box-shadow: 0 12px 40px var(--insight-shadow-color-16);
+  color: var(--insight-text-primary, #374151);
+  --ledger-border: var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  --ledger-surface: var(--insight-surface-panel, #fff);
+  --ledger-surface-opaque: var(--insight-surface-panel, #fff);
+  --ledger-text: var(--insight-text-primary, #374151);
+  --ledger-muted: var(--insight-text-secondary, #6b7280);
+  --finance-control-radius: 8px;
+}
+
+.action-dialog-panel.motion-dialog-panel {
+  transform: translate(var(--motion-fly-x, 0px), var(--motion-fly-y, 10px)) scale(var(--motion-fly-scale, 0.94));
+  opacity: 0;
+  transition: transform 0.4s ease, opacity 0.34s ease;
+}
+
+.action-dialog-backdrop.is-open .action-dialog-panel.motion-dialog-panel {
+  transform: translate(0, 0) scale(1);
+  opacity: 1;
+}
+
+.action-dialog-panel .dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--insight-text-primary, #111827);
+  margin-bottom: 14px;
+}
+
+.action-dialog-panel .dialog-field {
+  margin-bottom: 10px;
+}
+
+.action-dialog-panel .dialog-field label {
+  display: block;
+  font-size: 11px;
+  color: var(--insight-text-secondary, #6b7280);
+  margin-bottom: 5px;
+}
+
+.action-dialog-panel .dialog-field input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  border-radius: 12px;
+  background: var(--insight-control-surface-bg, #fff);
+  color: var(--insight-text-primary, #374151);
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.action-dialog-panel .dialog-field input:focus {
+  border-color: var(--insight-primary, #5b96d1);
+}
+
+.action-dialog-panel .dialog-field .orbita-date-picker-input,
+.action-dialog-panel .dialog-field .orbita-time-picker-input,
+.action-dialog-panel .dialog-field .orbita-date-picker-input:focus,
+.action-dialog-panel .dialog-field .orbita-time-picker-input:focus {
+  height: auto;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.action-dialog-panel .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.action-dialog-panel .dialog-btn {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 17px;
+  border: 1px solid var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  background: var(--insight-control-surface-bg, #fff);
+  color: var(--insight-text-primary, #374151);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.action-dialog-panel .dialog-btn-primary {
+  background: var(--insight-primary, #5b96d1);
+  border-color: transparent;
+  color: var(--insight-on-primary, #fff);
+}
+
+/* Scoped overrides keep the Panel's shared read-only track unchanged. */
+html[data-insight-theme] .timeline-app .action-track-card .health-track-card-legend {
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-semibold);
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .timeline-app .action-track-legend-icon {
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .timeline-app :is(.action-track-session-box, .action-track-create-preview.is-session) {
+  border-color: var(--timeline-session-color);
+  background: color-mix(in srgb, var(--timeline-session-color) 12%, transparent);
+}
+
+html[data-insight-theme] .timeline-app .action-track-create-preview:not(.is-session) {
+  border-color: var(--insight-primary);
+  background: color-mix(in srgb, var(--insight-primary) 18%, transparent);
+}
+
+html[data-insight-theme] .timeline-app .action-track-block {
+  background: var(--action-fill, var(--insight-control-selected));
+  border-color: var(--action-stroke, var(--insight-primary));
+  color: var(--insight-text-primary);
+  font-family: inherit;
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-semibold);
+}
+
+html[data-insight-theme] .timeline-app .action-track-time-chip {
+  background: var(--insight-surface-panel);
+  border-color: var(--insight-border-subtle);
+  color: var(--insight-text-secondary);
+  font-family: inherit;
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-semibold);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .timeline-app .action-track-error,
+html[data-insight-theme] .action-dialog-error {
+  color: var(--insight-danger);
+  font-size: var(--insight-font-role-label);
+}
+
+html[data-insight-theme] .action-dialog-backdrop {
+  background: color-mix(in srgb, var(--insight-text-primary) 18%, transparent);
+}
+
+html[data-insight-theme] .action-dialog-panel {
+  color: var(--insight-text-primary);
+  background: var(--insight-surface-panel);
+  border-color: var(--insight-border-subtle);
+  box-shadow: var(--insight-shadow-panel);
+  font-family: inherit;
+  font-size: var(--insight-font-role-dialog-body);
+  font-weight: var(--insight-weight-regular);
+  --ledger-border: var(--insight-border-subtle);
+  --ledger-surface: var(--insight-surface-panel);
+  --ledger-surface-opaque: var(--insight-surface-panel);
+  --ledger-text: var(--insight-text-primary);
+  --ledger-muted: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .action-dialog-panel .dialog-title {
+  color: var(--insight-text-primary);
+  font-size: var(--insight-font-role-dialog-title);
+  font-weight: var(--insight-weight-semibold);
+}
+
+html[data-insight-theme] .action-dialog-panel .dialog-field label {
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-label);
+}
+
+html[data-insight-theme] .action-dialog-panel :is(.dialog-field input, .action-dialog-style select, .action-dialog-target-kind, .action-dialog-target-trigger, .dialog-btn) {
+  background: var(--insight-control-surface-bg);
+  color: var(--insight-text-primary);
+  border-color: var(--insight-border-subtle);
+  font-family: inherit;
+  font-size: var(--insight-font-role-control);
+  font-weight: var(--insight-weight-regular);
+}
+
+html[data-insight-theme] .action-dialog-panel .dialog-field input:focus {
+  border-color: var(--insight-primary);
+}
+
+html[data-insight-theme] .action-dialog-panel .action-dialog-target-kind.is-active {
+  background: var(--insight-control-selected);
+  border-color: var(--insight-primary);
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .action-dialog-panel .dialog-btn-primary {
+  background: var(--insight-primary);
+  border-color: transparent;
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] .action-dialog-panel .dialog-field .orbita-decoupled-picker-trigger {
+  width: calc(var(--orbita-decoupled-trigger-chars) * 1ch + 20px);
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--insight-radius-control);
+}
+
+html[data-insight-theme] .action-dialog-panel .dialog-field .action-dialog-style :is(input[type="color"], input[type="range"]) {
+  font-size: var(--insight-font-role-control);
+}
+
+html[data-insight-theme] .action-dialog-panel .dialog-field .action-dialog-style input[type="range"] {
+  background: transparent;
+  accent-color: var(--insight-primary);
+}
+
+html[data-insight-theme] .action-dialog-panel .action-track-exec-bar button {
+  font-family: inherit;
+  font-size: var(--insight-font-role-control);
+  font-weight: var(--insight-weight-regular);
+}
+
+html[data-insight-theme] .action-dialog-target-menu {
+  font-family: inherit;
+  font-weight: var(--insight-weight-regular);
+  color: var(--insight-text-primary);
+  background: var(--insight-surface-elevated);
+  border-color: var(--insight-border-subtle);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .action-dialog-target-menu .orbita-searchable-select-input {
+  font-family: inherit;
+  font-size: var(--insight-font-role-control);
+  font-weight: var(--insight-weight-regular);
+  color: var(--insight-text-primary);
+  background: var(--insight-surface-sunken);
+  border-color: var(--insight-border-subtle);
+}
+
+html[data-insight-theme] .action-dialog-target-menu .orbita-searchable-select-option {
+  font-family: inherit;
+  font-size: var(--insight-font-role-menu);
+  font-weight: var(--insight-weight-regular);
+  color: var(--insight-text-primary);
+  background: transparent;
+}
+
+html[data-insight-theme] .action-dialog-target-menu .orbita-searchable-select-option:hover {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .action-dialog-target-menu .orbita-searchable-select-option.is-selected {
+  color: var(--insight-primary);
+  background: var(--insight-control-selected);
+}
+
+html[data-insight-theme] .action-dialog-target-menu .orbita-searchable-select-option-sub {
+  font-size: var(--insight-font-role-label);
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .action-dialog-target-menu .orbita-searchable-select-empty {
+  font-family: inherit;
+  font-size: var(--insight-font-role-menu);
+  font-weight: var(--insight-weight-regular);
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .action-dialog-panel .action-track-exec-bar .admin-placeholder-hint {
+  font-family: inherit;
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-regular);
+  color: var(--insight-text-secondary);
+}

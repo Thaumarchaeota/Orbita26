@@ -1,12 +1,12 @@
-import { mountPlaceholderDestination } from "../placeholder";
-import type { InsightDestination } from "../types";
+import type { InsightDestination, InsightDestinationHandle, InsightHostContext } from "../types";
+import { mountTaskTab } from "./task/task-tab";
 
 export const workDestination: InsightDestination = {
   id: "work",
   kind: "domain",
-  label: "工作",
+  label: "任务",
   icon: "work",
-  mount(root) {
-    return mountPlaceholderDestination(root, "工作");
+  mount(root, ctx): InsightDestinationHandle {
+    return mountTaskTab(root, ctx);
   },
 };

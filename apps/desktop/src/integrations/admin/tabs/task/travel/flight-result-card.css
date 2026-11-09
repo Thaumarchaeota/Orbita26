@@ -1,0 +1,24 @@
+/* Shared by first-add query dialog and week-menu style preview. Do not restyle cards in rail.css or task.css. */
+.flight-results { display: flex; flex-direction: column; gap: 20px; margin-top: 16px; }
+.travel-rail-flight-query-dialog.is-selecting .insight-dialog-field { display: none; }
+.travel-rail-flight-query-dialog .flight-results { box-sizing: border-box; margin-top: 0; padding: 4px 16px 16px; }
+.flight-result-card { width: 100%; padding: 12px 20px; border: 1px solid var(--insight-border-color); border-radius: var(--insight-radius-card); background: var(--insight-control-surface-bg); color: var(--insight-text-primary); font: inherit; text-align: left; transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; }
+.flight-result-card.is-selected { border-color: var(--insight-primary); background: var(--insight-control-surface-bg); box-shadow: inset 0 0 0 1px var(--insight-primary); }
+.flight-result-card[role="radio"] { cursor: pointer; }
+@media (hover: hover) {
+  .flight-result-card[role="radio"]:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14); }
+  .flight-result-card.is-selected[role="radio"]:hover { box-shadow: inset 0 0 0 1px var(--insight-primary), 0 6px 20px rgba(0, 0, 0, 0.14); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flight-result-card { transition: none; }
+  .flight-result-card[role="radio"]:hover { transform: none; }
+}
+.flight-result-card[role="radio"]:focus-visible { outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, var(--insight-primary))); outline-offset: 2px; }
+.flight-result-codes { display: grid; grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr); align-items: start; column-gap: 10px; }
+.flight-result-end { display: flex; width: 100%; min-width: 0; max-width: 100%; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.flight-result-plane { display: flex; box-sizing: border-box; width: 20px; height: 20px; min-width: 20px; max-width: 20px; overflow: hidden; align-self: center; align-items: center; justify-self: center; justify-content: center; color: var(--insight-text-secondary); }
+.flight-result-plane svg { display: block; width: 18px; height: 18px; max-width: 18px; max-height: 18px; flex: none; fill: currentColor; }
+.flight-result-code { font-family: "Segoe UI Light", "Segoe UI", sans-serif; font-size: 24px; font-weight: 300; letter-spacing: 0.04em; }
+.flight-result-airport { max-width: 100%; color: var(--insight-text-secondary); font-size: var(--insight-font-body); line-height: 1.15; white-space: nowrap; }
+.flight-result-stamp { display: flex; flex-direction: column; align-items: center; gap: 0; margin-top: 2px; color: var(--insight-text-secondary); font-size: 13px; line-height: 1.15; white-space: nowrap; }
+.flight-result-date { display: none; }

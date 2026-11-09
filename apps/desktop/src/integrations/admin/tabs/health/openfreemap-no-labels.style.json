@@ -1,0 +1,20 @@
+{
+  "version": 8,
+  "name": "Orbita activity thumbnails (no labels)",
+  "sources": {
+    "openmaptiles": {
+      "type": "vector",
+      "url": "https://tiles.openfreemap.org/planet",
+      "attribution": "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
+    }
+  },
+  "layers": [
+    { "id": "background", "type": "background", "paint": { "background-color": "#f7f8f3" } },
+    { "id": "park", "type": "fill", "source": "openmaptiles", "source-layer": "park", "paint": { "fill-color": "#dcebd5", "fill-opacity": 0.8 } },
+    { "id": "wood", "type": "fill", "source": "openmaptiles", "source-layer": "landcover", "filter": ["==", ["get", "class"], "wood"], "paint": { "fill-color": "#d5e7cc", "fill-opacity": 0.55 } },
+    { "id": "water", "type": "fill", "source": "openmaptiles", "source-layer": "water", "paint": { "fill-color": "#cfe7ef" } },
+    { "id": "waterway", "type": "line", "source": "openmaptiles", "source-layer": "waterway", "paint": { "line-color": "#b5dce8", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 17, 2] } },
+    { "id": "road-minor", "type": "line", "source": "openmaptiles", "source-layer": "transportation", "filter": ["match", ["get", "class"], ["minor", "service", "track"], true, false], "paint": { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 17, 2.2] } },
+    { "id": "road-major", "type": "line", "source": "openmaptiles", "source-layer": "transportation", "filter": ["match", ["get", "class"], ["motorway", "trunk", "primary", "secondary", "tertiary"], true, false], "paint": { "line-color": "#f8f4e8", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.7, 17, 3.5] } }
+  ]
+}

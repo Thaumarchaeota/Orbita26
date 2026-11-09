@@ -63,9 +63,143 @@ pub(crate) fn conversations_dir(data_dir: &str) -> PathBuf {
     Path::new(data_dir).join("ai").join("conversations")
 }
 
-fn conversation_path(data_dir: &str, id: &str) -> Result<PathBuf, String> {
+const UI_THEME_ROLE_IDS: &[&str] = &[
+    "surface.chrome", "surface.sidebar", "surface.page", "surface.card", "surface.control", "surface.inset",
+    "text.primary", "text.secondary", "text.placeholder", "text.disabled", "border.subtle", "border.weekGrid", "brand.primary",
+    "brand.primaryForeground", "brand.primaryHover", "state.selection.surface", "state.selection.foreground",
+    "state.focus.ring", "state.focus.foreground", "state.neutral.hover", "state.hover.sidebar", "state.hover.page", "state.neutral.pressed",
+    "state.disabled.surface", "state.disabled.foreground", "semantic.danger.foreground", "semantic.danger.surface",
+    "semantic.success.foreground", "semantic.success.surface", "semantic.warning.foreground", "semantic.warning.surface",
+    "semantic.info.foreground", "semantic.info.surface",
+];
+
+fn exact_keys(value: &serde_json::Value, keys: &[&str], label: &str) -> Result<(), String> {
+    let object = value.as_object().ok_or_else(|| format!("{label} must be an object"))?;
+    if object.len() != keys.len() || object.keys().any(|key| !keys.contains(&key.as_str())) {
+        return Err(format!("{label} contains unknown or missing fields"));
+    }
+    Ok(())
+}
+
+fn fill_surface_hover_colors(theme: &mut serde_json::Value) {
+    let Some(colors) = theme.get_mut("colors").and_then(|value| value.as_object_mut()) else { return };
+    let Some(seed) = colors.get("state.neutral.hover").cloned() else { return };
+    for role in ["state.hover.sidebar", "state.hover.page"] {
+        colors.entry(role.to_owned()).or_insert_with(|| seed.clone());
+    }
+}
+
+fn fill_week_grid_color(theme: &mut serde_json::Value) {
+    // Week-grid lines used to share border.subtle. Copy that color when the role
+    // is absent so existing themes keep the same grid until the user edits it.
+    // This only fills the in-memory document; startup does not rewrite settings.json.
+    let Some(colors) = theme.get_mut("colors").and_then(|value| value.as_object_mut()) else { return };
+    let Some(border) = colors.get("border.subtle").cloned() else { return };
+    colors.entry("border.weekGrid".to_owned()).or_insert(border);
+}
+
+fn fill_theme_hover_roles(ui: &mut super::types::UiPrefs) {
+    if let Some(presets) = ui.insight_theme_presets.as_mut() {
+        for preset in presets {
+            if let Some(theme) = preset.get_mut("theme") {
+                fill_surface_hover_colors(theme);
+                fill_week_grid_color(theme);
+            }
+        }
+    }
+    if let Some(applied) = ui.applied_insight_theme.as_mut() {
+        if let Some(theme) = applied.get_mut("theme") {
+            fill_surface_hover_colors(theme);
+            fill_week_grid_color(theme);
+        }
+    }
+}
+
+fn validate_theme_document(theme: &serde_json::Value) -> Result<(), String> {
+    let mut theme_keys = vec!["schemaVersion", "engineVersion", "metadata", "colors", "stateRules"];
+    if theme.get("selection").is_some() { theme_keys.push("selection"); }
+    exact_keys(theme, &theme_keys, "theme")?;
+    if theme["schemaVersion"] != 1 || theme["engineVersion"] != 1 { return Err("unsupported theme version".into()); }
+    let metadata = &theme["metadata"];
+    exact_keys(metadata, &["id", "name", "revision", "updatedAt"], "theme metadata")?;
+    let id = metadata["id"].as_str().filter(|value| !value.trim().is_empty() && value.len() <= 128).ok_or("invalid theme id")?;
+    let name = metadata["name"].as_str().filter(|value| !value.trim().is_empty() && value.len() <= 80).ok_or("invalid theme name")?;
+    let _ = (id, name);
+    if metadata["revision"].as_u64().filter(|value| *value > 0).is_none() || metadata["updatedAt"].as_str().filter(|value| value.len() <= 64).is_none() { return Err("invalid theme metadata".into()); }
+    let colors = &theme["colors"];
+    exact_keys(colors, UI_THEME_ROLE_IDS, "theme colors")?;
+    for role in UI_THEME_ROLE_IDS {
+        let color = &colors[*role];
+        exact_keys(color, &["oklch"], "theme color")?;
+        let oklch = &color["oklch"];
+        exact_keys(oklch, &["l", "c", "h"], "theme OKLCH")?;
+        let l = oklch["l"].as_f64().filter(|value| (0.0..=1.0).contains(value)).ok_or("invalid theme lightness")?;
+        let c = oklch["c"].as_f64().filter(|value| (0.0..=0.5).contains(value)).ok_or("invalid theme chroma")?;
+        let h = oklch["h"].as_f64().filter(|value| (0.0..360.0).contains(value)).ok_or("invalid theme hue")?;
+        let _ = (l, c, h);
+    }
+    let rules = &theme["stateRules"];
+    let mut rule_keys = vec!["hoverAlpha", "pressedAlpha", "disabledAlpha", "focusAlpha"];
+    if rules.get("focusEnabled").is_some() { rule_keys.push("focusEnabled"); }
+    exact_keys(rules, &rule_keys, "theme state rules")?;
+    for name in ["hoverAlpha", "pressedAlpha", "disabledAlpha", "focusAlpha"] {
+        if rules[name].as_f64().filter(|value| (0.0..=1.0).contains(value)).is_none() { return Err("invalid theme state rule".into()); }
+    }
+    if let Some(enabled) = rules.get("focusEnabled") {
+        if !enabled.is_boolean() { return Err("invalid theme focusEnabled".into()); }
+    }
+    if let Some(selection) = theme.get("selection") {
+        exact_keys(selection, &["mode", "lightnessDelta"], "theme selection")?;
+        if !matches!(selection["mode"].as_str(), Some("relative") | Some("custom")) || selection["lightnessDelta"].as_f64().filter(|value| (-1.0..=1.0).contains(value)).is_none() {
+            return Err("invalid theme selection".into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_theme_settings(ui: &super::types::UiPrefs) -> Result<(), String> {
+    // Theme settings are bounded and allowlisted before persistence; unknown versions must stay readable as errors, per SPEC-0006 §4.
+    let fields_set = ui.insight_theme_presets.is_some() as u8 + ui.applied_insight_theme.is_some() as u8 + ui.insight_theme_library_revision.is_some() as u8;
+    if fields_set == 0 { return Ok(()); }
+    if fields_set != 3 { return Err("incomplete or unsupported Insight theme settings".into()); }
+    let raw = serde_json::json!({
+        "presets": &ui.insight_theme_presets,
+        "applied": &ui.applied_insight_theme,
+        "revision": &ui.insight_theme_library_revision,
+    });
+    if raw.to_string().len() > 1024 * 1024 { return Err("Insight theme settings exceed 1 MiB".into()); }
+    let presets = ui.insight_theme_presets.as_ref().expect("checked above");
+    let mut ids = std::collections::HashSet::new();
+    for preset in presets {
+        exact_keys(preset, &["id", "name", "revision", "builtin", "theme"], "theme preset")?;
+        let id = preset["id"].as_str().filter(|value| !value.trim().is_empty() && value.len() <= 128).ok_or("invalid preset id")?;
+        let name = preset["name"].as_str().filter(|value| !value.trim().is_empty() && value.len() <= 80).ok_or("invalid preset name")?;
+        let _ = name;
+        if !ids.insert(id.to_owned()) || preset["builtin"] != false || preset["revision"].as_u64().filter(|value| *value > 0).is_none() { return Err("invalid or duplicate user theme preset".into()); }
+        validate_theme_document(&preset["theme"])?;
+    }
+    let applied = ui.applied_insight_theme.as_ref().expect("checked above");
+    exact_keys(applied, &["schemaVersion", "presetId", "presetName", "revision", "appliedAt", "theme"], "applied theme")?;
+    let preset_id_valid = applied["presetId"].is_null() || applied["presetId"].as_str().map_or(false, |value| value.len() <= 128);
+    if applied["schemaVersion"] != 1 || !preset_id_valid
+        || applied["presetName"].as_str().map_or(true, |value| value.trim().is_empty() || value.len() > 80)
+        || applied["revision"].as_u64().filter(|value| *value > 0).is_none() || applied["appliedAt"].as_str().map_or(true, |value| value.len() > 64) {
+        return Err("invalid applied theme metadata".into());
+    }
+    validate_theme_document(&applied["theme"])
+}
+
+// Insight 与 Panel 分目录，会话不共用（ADR 0036）。
+pub(crate) fn insight_conversations_dir(data_dir: &str) -> PathBuf {
+    Path::new(data_dir)
+        .join("ai")
+        .join("insight")
+        .join("conversations")
+}
+
+fn conversation_path_in(dir: &Path, id: &str) -> Result<PathBuf, String> {
     validate_conversation_id(id)?;
-    Ok(conversations_dir(data_dir).join(format!("{id}.json")))
+    Ok(dir.join(format!("{id}.json")))
 }
 
 pub fn bookmarks_path(data_dir: &str) -> PathBuf {
@@ -142,6 +276,8 @@ pub fn read_settings(app: &tauri::AppHandle) -> Result<AppSettings, String> {
     }
     let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;
     if let Ok(mut s) = serde_json::from_str::<AppSettings>(&raw) {
+        fill_theme_hover_roles(&mut s.ui);
+        validate_theme_settings(&s.ui)?;
         s.data_dir = data_dir.clone();
         super::migrate::merge_ai_from_legacy_file(&mut s, &data_dir);
         super::migrate::normalize_settings(&mut s, &data_dir);
@@ -161,10 +297,18 @@ pub fn read_settings(app: &tauri::AppHandle) -> Result<AppSettings, String> {
     Err("invalid settings.json".into())
 }
 
-pub fn write_settings(app: &tauri::AppHandle, settings: AppSettings) -> Result<(), String> {
+pub fn write_settings(app: &tauri::AppHandle, mut settings: AppSettings) -> Result<(), String> {
+    fill_theme_hover_roles(&mut settings.ui);
+    validate_theme_settings(&settings.ui)?;
     let current = get_data_dir(app)?;
     if settings.data_dir != current {
-        set_data_dir(app, settings.data_dir.clone())?;
+        let target = settings.data_dir.clone();
+        crate::productivity_db::switch_data_dir(&target).map_err(|e| e.to_string())?;
+        if let Err(e) = set_data_dir(app, target) {
+            crate::productivity_db::switch_data_dir(&current)
+                .map_err(|e2| format!("{e}; rollback switch failed: {e2}"))?;
+            return Err(e);
+        }
     }
     let data_dir = get_data_dir(app)?;
     fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
@@ -186,14 +330,12 @@ pub fn write_ai_config(app: &tauri::AppHandle, config: AiConfig) -> Result<(), S
     write_settings(app, settings)
 }
 
-pub fn list_conversations(app: &tauri::AppHandle) -> Result<Vec<ConversationMeta>, String> {
-    let data_dir = get_data_dir(app)?;
-    let dir = conversations_dir(&data_dir);
+fn list_conversations_in(dir: &Path) -> Result<Vec<ConversationMeta>, String> {
     if !dir.exists() {
         return Ok(vec![]);
     }
     let mut items = Vec::new();
-    for entry in fs::read_dir(&dir).map_err(|e| e.to_string())? {
+    for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         if path.extension().and_then(|s| s.to_str()) != Some("json") {
@@ -211,9 +353,18 @@ pub fn list_conversations(app: &tauri::AppHandle) -> Result<Vec<ConversationMeta
     Ok(items)
 }
 
-pub fn read_conversation(app: &tauri::AppHandle, id: String) -> Result<Conversation, String> {
+pub fn list_conversations(app: &tauri::AppHandle) -> Result<Vec<ConversationMeta>, String> {
     let data_dir = get_data_dir(app)?;
-    let path = conversation_path(&data_dir, &id)?;
+    list_conversations_in(&conversations_dir(&data_dir))
+}
+
+pub fn list_insight_conversations(app: &tauri::AppHandle) -> Result<Vec<ConversationMeta>, String> {
+    let data_dir = get_data_dir(app)?;
+    list_conversations_in(&insight_conversations_dir(&data_dir))
+}
+
+fn read_conversation_in(dir: &Path, id: &str) -> Result<Conversation, String> {
+    let path = conversation_path_in(dir, id)?;
     if !path.exists() {
         return Err("conversation not found".into());
     }
@@ -221,21 +372,51 @@ pub fn read_conversation(app: &tauri::AppHandle, id: String) -> Result<Conversat
     serde_json::from_str(&raw).map_err(|e| e.to_string())
 }
 
-pub fn write_conversation(app: &tauri::AppHandle, conversation: Conversation) -> Result<(), String> {
+pub fn read_conversation(app: &tauri::AppHandle, id: String) -> Result<Conversation, String> {
     let data_dir = get_data_dir(app)?;
-    let dir = conversations_dir(&data_dir);
-    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let path = conversation_path(&data_dir, &conversation.id)?;
-    write_json(&path, &conversation)
+    read_conversation_in(&conversations_dir(&data_dir), &id)
 }
 
-pub fn delete_conversation(app: &tauri::AppHandle, id: String) -> Result<(), String> {
+pub fn read_insight_conversation(app: &tauri::AppHandle, id: String) -> Result<Conversation, String> {
     let data_dir = get_data_dir(app)?;
-    let path = conversation_path(&data_dir, &id)?;
+    read_conversation_in(&insight_conversations_dir(&data_dir), &id)
+}
+
+fn write_conversation_in(dir: &Path, conversation: &Conversation) -> Result<(), String> {
+    fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let path = conversation_path_in(dir, &conversation.id)?;
+    write_json(&path, conversation)
+}
+
+pub fn write_conversation(app: &tauri::AppHandle, conversation: Conversation) -> Result<(), String> {
+    let data_dir = get_data_dir(app)?;
+    write_conversation_in(&conversations_dir(&data_dir), &conversation)
+}
+
+pub fn write_insight_conversation(
+    app: &tauri::AppHandle,
+    conversation: Conversation,
+) -> Result<(), String> {
+    let data_dir = get_data_dir(app)?;
+    write_conversation_in(&insight_conversations_dir(&data_dir), &conversation)
+}
+
+fn delete_conversation_in(dir: &Path, id: &str) -> Result<(), String> {
+    let path = conversation_path_in(dir, id)?;
     if path.exists() {
         fs::remove_file(&path).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+pub fn delete_conversation(app: &tauri::AppHandle, id: String) -> Result<(), String> {
+    let data_dir = get_data_dir(app)?;
+    delete_conversation_in(&conversations_dir(&data_dir), &id)
+}
+
+pub fn delete_insight_conversation(app: &tauri::AppHandle, id: String) -> Result<(), String> {
+    let data_dir = get_data_dir(app)?;
+    delete_conversation_in(&insight_conversations_dir(&data_dir), &id)
 }
 
 pub fn read_bookmarks(app: &tauri::AppHandle) -> Result<Vec<BookmarkEntry>, String> {

@@ -7,6 +7,8 @@ import type { InsightDestinationHandle, InsightHostContext } from "../../types";
 import { mountHealthTracksView, type HealthTracksViewHandle } from "../../timeline/health-tracks-view";
 import { loadLegendState } from "./legend";
 import { addDays, beijingToday, trackBufferWindow } from "./format";
+import { createActivityPageHost, mountActivityListSection } from "./activity-page";
+import { mountMealHistorySection } from "./meal-history";
 import { renderSummary } from "./summary";
 import { renderTrends } from "./trends";
 import type {
@@ -15,6 +17,7 @@ import type {
   TrendWindow,
 } from "./types";
 import "./health.css";
+import "./activity-page.css";
 
 function formatLoadError(err: unknown): string {
   if (typeof err === "string" && err.trim()) return err;
@@ -56,6 +59,8 @@ export function mountHealthOverview(root: HTMLElement, _ctx: InsightHostContext)
     latestLocalDate: null,
   };
   let tracksView: HealthTracksViewHandle | null = null;
+  let activityList: { reload: () => Promise<void> } | null = null;
+  let mealHistory: { reload: () => Promise<void> } | null = null;
   let loading = false;
   let loadError: string | null = null;
   let summaryTimer = 0;
@@ -64,6 +69,8 @@ export function mountHealthOverview(root: HTMLElement, _ctx: InsightHostContext)
     <div class="health-app">
       <div class="health-scroll">
         <div data-region="tracks-view"></div>
+        <div data-region="activity-list"></div>
+        <div data-region="meal-history"></div>
         <section class="health-section">
           <div class="health-section-head">
             <h3 class="health-section-title">长期趋势</h3>
@@ -83,10 +90,17 @@ export function mountHealthOverview(root: HTMLElement, _ctx: InsightHostContext)
       </div>
     </div>`;
 
+  const healthApp = root.querySelector<HTMLElement>(".health-app")!;
   const tracksMount = root.querySelector<HTMLElement>('[data-region="tracks-view"]')!;
+  const activityListMount = root.querySelector<HTMLElement>('[data-region="activity-list"]')!;
+  const mealHistoryMount = root.querySelector<HTMLElement>('[data-region="meal-history"]')!;
   const trendsRegion = root.querySelector<HTMLElement>('[data-region="trends"]')!;
   const summaryRegion = root.querySelector<HTMLElement>('[data-region="summary"]')!;
   const fetchHistoryBtn = root.querySelector<HTMLButtonElement>('[data-action="fetch-history"]')!;
+
+  const activityHost = createActivityPageHost(healthApp, ac.signal);
+  activityList = mountActivityListSection(activityListMount, activityHost, ac.signal);
+  mealHistory = mountMealHistorySection(mealHistoryMount, ac.signal);
 
   tracksView = mountHealthTracksView(tracksMount, {
     signal: ac.signal,
@@ -96,6 +110,7 @@ export function mountHealthOverview(root: HTMLElement, _ctx: InsightHostContext)
     onDateChange: () => {
       scheduleSummaryReload();
     },
+    onActivityClick: (id) => activityHost.openDetail(id),
   });
 
   function updateFetchHistory(): void {
@@ -242,6 +257,8 @@ export function mountHealthOverview(root: HTMLElement, _ctx: InsightHostContext)
       void refreshSyncStatus();
       void tracksView!.activate();
       void loadOverview();
+      void activityList!.reload();
+      void mealHistory!.reload();
     },
     deactivate() {
       tracksView!.deactivate();

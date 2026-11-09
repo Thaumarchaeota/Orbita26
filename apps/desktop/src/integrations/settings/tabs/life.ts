@@ -14,6 +14,8 @@ import {
   garminLogin,
   garminStatus,
   garminSync,
+  isGarminSyncing,
+  subscribeGarminSyncing,
   syncFromDate,
 } from "../../journal/client";
 
@@ -134,6 +136,11 @@ export function bindLifeTab(root: HTMLElement) {
   const loginStatusEl = root.querySelector<HTMLElement>("#garminLoginStatus")!;
   const syncBtn = root.querySelector<HTMLButtonElement>("#garminSyncBtn")!;
   const syncStatus = root.querySelector<HTMLElement>("#garminSyncStatus")!;
+  const idleSyncLabel = syncBtn.textContent || "同步最近 7 天";
+  subscribeGarminSyncing((busy) => {
+    syncBtn.disabled = busy;
+    if (!busy) syncBtn.textContent = idleSyncLabel;
+  });
   const axisModeEl = root.querySelector<HTMLSelectElement>("#healthTrackAxisMode")!;
   const axisRangesEl = root.querySelector<HTMLElement>("#healthTrackAxisRanges")!;
 
@@ -189,10 +196,10 @@ export function bindLifeTab(root: HTMLElement) {
   });
 
   syncBtn.addEventListener("click", async () => {
-    syncBtn.disabled = true;
-    syncStatus.textContent = "同步中…";
+    if (isGarminSyncing()) return;
     try {
       const res = await garminSync({ from: syncFromDate(7), to: undefined });
+      if (res.reason === "GARMIN_SYNC_CANCELLED") return;
       if (res.ok) {
         syncStatus.textContent = `完成：daily ${res.dailyCount ?? 0}，睡眠 ${res.routineCount ?? 0}，骑行 ${res.exerciseCount ?? 0}`;
         window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
@@ -205,7 +212,7 @@ export function bindLifeTab(root: HTMLElement) {
       alert(msg);
       syncStatus.textContent = msg;
     } finally {
-      syncBtn.disabled = false;
+      if (!isGarminSyncing()) syncBtn.disabled = false;
     }
   });
 
@@ -231,7 +238,7 @@ export function bindLifeTab(root: HTMLElement) {
         maxEl.value = String(range.max);
       }
       syncAxisRangeEnabled();
-      syncStatus.textContent = "";
+      if (!isGarminSyncing()) syncStatus.textContent = "";
       void refreshGarminStatus(loginStatusEl, loginBtn);
     },
     read(): LifeDraft {

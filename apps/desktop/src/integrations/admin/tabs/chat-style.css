@@ -1,0 +1,299 @@
+/*
+ * Chat presentation uses the shared Insight appearance and palette tokens.
+ * Rules in this file remain local to the conversation tab.
+ */
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) {
+  background: var(--insight-surface-page);
+  color: var(--insight-text-primary);
+  --insight-chat-rail-selected-bg: var(--insight-state-sidebar-selected, var(--insight-selected-bg));
+}
+
+html[data-insight-theme] .insight-chat-rail {
+  background: var(--insight-sidebar-bg);
+  border-right-color: var(--insight-border-color);
+}
+
+html[data-insight-theme] .insight-chat-rail-bar {
+  height: 44px;
+  padding-top: 10px;
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-title {
+  color: var(--insight-text-primary);
+  letter-spacing: 0.01em;
+}
+
+html[data-insight-theme] .insight-chat-rail-new,
+html[data-insight-theme] .insight-chat-more {
+  border-radius: var(--insight-radius-control);
+  color: var(--insight-icon-default);
+}
+
+html[data-insight-theme] .insight-chat-rail-new:hover,
+html[data-insight-theme] .insight-chat-more:hover {
+  background: var(--insight-control-hover);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-chat-rail-list {
+  padding: 6px 8px 12px;
+  gap: 3px;
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-row {
+  border-radius: var(--insight-radius-control);
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-row:hover:not(:has(.insight-chat-rail-item.is-active)) {
+  background: var(--insight-hover-sidebar, var(--insight-hover-bg));
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-row:hover:not(:has(.insight-chat-rail-item.is-active)) .insight-chat-rail-item {
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-row:has(.insight-chat-rail-item.is-active) {
+  /* Keep the selected conversation as a complete rounded row. */
+  background: var(--insight-chat-rail-selected-bg);
+  box-shadow: none;
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-item {
+  border-radius: var(--insight-radius-control);
+  padding: 8px 10px 8px 12px;
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-menu);
+  font-weight: var(--insight-weight-regular);
+  line-height: 20px;
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-item.is-active {
+  color: var(--insight-state-sidebar-selected-foreground, var(--insight-primary));
+  font-weight: var(--insight-weight-regular);
+}
+
+.insight-chat-temperature {
+  min-width: 180px;
+}
+
+html[data-insight-theme] .insight-chat-page:not(.insight-settings) .insight-chat-rail-item:focus-visible {
+  outline: 2px solid var(--insight-primary);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .insight-chat-main {
+  background: var(--insight-surface-page);
+}
+
+html[data-insight-theme] .insight-chat-main-bar {
+  height: var(--insight-chat-topbar-height);
+  min-height: var(--insight-chat-topbar-height);
+  padding-top: 10px;
+  background: var(--insight-surface-page);
+}
+
+html[data-insight-theme] .insight-chat-heading-edit {
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-surface-panel);
+  box-shadow: none;
+}
+
+html[data-insight-theme] .insight-chat-heading-edit:focus {
+  border-color: var(--insight-primary);
+  box-shadow: 0 0 0 3px var(--insight-focus-ring);
+}
+
+html[data-insight-theme] .insight-chat-config-error {
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-danger-bg);
+}
+
+html[data-insight-theme] .insight-chat-messages {
+  background: var(--insight-surface-page);
+}
+
+html[data-insight-theme] .insight-chat-msg-user .insight-chat-bubble {
+  border: var(--insight-border-width) solid color-mix(in srgb, var(--insight-primary) 26%, var(--insight-divider));
+  border-radius: var(--insight-radius-menu);
+  background: var(--insight-user-bubble);
+  color: var(--insight-user-bubble-text);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--insight-text-primary) 6%, transparent);
+}
+
+html[data-insight-theme] .insight-chat-msg-assistant .insight-chat-bubble {
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-chat-status,
+html[data-insight-theme] .insight-chat-reasoning-toggle,
+html[data-insight-theme] .insight-chat-length-hint {
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .insight-chat-reasoning-body {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-insight-theme] .insight-chat-action-btn,
+html[data-insight-theme] .insight-chat-msg-time {
+  border-radius: var(--insight-radius-control);
+}
+
+html[data-insight-theme] .insight-chat-action-btn:hover,
+html[data-insight-theme] .insight-chat-msg-time:hover {
+  background: var(--insight-control-hover);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-tool-confirm-card,
+html[data-insight-theme] .insight-chat-deferred-item {
+  border: var(--insight-border-width) solid var(--insight-divider);
+  border-radius: var(--insight-radius-card);
+  background: var(--insight-surface-panel);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .insight-tool-confirm-card input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]),
+html[data-insight-theme] .insight-tool-confirm-card textarea,
+html[data-insight-theme] .insight-tool-confirm-card select,
+html[data-insight-theme] .insight-tool-confirm-card .meal-slot-btn,
+html[data-insight-theme] .insight-tool-confirm-card .insight-dialog-btn:not(.insight-dialog-btn-primary):not(.insight-dialog-btn-danger) {
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-surface-panel);
+}
+
+html[data-insight-theme] .insight-tool-confirm-card .insight-dialog-btn-primary {
+  border-color: var(--insight-primary);
+  background: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] .insight-tool-confirm-card input:focus,
+html[data-insight-theme] .insight-tool-confirm-card textarea:focus,
+html[data-insight-theme] .insight-tool-confirm-card select:focus,
+html[data-insight-theme] .insight-chat-composer-box:focus-within {
+  border-color: var(--insight-primary);
+  /* Focus is expressed by the existing blue border; do not add an outer glow. */
+  box-shadow: var(--insight-shadow-panel);
+  outline: none;
+}
+
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-value input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]),
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-value textarea,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-slot-trigger,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-food-item input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]) {
+  width: auto;
+  min-height: 0;
+  height: auto;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-value > input[name="title"],
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-value > textarea {
+  width: 100%;
+}
+
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger {
+  width: calc(var(--orbita-decoupled-trigger-chars) * 1ch);
+}
+
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-value input:focus,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-value textarea:focus,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger:focus,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger:focus-visible,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-slot-trigger:focus,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-property-slot-trigger:focus-visible,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-food-item input:focus,
+html[data-insight-theme] .insight-meal-confirm-dialog .meal-food-item input:focus-visible {
+  border-color: transparent;
+  outline: none;
+  box-shadow: 0 1px 0 0 var(--insight-primary);
+}
+
+html[data-insight-theme] :is(
+  .insight-meal-confirm-dialog .meal-property-value input,
+  .insight-meal-confirm-dialog .meal-property-value textarea,
+  .insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger,
+  .insight-meal-confirm-dialog .meal-property-slot-trigger,
+  .insight-meal-confirm-dialog .meal-food-item input
+):focus-visible {
+  outline: none;
+  box-shadow: 0 1px 0 0 var(--insight-primary);
+}
+
+html[data-insight-theme] .insight-chat-composer {
+  background: var(--insight-surface-page);
+}
+
+/* Keep the existing 75% × 97px composer geometry and interaction layout. */
+html[data-insight-theme] .insight-chat-composer-box {
+  border-color: var(--insight-divider);
+  border-radius: var(--insight-radius-composer);
+  background: var(--insight-surface-panel);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .insight-chat-composer textarea {
+  border-radius: var(--insight-radius-composer);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-chat-plus {
+  border-radius: 50%;
+  color: var(--insight-icon-default);
+}
+
+html[data-insight-theme] .insight-chat-model {
+  border-radius: var(--insight-radius-pill);
+  color: var(--insight-icon-default);
+}
+
+html[data-insight-theme] .insight-chat-model:hover,
+html[data-insight-theme] .insight-chat-plus:hover {
+  background: var(--insight-control-hover);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-chat-token-track {
+  border-radius: var(--insight-radius-pill);
+  background: var(--insight-divider);
+}
+
+html[data-insight-theme] .insight-chat-send {
+  border-radius: 50%;
+  background: var(--insight-primary);
+}
+
+html[data-insight-theme] .insight-chat-send:hover {
+  background: var(--insight-primary-hover);
+}
+
+html[data-insight-theme] .insight-chat-send.is-stop {
+  background: var(--insight-danger);
+}
+
+html[data-insight-theme] :is(
+  .insight-chat-rail-new,
+  .insight-chat-rail-item,
+  .insight-chat-more,
+  .insight-chat-action-btn,
+  .insight-chat-msg-time,
+  .insight-chat-plus,
+  .insight-chat-model,
+  .insight-chat-send,
+  .insight-tool-confirm-card input,
+  .insight-tool-confirm-card textarea,
+  .insight-tool-confirm-card select,
+  .insight-tool-confirm-card .dialog-btn
+):focus-visible {
+  outline: 2px solid var(--insight-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--insight-focus-ring);
+}

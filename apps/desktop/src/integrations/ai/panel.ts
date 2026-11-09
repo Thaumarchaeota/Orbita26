@@ -1,8 +1,8 @@
-import { mountContextMenu } from "../../ui/context-menu";
+import { showCommandMenuAt } from "../../ui/command-menu-popover";
 import { closePopover, isPopoverOpen, openPopover, type MotionTrigger } from "../../ui/motion";
 import { escAttr, escHtml } from "../../core/html";
 import { getAiConfig, loadAiConfig, saveAiConfig, type ApiEntry } from "./config";
-import { abortChat, chatStream, generateConversationTitle, type ChatMessage } from "./adapter";
+import { abortChat, chatStream, generateConversationTitle, handleSearchSourceClick, searchEvidenceHtml, type ChatMessage } from "./adapter";
 import {
   deleteConversation,
   ensureInitialConversation,
@@ -43,7 +43,7 @@ function formatAssistantHtml(content: string, index: number) {
 
 function messageBubbleHtml(m: ChatMessage, index: number) {
   const body = m.role === "user" ? formatPlainText(m.content) : formatAssistantHtml(m.content, index);
-  return `<div class="ai-msg ai-msg-${m.role}" data-index="${index}"><div class="ai-msg-bubble">${body}</div></div>`;
+  return `<div class="ai-msg ai-msg-${m.role}" data-index="${index}"><div class="ai-msg-bubble">${body}${m.role === "assistant" ? searchEvidenceHtml(m) : ""}</div></div>`;
 }
 
 function modelBaseName(model: string): string {
@@ -110,7 +110,6 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
 
   const promptDialog = mountTextDialog(dialogRoot);
   const confirmDelete = getConfirmDialog();
-  const msgCtxMenu = mountContextMenu(new AbortController().signal);
   let conversation: Conversation | null = null;
   let requestId: string | null = null;
   let streaming = false;
@@ -155,6 +154,13 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
       streamingTextEl = streamingBubble.querySelector<HTMLElement>(".ai-msg-text")!;
       streamHasText = false;
     }
+  }
+
+  function updatePanelSearchEvidence(message: ChatMessage) {
+    ensureStreamingBubble();
+    if (!streamingBubble) return;
+    streamingBubble.querySelectorAll(".ai-search-status, .ai-search-sources").forEach((el) => el.remove());
+    streamingBubble.insertAdjacentHTML("afterbegin", searchEvidenceHtml(message));
   }
 
   function ensureToolStepsEl() {
@@ -658,7 +664,19 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
       conversation.activeModel,
       (event) => {
         if (gen !== activeStreamGen) return;
-        if (event.type === "chunk") {
+        if (event.type === "searchStart") {
+          assistant.searchStatus = "searching";
+          updatePanelSearchEvidence(assistant);
+        } else if (event.type === "searchDone") {
+          assistant.searchStatus = "verified";
+          assistant.sources = event.sources;
+          updatePanelSearchEvidence(assistant);
+        } else if (event.type === "searchError") {
+          assistant.searchStatus = `failed:${event.message}`;
+          updatePanelSearchEvidence(assistant);
+        } else if (event.type === "connected" || event.type === "reasoning" || event.type === "finish") {
+          /* insight-only stream phases */
+        } else if (event.type === "chunk") {
           const delta = event.content;
           assistant.content += delta;
           pushStreamingChunk(delta, assistant.content);
@@ -691,6 +709,7 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
           paintStreamingPlainText(assistant.content);
         }
       },
+      "panel",
     );
 
     if (gen !== activeStreamGen) return;
@@ -826,6 +845,8 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     }
   });
 
+  messagesEl.addEventListener("click", (event) => { handleSearchSourceClick(event); });
+
   messagesEl.addEventListener("contextmenu", (e) => {
     const msgEl = (e.target as HTMLElement).closest<HTMLElement>(".ai-msg");
     if (!msgEl || !messagesEl.contains(msgEl)) return;
@@ -833,16 +854,21 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     if (!conversation || Number.isNaN(index) || index < 0 || index >= conversation.messages.length) return;
     e.preventDefault();
     e.stopPropagation();
-    msgCtxMenu.show(
+    showCommandMenuAt(
       e.clientX,
       e.clientY,
       [
-        { action: "copy", label: "复制" },
-        { action: "delete", label: "删除", danger: true, confirm: true },
+        { value: "copy", label: "复制" },
+        { value: "delete", label: "删除", danger: true },
       ],
       (action) => {
         if (action === "copy") void copyMessageAt(index);
-        if (action === "delete") void deleteMessageAt(index);
+        if (action === "delete") {
+          void (async () => {
+            if (!(await confirmDelete("删除确认", "确定删除该消息？", msgEl))) return;
+            await deleteMessageAt(index);
+          })();
+        }
       },
     );
   });
@@ -856,14 +882,13 @@ export function mountAiPanel(root: HTMLElement, dialogRoot: HTMLElement) {
     void sendMessage(input.value);
   });
 
-  ensureInitialConversation().then((conv) => {
-    conversation = conv;
-    setMarkdownCacheConversation(conv.id);
-    syncConvLabel();
-    renderMessages();
-    syncModelBtn();
-    void paintConvMenu();
-  });
+  conversation = newConversation(getAiConfig());
+  conversation.title = "新对话";
+  setMarkdownCacheConversation(conversation.id);
+  syncConvLabel();
+  renderMessages();
+  syncModelBtn();
+  void paintConvMenu();
 
   return { refreshUi };
 }

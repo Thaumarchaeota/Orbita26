@@ -7,7 +7,7 @@
   align-items: center;
   gap: 0;
   width: 100%;
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, #e5e7eb));
   border-radius: var(--finance-control-radius, 8px);
   background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
   box-sizing: border-box;
@@ -46,7 +46,7 @@
   height: 100%;
   padding: 0;
   border: none;
-  border-left: 1px solid var(--ledger-border, #e5e7eb);
+  border-left: 1px solid var(--ledger-border, var(--insight-border-color, #e5e7eb));
   background: transparent;
   cursor: pointer;
   color: var(--ledger-muted);
@@ -87,9 +87,9 @@
   pointer-events: none;
   transform: scale(0.96);
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
-    visibility 0s linear 0.2s;
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s linear 180ms;
 }
 
 .orbita-time-picker-menu.motion-popover.is-open {
@@ -98,9 +98,16 @@
   pointer-events: auto;
   transform: scale(1);
   transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
     visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbita-time-picker-menu.motion-popover,
+  .orbita-time-picker-menu.motion-popover.is-open {
+    transform: none;
+  }
 }
 
 .orbita-time-panel {
@@ -116,7 +123,7 @@
   width: 100%;
   box-sizing: border-box;
   padding: 4px 8px;
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, #e5e7eb));
   border-radius: 4px;
   background: var(--ledger-surface, #fff);
   color: var(--ledger-text);
@@ -153,8 +160,8 @@
   right: 2px;
   top: calc(var(--orbita-time-col-label-h) + (var(--orbita-time-viewport-h) - var(--orbita-time-item-h)) / 2);
   height: var(--orbita-time-item-h);
-  border-top: 1px solid var(--ledger-border, #e5e7eb);
-  border-bottom: 1px solid var(--ledger-border, #e5e7eb);
+  border-top: 1px solid var(--ledger-border, var(--insight-border-color, #e5e7eb));
+  border-bottom: 1px solid var(--ledger-border, var(--insight-border-color, #e5e7eb));
   background: color-mix(in srgb, var(--ledger-text, #111827) 4%, transparent);
   border-radius: 3px;
   pointer-events: none;
@@ -252,12 +259,12 @@
   gap: 4px;
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px solid var(--ledger-border, #e5e7eb);
+  border-top: 1px solid var(--ledger-border, var(--insight-border-color, #e5e7eb));
 }
 
 .orbita-time-panel-clear,
 .orbita-time-panel-confirm {
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, #e5e7eb));
   border-radius: 4px;
   padding: 2px 8px;
   font: inherit;
@@ -279,7 +286,7 @@
 .orbita-time-panel-confirm {
   background: var(--ledger-accent, #2563eb);
   border-color: var(--ledger-accent, #2563eb);
-  color: #fff;
+  color: var(--insight-on-primary, #fff);
 }
 
 .orbita-time-panel-confirm:hover:not(:disabled) {

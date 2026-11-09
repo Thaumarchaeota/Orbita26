@@ -27,6 +27,8 @@
       },
       {
         "label": "admin",
+        "dragDropEnabled": false,
+        "zoomHotkeysEnabled": true,
         "title": "Orbita",
         "url": "index.html?app=admin",
         "width": 1100,

@@ -1,0 +1,254 @@
+.orbita-flat-select {
+  width: max-content;
+  min-width: 120px;
+  max-width: min(320px, calc(100vw - 16px));
+  background: var(--insight-surface-elevated, var(--insight-card-bg, #fff));
+  border: var(--insight-border-width, 1px) solid var(--insight-divider, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  border-radius: var(--insight-radius-menu);
+  box-shadow: var(--insight-shadow-panel, 0 8px 24px var(--insight-shadow-color-8));
+  overflow: hidden;
+  color: var(--insight-text-primary, inherit);
+  --orbita-flat-select-inset: 4px;
+  z-index: var(--orbita-popover-z, 205);
+}
+
+.orbita-flat-select.orbita-popover-portal-item {
+  position: fixed;
+  z-index: var(--orbita-popover-z, 205);
+}
+
+.orbita-flat-select-section + .orbita-flat-select-section {
+  position: relative;
+}
+
+.orbita-flat-select-section + .orbita-flat-select-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(var(--orbita-flat-select-inset) + 2px);
+  right: calc(var(--orbita-flat-select-inset) + 2px);
+  height: var(--insight-border-width, 1px);
+  background: var(--insight-divider, var(--insight-border-color, #d4dce6));
+}
+
+.orbita-flat-select-search {
+  box-sizing: border-box;
+  width: 0;
+  min-width: 100%;
+  padding: 4px 8px;
+  overflow: hidden;
+}
+
+.orbita-flat-select-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 32px;
+  margin: 0;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--insight-font-role-menu);
+  color: var(--insight-text-primary, inherit);
+  appearance: none;
+}
+
+.orbita-flat-select-input::placeholder {
+  color: var(--insight-text-secondary, #66758a);
+}
+
+.orbita-flat-select-input:focus,
+.orbita-flat-select-input:focus-visible {
+  outline: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.orbita-flat-select-input::-webkit-search-decoration,
+.orbita-flat-select-input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.orbita-flat-select-section > .orbita-section-title {
+  padding: 4px calc(var(--orbita-flat-select-inset) + 10px) 0;
+  font-size: var(--insight-font-role-menu-group);
+  font-weight: var(--insight-weight-regular);
+  line-height: 16px;
+}
+
+.orbita-flat-select-list > .orbita-section-title {
+  padding: 4px 10px 0;
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-menu-group);
+  font-weight: var(--insight-weight-regular);
+  line-height: 16px;
+}
+
+.orbita-flat-select-slot {
+  padding: 4px var(--orbita-flat-select-inset);
+}
+
+.orbita-flat-select-list {
+  overflow-y: auto;
+  max-height: 280px;
+  padding: 4px var(--orbita-flat-select-inset);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: none;
+}
+
+.orbita-flat-select-list:focus {
+  outline: none;
+}
+
+.orbita-flat-select-list::-webkit-scrollbar {
+  display: none;
+}
+
+.orbita-flat-select-icon-only {
+  min-width: 0;
+  width: 264px;
+  max-width: min(320px, calc(100vw - 16px));
+}
+
+.orbita-flat-select-icon-only .orbita-flat-select-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 40px);
+  justify-content: start;
+  gap: 4px;
+}
+
+.orbita-flat-select-icon-only .orbita-flat-select-option {
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  padding: 8px;
+}
+
+.orbita-flat-select-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  pointer-events: none;
+}
+
+.orbita-flat-select-option-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+
+.orbita-flat-select-option.has-hint {
+  display: block;
+  text-align: left;
+  padding-bottom: 4px;
+}
+
+.orbita-flat-select-option.has-hint > .orbita-option-hint {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  text-align: left;
+}
+
+.orbita-flat-select-option.has-hint:has(.orbita-choice-checkbox) > .orbita-option-hint {
+  padding-left: calc(16px + 8px);
+}
+
+.orbita-flat-select-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--insight-radius-control);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: var(--insight-font-role-menu);
+  font-weight: var(--insight-weight-regular);
+  line-height: 20px;
+  cursor: pointer;
+  color: var(--insight-text-primary, inherit);
+}
+
+
+.orbita-flat-select-option:hover:not(:disabled),
+.orbita-flat-select-option:focus-visible:not(:disabled) {
+  outline: none;
+  background: var(--insight-hover-control, var(--insight-hover-bg, #e5ebf3));
+}
+
+.orbita-flat-select-option.is-danger {
+  color: var(--insight-danger, #c0393b);
+}
+
+.orbita-flat-select-option.is-danger:hover:not(:disabled),
+.orbita-flat-select-option.is-danger:focus-visible:not(:disabled) {
+  background: var(--insight-danger-bg, #fef2f2);
+  color: var(--insight-danger, #c0393b);
+}
+
+.orbita-flat-select-option:disabled {
+  color: var(--insight-text-disabled, var(--insight-text-secondary, #9ca3af));
+  cursor: default;
+}
+
+.orbita-flat-select-mode-single .orbita-flat-select-option.is-selected {
+  background: var(--insight-state-card-selected, var(--insight-selected-bg, #d7e3f5));
+  color: var(--insight-state-card-selected-foreground, var(--insight-primary, #4b78b8));
+}
+
+.orbita-flat-select-mode-single .orbita-flat-select-option.is-selected:hover:not(:disabled),
+.orbita-flat-select-mode-single .orbita-flat-select-option.is-selected:focus-visible:not(:disabled) {
+  background: var(--insight-state-card-selected, var(--insight-selected-bg, #d7e3f5));
+  color: var(--insight-state-card-selected-foreground, var(--insight-primary, #4b78b8));
+}
+
+.orbita-flat-select-mode-multiple .orbita-choice-checkbox {
+  pointer-events: none;
+}
+
+.orbita-flat-select-mode-multiple .orbita-flat-select-option.is-selected {
+  background: transparent;
+  color: var(--insight-text-primary, inherit);
+}
+
+.orbita-flat-select-mode-multiple .orbita-flat-select-option.is-selected:hover:not(:disabled) {
+  background: var(--insight-hover-control, var(--insight-hover-bg, #e5ebf3));
+}
+
+.orbita-flat-select-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.orbita-flat-select-empty {
+  padding: 12px 8px;
+  font-size: var(--insight-font-role-menu);
+  font-weight: var(--insight-weight-regular);
+  line-height: 20px;
+  color: var(--insight-text-secondary, #66758a);
+  text-align: center;
+}
+
+.orbita-flat-select-arrow {
+  flex-shrink: 0;
+  color: var(--insight-text-secondary, #66758a);
+  font-size: 14px;
+  line-height: 1;
+}

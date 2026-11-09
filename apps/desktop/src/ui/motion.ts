@@ -1,9 +1,10 @@
 import { hideHoverTip } from "./hover-tip";
 import { getModalRoot, hideModalBackdrop, raiseModalBackdrop } from "./modal-root";
+import { acquireInteraction, type InteractionLease } from "./interaction-lease";
 
 export type MotionTrigger = HTMLElement | MouseEvent | { x: number; y: number };
 
-const POPOVER_MS = 360;
+const POPOVER_MS = 180;
 const DIALOG_MS = 400;
 const DIALOG_CLOSE_MS = 280;
 const DIALOG_BIAS_OPEN = 0.2;
@@ -11,6 +12,31 @@ const DIALOG_BIAS_CLOSE = 0.12;
 const DIALOG_MAX_BIAS = 36;
 const DIALOG_SCALE_OPEN = 0.9;
 const DIALOG_SCALE_CLOSE = 0.94;
+type DialogState = {
+  lease: InteractionLease;
+  generation: number;
+  closing: Promise<void> | null;
+};
+const dialogLeases = new WeakMap<HTMLElement, DialogState>();
+
+function holdDialog(backdrop: HTMLElement): DialogState {
+  let state = dialogLeases.get(backdrop);
+  if (!state) {
+    state = { lease: acquireInteraction("modal"), generation: 0, closing: null };
+    dialogLeases.set(backdrop, state);
+  }
+  state.generation += 1;
+  // A new open intent cancels any pending close. Let a later close request
+  // start its own operation instead of reusing the now-stale promise.
+  state.closing = null;
+  return state;
+}
+
+function releaseDialog(backdrop: HTMLElement, state: DialogState): void {
+  if (dialogLeases.get(backdrop) !== state) return;
+  dialogLeases.delete(backdrop);
+  state.lease.release();
+}
 
 function clampBias(value: number) {
   return Math.max(-DIALOG_MAX_BIAS, Math.min(DIALOG_MAX_BIAS, value));
@@ -67,10 +93,16 @@ function prepareModalBackdrop(backdrop: HTMLElement) {
   hideHoverTip();
 }
 
+// Origin vs unscaled layout box (fixed left/top + offset size), not GBR which
+// includes the closed-state scale. See docs/adr/0040-anchored-popover-motion.md.
 export function setPopoverOrigin(el: HTMLElement, trigger: MotionTrigger) {
-  const rect = el.getBoundingClientRect();
-  const p = motionPoint(trigger)!;
-  el.style.transformOrigin = `${p.x - rect.left}px ${p.y - rect.top}px`;
+  const p = motionPoint(trigger);
+  if (!p) return;
+  const left = Number.parseFloat(el.style.left);
+  const top = Number.parseFloat(el.style.top);
+  const originX = p.x - (Number.isFinite(left) ? left : 0);
+  const originY = p.y - (Number.isFinite(top) ? top : 0);
+  el.style.transformOrigin = `${originX}px ${originY}px`;
 }
 
 export function isPopoverOpen(el: HTMLElement) {
@@ -90,7 +122,7 @@ export async function closePopover(el: HTMLElement, trigger?: MotionTrigger) {
   if (!el.classList.contains("is-open")) return;
   if (trigger) setPopoverOrigin(el, trigger);
   el.classList.remove("is-open");
-  await waitTransition(el, "transform", POPOVER_MS * 0.65);
+  await waitTransition(el, "transform", POPOVER_MS);
 }
 
 export async function togglePopover(el: HTMLElement, trigger: MotionTrigger) {
@@ -130,6 +162,19 @@ export function isDialogOpen(backdrop: HTMLElement) {
 
 export async function openDialog(backdrop: HTMLElement, trigger?: MotionTrigger, panel?: HTMLElement) {
   const p = dialogPanel(backdrop, panel);
+  const state = holdDialog(backdrop);
+  const generation = state.generation;
+  try {
+    await state.lease.ready;
+  } catch {
+    if (dialogLeases.get(backdrop) === state && state.generation === generation) {
+      hideModalBackdrop(backdrop);
+      releaseDialog(backdrop, state);
+      notifyModalLayer();
+    }
+    return;
+  }
+  if (dialogLeases.get(backdrop) !== state || state.generation !== generation) return;
   if (backdrop.classList.contains("is-open")) {
     notifyModalLayer();
     return;
@@ -141,6 +186,7 @@ export async function openDialog(backdrop: HTMLElement, trigger?: MotionTrigger,
   setDialogFly(p, trigger, "open");
   flushLayout(p);
   await nextFrame();
+  if (dialogLeases.get(backdrop) !== state || state.generation !== generation) return;
   backdrop.classList.add("is-open");
   notifyModalLayer();
   await Promise.all([
@@ -150,21 +196,45 @@ export async function openDialog(backdrop: HTMLElement, trigger?: MotionTrigger,
 }
 
 export async function closeDialog(backdrop: HTMLElement, trigger?: MotionTrigger, panel?: HTMLElement) {
-  if (!backdrop.classList.contains("is-open")) return;
-  const p = dialogPanel(backdrop, panel);
-  setDialogFly(p, trigger, "close");
-  flushLayout(p);
-  await nextFrame();
-  backdrop.classList.remove("is-open");
-  notifyModalLayer();
-  await Promise.all([
-    waitTransition(backdrop, "opacity", DIALOG_CLOSE_MS),
-    waitTransition(p, "transform", DIALOG_CLOSE_MS),
-  ]);
-  p.style.removeProperty("--motion-fly-x");
-  p.style.removeProperty("--motion-fly-y");
-  p.style.removeProperty("--motion-fly-scale");
-  hideModalBackdrop(backdrop);
+  const state = dialogLeases.get(backdrop);
+  if (!state) return;
+  if (state.closing) return state.closing;
+  state.generation += 1;
+  const generation = state.generation;
+  const closeOperation = (async () => {
+    if (!backdrop.classList.contains("is-open")) {
+      hideModalBackdrop(backdrop);
+      if (dialogLeases.get(backdrop) === state && state.generation === generation) {
+        releaseDialog(backdrop, state);
+        notifyModalLayer();
+      }
+      return;
+    }
+    const p = dialogPanel(backdrop, panel);
+    setDialogFly(p, trigger, "close");
+    flushLayout(p);
+    await nextFrame();
+    if (dialogLeases.get(backdrop) !== state || state.generation !== generation) return;
+    backdrop.classList.remove("is-open");
+    notifyModalLayer();
+    await Promise.all([
+      waitTransition(backdrop, "opacity", DIALOG_CLOSE_MS),
+      waitTransition(p, "transform", DIALOG_CLOSE_MS),
+    ]);
+    if (dialogLeases.get(backdrop) !== state || state.generation !== generation) return;
+    p.style.removeProperty("--motion-fly-x");
+    p.style.removeProperty("--motion-fly-y");
+    p.style.removeProperty("--motion-fly-scale");
+    hideModalBackdrop(backdrop);
+    releaseDialog(backdrop, state);
+    notifyModalLayer();
+  })();
+  state.closing = closeOperation;
+  try {
+    await closeOperation;
+  } finally {
+    if (state.closing === closeOperation) state.closing = null;
+  }
 }
 
 const CROSSFADE_MS = 120;

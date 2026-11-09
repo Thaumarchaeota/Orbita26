@@ -7,7 +7,7 @@
   align-items: center;
   gap: 0;
   width: 100%;
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
   border-radius: var(--finance-control-radius, 8px);
   background-color: var(--ledger-surface-opaque, var(--ledger-surface, #fff));
   box-sizing: border-box;
@@ -56,7 +56,7 @@
   min-height: 36px;
   padding: 0;
   border: none;
-  border-left: 1px solid var(--ledger-border, #e5e7eb);
+  border-left: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
   background: transparent;
   cursor: pointer;
   color: var(--ledger-muted);
@@ -100,12 +100,12 @@
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--ledger-border, #e5e7eb);
+  border-top: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
 }
 
 .orbita-mini-cal-footer button {
   padding: 4px 12px;
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
   border-radius: var(--admin-radius-sm, 6px);
   background: var(--ledger-surface, #fff);
   color: var(--ledger-text);
@@ -117,7 +117,7 @@
 .orbita-mini-cal-footer button[data-action="confirm"] {
   border-color: var(--ledger-accent, #5b96d1);
   background: var(--ledger-accent, #5b96d1);
-  color: #fff;
+  color: var(--insight-on-primary, #fff);
 }
 
 .orbita-mini-cal-footer button:hover {
@@ -200,11 +200,11 @@
 
 .orbita-mini-cal-cell.is-active {
   background: var(--ledger-accent, #5b96d1);
-  color: #fff;
+  color: var(--insight-on-primary, #fff);
 }
 
 .orbita-mini-cal-cell.is-active.is-today {
-  color: #fff;
+  color: var(--insight-on-primary, #fff);
 }
 
 .orbita-mini-cal-cell:hover:not(.is-active):not(.is-empty) {

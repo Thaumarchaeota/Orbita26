@@ -62,6 +62,7 @@
   --font-literature: var(--font-base);
   --font-note: var(--font-base);
   --font-ai: var(--font-base);
+  --font-code: "Ubuntu Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
   --font-finance: var(--font-base);
   --font-finance-chrome: var(--font-life-ring, var(--font-clock));
   --font-finance-chrome-weight: var(--font-life-ring-weight, 700);

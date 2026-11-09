@@ -1,8 +1,25 @@
 reference/
 docs_legacy/
 
-# local SSH / infra notes (may contain host-specific details)
-docs/ssh.md
+# Project documents stay on this machine. Root README.md remains tracked.
+/docs/
+/AGENTS.md
+/services/sync/docs/
+
+# Personal data and live captures. Docs ignore covers the finance sample tree;
+# these rules still apply if a document path is ever tracked again.
+/merge_sep.mjs
+apps/desktop/python/tests/garmin-live-2026-09-27/walking-rerun/
+docs/plans/evidence/finance-v2-sample-audit-*/
+docs/plans/evidence/variflight-*.json
+docs/plans/evidence/travel-qa-*.png
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.fit
+*.gpx
+*.tcx
+*.kml
 
 scripts/env.ps1
 scripts/test_dida365.py
@@ -14,6 +31,7 @@ scripts/fix-logo.py
 
 **/garmin_tokens.json
 **/garmin_rate_limit.json
+apps/desktop/python/tests/garmin-live-2026-09-27/result*/
 **/settings.json
 **/credentials.json
 **/*_tokens.json

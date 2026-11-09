@@ -1,11 +1,11 @@
+import { mountDecoupledDatePicker, type DecoupledDatePickerHandle } from "../../../ui/decoupled-date-picker";
+import { mountDecoupledTimePicker, type DecoupledTimePickerHandle } from "../../../ui/decoupled-time-picker";
 import { DEFAULT_CURRENCY, MAX_POSTINGS, REMARK_MAX_LENGTH } from "../constants";
 import { validateComposerPostings } from "../domain/composer-validate";
 import { parseDecimalInput, parseOptionalDecimalInput } from "../domain/field-validate";
 import type { Entry, Posting } from "../types";
 import { todayIso } from "../utils";
 import { mountAccountSelect, type AccountSelectHandle } from "../ui/account-select";
-import { mountDatePicker, type DatePickerHandle } from "../../../ui/date-picker";
-import { mountTimePicker, type TimePickerHandle } from "../../../ui/time-picker";
 import { getTagsFromBox, initTagInput, setTagsInBox } from "./cds-tag-input";
 import { validateTxnTimeInput } from "../domain/txn-time";
 
@@ -122,8 +122,8 @@ export function mountCdsAdvancedComposer(
   );
   container.replaceChildren(form);
 
-  const datePicker: DatePickerHandle = mountDatePicker(dateMount, { compact: true });
-  const timePicker: TimePickerHandle = mountTimePicker(timeMount, { placeholder: "时间" });
+  const datePicker: DecoupledDatePickerHandle = mountDecoupledDatePicker({ defaultTrigger: { container: dateMount } });
+  const timePicker: DecoupledTimePickerHandle = mountDecoupledTimePicker({ defaultTrigger: { container: timeMount } });
   initTagInput(tagField, tagBox, signal);
 
   const rows: PostingRow[] = [];
@@ -180,7 +180,6 @@ export function mountCdsAdvancedComposer(
     const accountPicker = mountAccountSelect(accountMount, {
       groups: [...ALL_GROUPS],
       displayMode: "admin",
-      placeholder: "账户",
     });
 
     removeBtn.addEventListener(

@@ -45,21 +45,37 @@ export function buildMiniCalFooterHtml(): string {
   </div>`;
 }
 
+function calendarHeadHtml(year: number, month: number, yearNav: boolean): string {
+  const monthPrev = `<button type="button" class="orbita-mini-cal-nav" data-dir="-1" aria-label="上一月">‹</button>`;
+  const monthNext = `<button type="button" class="orbita-mini-cal-nav" data-dir="1" aria-label="下一月">›</button>`;
+  const yearPrev = `<button type="button" class="orbita-mini-cal-nav orbita-mini-cal-year" data-dir="-1" aria-label="上一年">‹‹</button>`;
+  const yearNext = `<button type="button" class="orbita-mini-cal-nav orbita-mini-cal-year" data-dir="1" aria-label="下一年">››</button>`;
+  const left = yearNav ? `<span class="orbita-mini-cal-nav-group">${monthPrev}${yearPrev}</span>` : monthPrev;
+  const right = yearNav ? `<span class="orbita-mini-cal-nav-group">${yearNext}${monthNext}</span>` : monthNext;
+  const title = yearNav
+    ? `<button type="button" class="orbita-mini-cal-month" aria-label="跳转到今天">${monthLabel(year, month)}</button>`
+    : `<span>${monthLabel(year, month)}</span>`;
+  return `
+      <div class="orbita-mini-cal-head">
+        ${left}
+        ${title}
+        ${right}
+      </div>`;
+}
+
 export function buildMiniCalendarHtml(
   year: number,
   month: number,
   cellFlags: (value: string, date: Date) => MiniCalCellFlags,
   calClass = "",
+  yearNav = false,
+  footer = true,
 ): string {
   const today = new Date();
   const cells = buildCalendarDays(year, month);
   return `
     <div class="orbita-mini-cal${calClass ? ` ${calClass}` : ""}">
-      <div class="orbita-mini-cal-head">
-        <button type="button" class="orbita-mini-cal-nav" data-dir="-1">‹</button>
-        <span>${monthLabel(year, month)}</span>
-        <button type="button" class="orbita-mini-cal-nav" data-dir="1">›</button>
-      </div>
+      ${calendarHeadHtml(year, month, yearNav)}
       <div class="orbita-mini-cal-week">${WEEKDAYS.map((d) => `<span>${d}</span>`).join("")}</div>
       <div class="orbita-mini-cal-grid">
         ${cells
@@ -75,7 +91,7 @@ export function buildMiniCalendarHtml(
           })
           .join("")}
       </div>
-      ${buildMiniCalFooterHtml()}
+      ${footer ? buildMiniCalFooterHtml() : ""}
     </div>`;
 }
 

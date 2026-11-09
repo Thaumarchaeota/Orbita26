@@ -1,0 +1,8 @@
+.orbita-option-hint {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--insight-font-role-label);
+  color: var(--insight-text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

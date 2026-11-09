@@ -57,7 +57,8 @@ export async function runGarminSyncSilent(): Promise<boolean> {
   syncing = true;
   try {
     const days = normalizeGarminSyncDays(getSettings().integrations.garmin.syncDays);
-    const res = await garminSync({ from: syncFromDate(days), to: beijingToday() });
+    const res = await garminSync({ from: syncFromDate(days), to: beijingToday(), entryPoint: "auto" });
+    if (res.reason === "GARMIN_SYNC_IN_PROGRESS") return false;
     if (res.ok) {
       window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
       return true;

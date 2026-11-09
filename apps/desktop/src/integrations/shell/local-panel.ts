@@ -2,7 +2,8 @@ import { escAttr, escHtml } from "../../core/html";
 import { getSettings } from "../../core/settings";
 import { hideHoverTip } from "../../ui/hover-tip";
 import { crossfadeSwap } from "../../ui/motion";
-import { mountContextMenu, type MenuItemDef } from "../../ui/context-menu";
+import { getConfirmDialog } from "../shell/dialog";
+import { showCommandMenuAt, type MenuItemDef } from "../../ui/command-menu-popover";
 import {
   openLocalPath,
   pickLocalFile,
@@ -31,7 +32,7 @@ import {
 } from "./local-files";
 import { bindListTreeDrag, consumeRowClickSuppress } from "./list-tree-drag";
 import { locateLocalEntry, moveLocalNode } from "./local-tree";
-import { setLocalTab, shellStore, type LocalTab } from "./store";
+import type { LocalTab } from "./store";
 import { FOLDER_OPEN_SVG, FOLDER_SVG, TOOLBAR_ADD_FILE_SVG, TOOLBAR_ADD_FOLDER_SVG, TOOLBAR_ADD_GROUP_SVG, TOOLBAR_RECYCLE_SVG, applyShellIcon, localItemIcon } from "./local-icons";
 import {
   renderTreeList,
@@ -53,24 +54,12 @@ function noteDisplayName(name: string, path: string): string {
   return base.replace(/\.md$/i, "") || n;
 }
 
-const LOCAL_TABS: { id: LocalTab; label: string }[] = [
-  { id: "file", label: "文件" },
-  { id: "literature", label: "文献" },
-  { id: "note", label: "笔记" },
-];
-
 const ADD_ACTIONS_HTML = `
   <button type="button" class="local-explorer-add" data-add-kind="file" data-tip="添加文件" aria-label="添加文件">${TOOLBAR_ADD_FILE_SVG}</button>
   <button type="button" class="local-explorer-add" data-add-kind="folder" data-tip="添加文件夹" aria-label="添加文件夹">${TOOLBAR_ADD_FOLDER_SVG}</button>
   <button type="button" class="local-explorer-add" data-add-kind="group" data-tip="添加分组" aria-label="添加分组">${TOOLBAR_ADD_GROUP_SVG}</button>
   <button type="button" class="local-explorer-add" data-action="recycle-bin" data-tip="回收站" aria-label="回收站">${TOOLBAR_RECYCLE_SVG}</button>
 `;
-
-function moveSegmentIndicator(indicator: HTMLElement, btn: HTMLButtonElement | null) {
-  if (!btn) return;
-  indicator.style.width = `${btn.offsetWidth}px`;
-  indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
-}
 
 function iconStyle(color?: string): string {
   return color ? ` style="--icon-color:${escAttr(color)}"` : "";
@@ -262,7 +251,7 @@ function mountFileList(
     setItems(moveLocalNode(items, sourceId, targetId, position));
   });
 
-  const ctxMenu = mountContextMenu(signal);
+  const confirmRemove = getConfirmDialog();
 
   const editEntry = async (loc: NonNullable<ReturnType<typeof locateLocalEntry>>, trigger: HTMLElement) => {
     if (loc.node.kind === "group") {
@@ -289,13 +278,13 @@ function mountFileList(
     if (kind === "file") items.push({ action: "open-with", label: "打开方式" });
     if (kind === "folder" && hasCursor()) items.push({ action: "cursor", label: "用 Cursor 打开" });
     items.push({ action: "reveal", label: "打开文件路径" });
-    items.push({ action: "remove", label: "移除收藏", danger: true, confirm: true });
+    items.push({ action: "remove", label: "移除收藏", danger: true });
     return items;
   };
 
   const groupMenuItems = (): MenuItemDef[] => [
     { action: "edit", label: "编辑" },
-    { action: "remove", label: "删除分组", danger: true, confirm: true },
+    { action: "remove", label: "删除分组", danger: true },
   ];
 
   const searchMenuItems = (isDir: boolean): MenuItemDef[] => {
@@ -389,7 +378,15 @@ function mountFileList(
         e.preventDefault();
         const path = searchRow.dataset.path;
         const isDir = searchRow.dataset.isDir === "1";
-        ctxMenu.show(e.clientX, e.clientY, searchMenuItems(isDir), (action) => {
+        showCommandMenuAt(
+          e.clientX,
+          e.clientY,
+          searchMenuItems(isDir).map((item) => ({
+            value: item.action,
+            label: item.label,
+            danger: item.danger,
+          })),
+          (action) => {
           if (action === "add") {
             const name = guessLocalName(path);
             const kind = isDir ? "folder" : "file";
@@ -399,7 +396,8 @@ function mountFileList(
           if (action === "open-with") void openWithSystemDialog(path);
           if (action === "cursor") void openWithCursor(path);
           if (action === "reveal") void revealPathInExplorer(path);
-        });
+          },
+        );
         e.stopPropagation();
         return;
       }
@@ -411,25 +409,51 @@ function mountFileList(
       if (!loc) return;
       if (loc.node.kind === "group") {
         const groupId = row.dataset.id;
-        ctxMenu.show(e.clientX, e.clientY, groupMenuItems(), (action, trigger) => {
-          if (action === "edit") void editEntry(loc, trigger);
-          if (action === "remove") setItems(removeLocalFile(groupId));
-        });
+        showCommandMenuAt(
+          e.clientX,
+          e.clientY,
+          groupMenuItems().map((item) => ({ value: item.action, label: item.label, danger: item.danger })),
+          (action) => {
+            if (action === "edit") void editEntry(loc, row);
+            if (action === "remove") {
+              void (async () => {
+                if (!(await confirmRemove("删除确认", "确定删除该分组？", row))) return;
+                setItems(removeLocalFile(groupId));
+              })();
+            }
+          },
+          { returnFocus: row },
+        );
         e.stopPropagation();
         return;
       }
       const leafKind = loc.node.kind;
       const leafPath = loc.node.path;
-      ctxMenu.show(e.clientX, e.clientY, favoriteMenuItems(leafKind), (action, trigger) => {
-        if (action === "edit") void editEntry(loc, trigger);
-        if (action === "open-with") {
-          if (leafKind === "file") void openWithSystemDialog(leafPath);
-          else void openLocalPath(leafPath);
-        }
-        if (action === "cursor") void openWithCursor(leafPath);
-        if (action === "reveal") void revealPathInExplorer(leafPath);
-        if (action === "remove") setItems(removeLocalFile(row.dataset.id!));
-      });
+      showCommandMenuAt(
+        e.clientX,
+        e.clientY,
+        favoriteMenuItems(leafKind).map((item) => ({
+          value: item.action,
+          label: item.label,
+          danger: item.danger,
+        })),
+        (action) => {
+          if (action === "edit") void editEntry(loc, row);
+          if (action === "open-with") {
+            if (leafKind === "file") void openWithSystemDialog(leafPath);
+            else void openLocalPath(leafPath);
+          }
+          if (action === "cursor") void openWithCursor(leafPath);
+          if (action === "reveal") void revealPathInExplorer(leafPath);
+          if (action === "remove") {
+            void (async () => {
+              if (!(await confirmRemove("删除确认", "确定移除该收藏？", row))) return;
+              setItems(removeLocalFile(row.dataset.id!));
+            })();
+          }
+        },
+        { returnFocus: row },
+      );
       e.stopPropagation();
     },
     { signal },
@@ -583,43 +607,24 @@ export function mountLocalPanel(
   container: HTMLElement,
   root: HTMLElement,
 ) {
-  const { localTab } = shellStore.getState();
   container.innerHTML = `
     <div class="launcher-head"><span class="launcher-title">${LOCAL_SVG}本地</span></div>
-    <div class="local-segment-wrap">
-      <div class="local-segment-indicator" id="localIndicator"></div>
-      <div class="local-segment" id="localSegment">
-        ${LOCAL_TABS.map(
-          (t) =>
-            `<button type="button" data-id="${t.id}" class="${t.id === localTab ? "active" : ""}">${t.label}</button>`,
-        ).join("")}
-      </div>
-    </div>
     <div class="local-content" id="localContent"></div>
   `;
 
-  const indicator = container.querySelector<HTMLElement>("#localIndicator")!;
-  const segment = container.querySelector<HTMLElement>("#localSegment")!;
   const content = container.querySelector<HTMLElement>("#localContent")!;
   const promptEntry = mountLocalEntryDialog(root);
   let tabAbort: AbortController | null = null;
   let contentReady = false;
-
-  const syncIndicator = () => {
-    const active = segment.querySelector<HTMLButtonElement>("button.active");
-    requestAnimationFrame(() => moveSegmentIndicator(indicator, active));
-  };
 
   const renderContent = async () => {
     const mount = () => {
       tabAbort?.abort();
       tabAbort = new AbortController();
       const { signal } = tabAbort;
-      const tab = shellStore.getState().localTab;
-      content.innerHTML = renderTabContent(tab);
-      if (tab === "file") mountFileList(content, promptEntry, signal);
-      if (tab === "literature") mountLiteratureList(content, signal);
-      if (tab === "note") mountNoteList(content, signal);
+      // Keep the saved localTab untouched; the redesigned Panel always opens its file surface.
+      content.innerHTML = renderTabContent("file");
+      mountFileList(content, promptEntry, signal);
     };
     if (!contentReady) {
       mount();
@@ -629,20 +634,5 @@ export function mountLocalPanel(
     await crossfadeSwap(content, mount);
   };
 
-  syncIndicator();
   void renderContent();
-
-  segment.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
-    if (!btn || btn.classList.contains("active")) return;
-    setLocalTab(btn.dataset.id as LocalTab);
-    segment.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
-    syncIndicator();
-    void renderContent();
-  });
-
-  window.addEventListener("resize", syncIndicator);
-  shellStore.subscribe(() => {
-    syncIndicator();
-  });
 }

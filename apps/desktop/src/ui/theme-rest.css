@@ -23,6 +23,12 @@
   width: 100%;
   pointer-events: none;
 }
+.search-bar-line::before {
+  content: "";
+  flex: 0 0 calc(4.4ch + 4px);
+  font: 300 32px/1 var(--font-clock);
+  pointer-events: none;
+}
 .engines-wrap {
   position: relative;
   display: inline-block;
@@ -582,6 +588,27 @@
   opacity: 0;
   transform: scale(0.45) rotate(-40deg);
   color: #22c55e;
+}
+.garmin-sync-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.garmin-sync-progress {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.garmin-sync-progress[hidden] {
+  display: none;
+}
+.ticktick-icon-btn.garmin-sync-accent.is-spinning {
+  color: #eab308;
+  border-color: rgba(234, 179, 8, 0.55);
+}
+.ticktick-icon-btn.is-spinning:disabled {
+  opacity: 1;
+  cursor: wait;
 }
 .ticktick-icon-btn.is-spinning .ticktick-refresh-icon {
   animation: ticktick-spin 0.75s linear infinite;

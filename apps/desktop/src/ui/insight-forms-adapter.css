@@ -1,0 +1,564 @@
+/*
+ * Default geometry adapter for Insight workspace and form surfaces.
+ * Keep this file scoped to the Insight document so Panel stays separate.
+ */
+
+html[data-insight-theme] .admin-workspace-section {
+  border-top-color: var(--insight-divider);
+}
+
+html[data-insight-theme] :is(
+  .admin-workspace-btn,
+  .admin-workspace-item,
+  .admin-workspace-group-toggle,
+  .work-page-back,
+  .work-filter-btn,
+  .project-create-row button
+) {
+  border-radius: var(--insight-radius-sm);
+}
+
+html[data-insight-theme] :is(
+  .admin-workspace-btn:hover,
+  .admin-workspace-item:hover,
+  .work-page-back:hover,
+  .work-filter-btn:hover
+) {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .admin-workspace-item.is-active,
+html[data-insight-theme] .work-filter-btn.is-active {
+  color: var(--insight-icon-active);
+  background: var(--insight-control-selected);
+  border-color: var(--insight-border-subtle);
+}
+
+html[data-insight-theme] :is(
+  .admin-workspace-btn,
+  .admin-workspace-item,
+  .admin-workspace-group-toggle,
+  .work-page-back,
+  .work-filter-btn,
+  .project-create-row button,
+  .work-item-priority,
+  .item-compose-exec button,
+  .meal-compose-foods-head button,
+  .meal-compose-ai button,
+  .meal-compose-save,
+  .meal-compose-recent-item,
+  .meal-food-card-head button,
+  .meal-food-search-hit
+):focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] :is(
+  .work-item-title,
+  .project-tree-row,
+  .work-list-row,
+  .project-task-row
+):focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] :is(
+  .admin-workspace-btn:disabled,
+  .admin-workspace-item:disabled,
+  .work-page-back:disabled,
+  .work-filter-btn:disabled,
+  .work-item-priority:disabled,
+  .item-compose-exec button:disabled,
+  .meal-compose-foods-head button:disabled,
+  .meal-compose-ai button:disabled,
+  .meal-compose-save:disabled,
+  .meal-compose-recent-item:disabled,
+  .item-compose-action-head input:disabled,
+  .item-compose-plan-row input:disabled,
+  .item-compose-plan-row select:disabled,
+  .meal-compose-field input:disabled,
+  .meal-compose-field select:disabled,
+  .meal-compose-field textarea:disabled,
+  .meal-food-field input:disabled,
+  .meal-food-search-input:disabled,
+  .meal-compose-ai input:disabled
+) {
+  color: var(--insight-text-disabled);
+  cursor: not-allowed;
+}
+
+/* Work and project surfaces. */
+html[data-insight-theme] :is(.work-list-row, .project-task-row, .project-tree-row) {
+  background: var(--insight-surface-panel);
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-md);
+}
+
+html[data-insight-theme] :is(.work-list-row, .project-task-row, .project-tree-row):hover {
+  border-color: var(--insight-primary);
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .project-tree-row.is-selected {
+  border-color: var(--insight-primary);
+  background: var(--insight-control-selected);
+}
+
+html[data-insight-theme] .work-filter-btn {
+  border-color: transparent;
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] :is(.work-filter-btn, .work-item-row, .work-item-title, .project-tree-row) {
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .work-toggle {
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .work-item-title.is-done {
+  color: var(--insight-text-disabled);
+}
+
+html[data-insight-theme] :is(.work-item-row, .project-tree-row) {
+  background: var(--insight-surface-panel);
+  border-color: var(--insight-border-subtle);
+}
+
+html[data-insight-theme] :is(.work-item-priority, .item-compose-action-head input, .item-compose-plan-row input, .item-compose-plan-row select) {
+  border-color: var(--insight-input-border);
+  background: var(--insight-control-surface-bg);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .item-compose-error {
+  color: var(--insight-danger);
+}
+
+html[data-insight-theme] .work-item-priority {
+  border-color: var(--insight-border-subtle);
+  background: var(--insight-surface-sunken);
+  border-radius: var(--insight-radius-xs);
+}
+
+html[data-insight-theme] .work-item-title {
+  color: var(--insight-text-primary);
+  border-radius: var(--insight-radius-xs);
+}
+
+html[data-insight-theme] .work-item-title:focus {
+  outline: 2px solid var(--insight-focus-ring);
+  background: var(--insight-surface-panel);
+}
+
+html[data-insight-theme] :is(.project-create-row input, .productivity-panel-compose input[type="text"]) {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(.project-create-row input, .productivity-panel-compose input[type="text"]):focus {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .project-create-row button {
+  background: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] .project-create-row button:hover:not(:disabled),
+html[data-insight-theme] .meal-compose-save:hover:not(:disabled),
+html[data-insight-theme] .meal-compose-ai button:hover:not(:disabled) {
+  background: var(--insight-primary-hover);
+}
+
+html[data-insight-theme] .project-task-actions {
+  border-top-color: var(--insight-divider);
+}
+
+/* Item compose dialog and action rows. Running/paused colors stay semantic. */
+html[data-insight-theme] .item-compose-backdrop .dialog-panel {
+  background: var(--insight-surface-panel);
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-panel);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .item-compose-action-row {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-md);
+  background: var(--insight-surface-panel);
+}
+
+html[data-insight-theme] :is(
+  .item-compose-action-head input,
+  .item-compose-plan-row input,
+  .item-compose-plan-row select
+) {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(
+  .item-compose-action-head input,
+  .item-compose-plan-row input,
+  .item-compose-plan-row select
+):focus {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .item-compose-exec button,
+html[data-insight-theme] .action-track-exec-bar button {
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-subtle);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(.item-compose-exec button, .action-track-exec-bar button):hover:not(:disabled) {
+  border-color: var(--insight-primary);
+  background: var(--insight-control-hover);
+}
+
+/* Meal compose surface. Error and warning foregrounds remain domain-owned. */
+html[data-insight-theme] .meal-compose-page {
+  background: var(--insight-surface-page);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .meal-compose-backdrop {
+  background: color-mix(in srgb, var(--insight-content-bg) 78%, transparent);
+}
+
+html[data-insight-theme] .meal-compose-card {
+  background: var(--insight-surface-panel);
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-panel);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] :is(
+  .meal-compose-field input,
+  .meal-compose-field select,
+  .meal-compose-field textarea,
+  .meal-food-field input,
+  .meal-food-search-input,
+  .meal-compose-ai input
+) {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] :is(
+  .meal-compose-field input,
+  .meal-compose-field select,
+  .meal-compose-field textarea,
+  .meal-food-field input,
+  .meal-food-search-input,
+  .meal-compose-ai input
+):focus {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] :is(
+  .meal-compose-footer,
+  .meal-compose-recent,
+  .meal-food-card-head,
+  .meal-food-section
+) {
+  border-color: var(--insight-divider);
+}
+
+html[data-insight-theme] .meal-compose-foods-head button {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-subtle);
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .meal-food-empty {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-md);
+  background: var(--insight-surface-sunken);
+}
+
+html[data-insight-theme] .meal-food-card {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-md);
+  background: var(--insight-surface-subtle);
+}
+
+html[data-insight-theme] .meal-food-card-head {
+  border-bottom-color: var(--insight-divider);
+}
+
+html[data-insight-theme] .meal-compose-footer {
+  background: var(--insight-surface-panel);
+  border-top-color: var(--insight-divider);
+}
+
+html[data-insight-theme] .meal-compose-ai button,
+html[data-insight-theme] .meal-compose-save {
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] .meal-compose-recent-item {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-sm);
+  background: var(--insight-surface-panel);
+}
+
+html[data-insight-theme] .meal-compose-recent-item:hover {
+  border-color: var(--insight-primary);
+  color: var(--insight-primary);
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .meal-food-search-results {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-md);
+  background: var(--insight-surface-panel);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .meal-food-search-hit {
+  border-bottom-color: var(--insight-divider);
+}
+
+html[data-insight-theme] .meal-food-search-hit:hover {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .meal-compose-totals {
+  border-color: var(--insight-border-subtle);
+  border-radius: var(--insight-radius-md);
+  background: var(--insight-surface-subtle);
+}
+
+html[data-insight-theme] .meal-compose-total-warn {
+  border-radius: var(--insight-radius-xs);
+}
+
+/* Shared date/time picker semantic tokens for all Insight styles. */
+html[data-insight-theme] {
+  --orbita-picker-surface: var(--insight-surface-elevated, var(--insight-card-bg, #fff));
+  --orbita-picker-surface-subtle: var(--insight-surface-sunken, var(--insight-surface-subtle, #f1f5f9));
+  --orbita-picker-border: var(--insight-border-subtle, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  --orbita-picker-text: var(--insight-text-primary, #243044);
+  --orbita-picker-muted: var(--insight-text-secondary, #66758a);
+  --orbita-picker-hover: var(--insight-control-hover, #eef2f7);
+  --orbita-picker-selected: var(--insight-state-control-selected, var(--insight-control-selected, #e6eef9));
+  --orbita-picker-selected-foreground: var(--insight-state-control-selected-foreground, var(--insight-primary, #4b78b8));
+  --orbita-picker-accent: var(--insight-primary, #4b78b8);
+  --orbita-picker-accent-hover: var(--insight-primary-hover, #3d669e);
+  --orbita-picker-focus: var(--insight-focus-ring, color-mix(in srgb, var(--insight-primary, #4b78b8) 30%, transparent));
+}
+
+html[data-insight-theme] :is(.orbita-date-picker, .orbita-time-picker) {
+  --ledger-surface: var(--orbita-picker-surface);
+  --ledger-surface-opaque: var(--orbita-picker-surface);
+  --ledger-border: var(--orbita-picker-border);
+  --ledger-text: var(--orbita-picker-text);
+  --ledger-muted: var(--orbita-picker-muted);
+  --ledger-hover: var(--orbita-picker-hover);
+  --ledger-accent-bg: var(--orbita-picker-selected);
+  --ledger-accent: var(--orbita-picker-accent);
+  --ledger-accent-hover: var(--orbita-picker-accent-hover);
+}
+
+html[data-insight-theme] :is(.orbita-date-picker-menu, .orbita-time-picker-menu) {
+  --ledger-surface: var(--orbita-picker-surface);
+  --ledger-surface-opaque: var(--orbita-picker-surface);
+  --ledger-border: var(--orbita-picker-border);
+  --ledger-text: var(--orbita-picker-text);
+  --ledger-muted: var(--orbita-picker-muted);
+  --ledger-hover: var(--orbita-picker-hover);
+  --ledger-accent-bg: var(--orbita-picker-selected);
+  --ledger-accent: var(--orbita-picker-accent);
+  --ledger-accent-hover: var(--orbita-picker-accent-hover);
+}
+
+html[data-insight-theme] :is(.orbita-date-picker-trigger, .orbita-time-picker-trigger):focus-within,
+html[data-insight-theme] :is(.orbita-date-picker-trigger, .orbita-time-picker-trigger).is-open {
+  box-shadow: 0 0 0 2px var(--orbita-picker-focus);
+}
+
+html[data-insight-theme] :is(
+  .orbita-date-picker-chevron-btn,
+  .orbita-mini-cal-nav,
+  .orbita-mini-cal-cell,
+  .orbita-mini-cal-footer button,
+  .orbita-time-picker-chevron-btn,
+  .orbita-time-panel-input,
+  .orbita-time-wheel-scroll,
+  .orbita-time-panel-clear,
+  .orbita-time-panel-confirm
+):focus-visible {
+  outline: 2px solid var(--orbita-picker-accent);
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .orbita-date-picker-trigger,
+html[data-insight-theme] .orbita-date-picker-menu,
+html[data-insight-theme] .orbita-time-picker-trigger,
+html[data-insight-theme] .orbita-time-picker-menu {
+  border-color: var(--orbita-picker-border);
+  border-radius: var(--insight-radius-md, 4px);
+  background-color: var(--orbita-picker-surface);
+  box-shadow: var(--insight-shadow-panel, 0 4px 12px rgba(36, 48, 68, 0.14));
+}
+
+html[data-insight-theme] :is(.orbita-date-picker-input, .orbita-time-picker-input, .orbita-time-panel-input) {
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] :is(
+  .orbita-date-picker-input::placeholder,
+  .orbita-mini-cal-week,
+  .orbita-time-picker-input::placeholder,
+  .orbita-time-panel-input::placeholder,
+  .orbita-time-wheel-col-label
+) {
+  color: var(--orbita-picker-muted);
+}
+
+html[data-insight-theme] :is(
+  .orbita-date-picker-trigger,
+  .orbita-time-picker-trigger,
+  .orbita-time-panel-input
+):focus-within,
+html[data-insight-theme] :is(.orbita-date-picker-trigger, .orbita-time-picker-trigger).is-open,
+html[data-insight-theme] .orbita-time-panel-input:focus {
+  border-color: var(--orbita-picker-accent);
+}
+
+html[data-insight-theme] :is(.orbita-date-picker-chevron-btn, .orbita-time-picker-chevron-btn) {
+  border-left-color: var(--orbita-picker-border);
+  color: var(--orbita-picker-muted);
+}
+
+html[data-insight-theme] :is(
+  .orbita-date-picker-chevron-btn:hover,
+  .orbita-mini-cal-nav:hover,
+  .orbita-mini-cal-cell:hover:not(.is-active):not(.is-empty),
+  .orbita-time-picker-chevron-btn:hover,
+  .orbita-time-wheel-item:hover
+) {
+  background: var(--orbita-picker-hover);
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] .orbita-mini-cal-footer {
+  border-top-color: var(--orbita-picker-border);
+}
+
+html[data-insight-theme] .orbita-mini-cal-footer button {
+  border-color: var(--orbita-picker-border);
+  border-radius: var(--insight-radius-xs, 2px);
+  background: var(--orbita-picker-surface);
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] .orbita-mini-cal-footer button:hover {
+  background: var(--orbita-picker-hover);
+}
+
+html[data-insight-theme] .orbita-mini-cal-footer button[data-action="confirm"] {
+  border-color: var(--orbita-picker-accent);
+  background: var(--orbita-picker-accent);
+}
+
+html[data-insight-theme] .orbita-mini-cal-footer button[data-action="confirm"]:hover {
+  background: var(--orbita-picker-accent-hover);
+}
+
+html[data-insight-theme] :is(.orbita-mini-cal-head, .orbita-mini-cal-cell) {
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] .orbita-mini-cal-nav {
+  border-radius: var(--insight-radius-xs, 2px);
+  color: var(--orbita-picker-muted);
+}
+
+html[data-insight-theme] .orbita-mini-cal-cell {
+  border-radius: var(--insight-radius-xs, 2px);
+}
+
+html[data-insight-theme] .orbita-mini-cal-cell.is-today {
+  color: var(--orbita-picker-accent);
+}
+
+html[data-insight-theme] .orbita-mini-cal-cell.is-in-range:not(.is-active) {
+  background: var(--orbita-picker-selected);
+  color: var(--orbita-picker-selected-foreground);
+}
+
+html[data-insight-theme] .orbita-mini-cal-cell.is-active {
+  background: var(--orbita-picker-accent);
+  color: var(--insight-on-primary, #fff);
+}
+
+html[data-insight-theme] :is(.orbita-mini-cal-cell:disabled, .orbita-mini-cal-footer button:disabled) {
+  opacity: 0.45;
+  cursor: default;
+}
+
+html[data-insight-theme] :is(.orbita-time-panel-input, .orbita-time-panel-clear, .orbita-time-panel-confirm) {
+  border-color: var(--orbita-picker-border);
+  border-radius: var(--insight-radius-xs, 2px);
+  background: var(--orbita-picker-surface);
+}
+
+html[data-insight-theme] .orbita-time-wheel-band {
+  border-color: var(--orbita-picker-border);
+  border-radius: var(--insight-radius-xs, 2px);
+  background: var(--orbita-picker-surface-subtle);
+}
+
+html[data-insight-theme] .orbita-time-wheel-item {
+  color: var(--orbita-picker-muted);
+  border-radius: var(--insight-radius-xs, 2px);
+}
+
+html[data-insight-theme] .orbita-time-wheel-item.is-selected {
+  background: var(--orbita-picker-selected);
+  color: var(--orbita-picker-selected-foreground);
+}
+
+html[data-insight-theme] .orbita-time-panel-foot {
+  border-top-color: var(--orbita-picker-border);
+}
+
+html[data-insight-theme] .orbita-time-panel-clear {
+  color: var(--orbita-picker-muted);
+}
+
+html[data-insight-theme] .orbita-time-panel-clear:hover {
+  background: var(--orbita-picker-hover);
+  color: var(--orbita-picker-text);
+}
+
+html[data-insight-theme] .orbita-time-panel-confirm {
+  border-color: var(--orbita-picker-accent);
+  background: var(--orbita-picker-accent);
+  color: var(--insight-on-primary, #fff);
+}
+
+html[data-insight-theme] .orbita-time-panel-confirm:hover:not(:disabled) {
+  border-color: var(--orbita-picker-accent-hover);
+  background: var(--orbita-picker-accent-hover);
+}

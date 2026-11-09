@@ -75,6 +75,11 @@ pub fn garmin_status(app: tauri::AppHandle) -> Result<garmin::GarminStatus, Stri
 }
 
 #[tauri::command]
+pub fn garmin_sync_busy() -> bool {
+    crate::health_db::host_lock::is_active()
+}
+
+#[tauri::command]
 pub async fn garmin_sync(
     app: tauri::AppHandle,
     req: garmin::GarminSyncRequest,
@@ -99,10 +104,10 @@ pub fn health_overview_query(
     app: tauri::AppHandle,
     req: journal_db::HealthOverviewRequest,
 ) -> Result<journal_db::HealthOverviewResponse, String> {
-    journal_db::health_overview_query(&app, req)
+    crate::health_db::health_overview_query_app(&app, req)
 }
 
 #[tauri::command]
 pub fn health_sync_status(app: tauri::AppHandle) -> Result<journal_db::HealthSyncStatus, String> {
-    journal_db::health_sync_status(&app)
+    crate::health_db::health_sync_status_app(&app)
 }

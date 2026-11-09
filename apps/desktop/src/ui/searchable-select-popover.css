@@ -2,9 +2,9 @@
   min-width: 220px;
   max-width: min(320px, calc(100vw - 16px));
   background: var(--ledger-surface, var(--admin-surface, #fff));
-  border: 1px solid var(--ledger-border, var(--admin-border, #e5e7eb));
+  border: 1px solid var(--ledger-border, var(--admin-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb))));
   border-radius: var(--admin-radius-sm, 8px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 8px 24px var(--insight-shadow-color-12, rgba(15, 23, 42, 0.12));
   overflow: hidden;
   z-index: var(--orbita-popover-z, 205);
 }
@@ -16,7 +16,7 @@
 
 .orbita-searchable-select-search {
   padding: 8px;
-  border-bottom: 1px solid var(--ledger-border, #e5e7eb);
+  border-bottom: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
 }
 
 .orbita-searchable-select-input {
@@ -24,7 +24,7 @@
   box-sizing: border-box;
   height: 32px;
   padding: 0 10px;
-  border: 1px solid var(--ledger-border, #e5e7eb);
+  border: 1px solid var(--ledger-border, var(--insight-border-color, var(--insight-border-color, #e5e7eb)));
   border-radius: 6px;
   font: inherit;
   font-size: 13px;
@@ -75,4 +75,53 @@
   font-size: 13px;
   color: var(--ledger-muted, #6b7280);
   text-align: center;
+}
+
+html[data-insight-theme] .orbita-searchable-select {
+  background: var(--insight-surface-elevated);
+  border-color: var(--insight-divider);
+  border-radius: var(--insight-radius-sm);
+  box-shadow: var(--insight-shadow-panel);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .orbita-searchable-select-search {
+  border-bottom-color: var(--insight-divider);
+}
+
+html[data-insight-theme] .orbita-searchable-select-input {
+  border-color: var(--insight-input-border);
+  border-radius: var(--insight-radius-xs);
+  background: var(--insight-surface-sunken);
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .orbita-searchable-select-input:focus-visible,
+html[data-insight-theme] .orbita-searchable-select-option:focus-visible {
+  outline: 2px solid var(--insight-primary);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--insight-focus-ring);
+}
+
+html[data-insight-theme] .orbita-searchable-select-option {
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .orbita-searchable-select-option:hover,
+html[data-insight-theme] .orbita-searchable-select-option.is-selected {
+  background: var(--insight-control-selected);
+}
+
+html[data-insight-theme] .orbita-searchable-select-option.is-selected {
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .orbita-searchable-select-option:disabled {
+  color: var(--insight-text-disabled);
+  cursor: default;
+}
+
+html[data-insight-theme] .orbita-searchable-select-option-sub,
+html[data-insight-theme] .orbita-searchable-select-empty {
+  color: var(--insight-text-secondary);
 }

@@ -1,0 +1,69 @@
+.insight-drag-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.insight-drag-overlay-root .insight-drag-edge-overlay {
+  position: fixed;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  pointer-events: none;
+  opacity: 0;
+  color: var(--insight-text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  border-radius: var(--admin-content-radius, 12px);
+  background: color-mix(in srgb, var(--insight-primary) 12%, transparent);
+  outline: 1px dashed color-mix(in srgb, var(--insight-primary) 45%, transparent);
+}
+
+.insight-drag-overlay-root .insight-drag-edge-overlay.is-active {
+  opacity: 1;
+}
+
+.insight-drag-overlay-root .insight-drag-floating-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  max-width: 220px;
+  padding: 6px 12px;
+  border-radius: var(--insight-tab-radius, 8px);
+  background: var(--insight-tab-active-bg, var(--insight-content-bg));
+  color: var(--insight-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--insight-text-primary) 16%, transparent);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.insight-drag-source-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.insight-content-tab.insight-drag-source-placeholder {
+  opacity: 0;
+  transform: none;
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .insight-drag-overlay-root .insight-drag-floating-preview {
+    transition: none;
+  }
+}

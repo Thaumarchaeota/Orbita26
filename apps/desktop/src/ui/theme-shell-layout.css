@@ -49,6 +49,12 @@
   gap: var(--shell-row-gap);
   box-sizing: border-box;
 }
+.shell-aside-tasks > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: calc(var(--shell-row1-h) + var(--shell-row-gap));
+}
+.shell-aside-tasks > .productivity-panel-task { width: 50%; }
 .today-section {
   position: absolute;
   top: 0;

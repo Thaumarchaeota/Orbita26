@@ -1,83 +1,40 @@
 .insight-settings {
+  color: var(--insight-text-primary, var(--admin-text, #374151));
+  background: var(--insight-surface-page, var(--admin-surface, #fff));
+}
+
+.insight-settings .insight-chat-main {
+  padding-top: 8px;
+}
+
+.insight-settings [data-settings-surface] {
+  display: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.insight-settings [data-settings-surface].is-active {
   display: flex;
   flex-direction: column;
-  height: 100%;
+}
+
+.insight-settings [data-settings-surface][hidden] {
+  display: none;
+}
+
+.insight-settings [data-settings-surface="color-management"] {
+  overflow: hidden;
+}
+
+.insight-color-management-host {
+  flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
-  color: var(--admin-text, #374151);
+  overflow: hidden;
 }
 
-.insight-settings-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 20px 8px;
-  flex-shrink: 0;
-}
-
-.insight-settings-back {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--admin-border, #d1d5db);
-  border-radius: 8px;
-  background: var(--admin-surface, #fff);
-  color: var(--admin-text, #374151);
-  cursor: pointer;
-}
-
-.insight-settings-back:hover {
-  background: var(--admin-hover, #f3f4f6);
-}
-
-.insight-settings-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.insight-settings-tabs {
-  position: relative;
-  display: flex;
-  gap: 4px;
-  margin: 0 20px;
-  padding: 0 2px 10px;
-  flex-shrink: 0;
-}
-
-.insight-settings-tab {
-  flex: 0 0 auto;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--admin-muted, #6b7280);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.insight-settings-tab:hover {
-  color: var(--admin-text, #374151);
-  background: var(--admin-hover, #f3f4f6);
-}
-
-.insight-settings-tab.is-active {
-  color: var(--admin-text, #374151);
-  background: var(--admin-accent-bg, #ecf4fa);
-}
-
-.insight-settings-tab-indicator {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--admin-accent, #5b96d1);
-  transition: transform 0.28s ease, width 0.28s ease, opacity 0.2s ease;
-  pointer-events: none;
+.insight-settings [data-settings-surface="temporary"] .insight-settings-panel {
+  display: block;
 }
 
 .insight-settings-form {
@@ -91,7 +48,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 4px 20px 12px;
+  padding: 4px 0 12px;
 }
 
 .insight-settings-panels {
@@ -109,16 +66,24 @@
 .insight-settings-section {
   margin-bottom: 14px;
   padding: 14px;
-  border: 1px solid var(--admin-border, #d1d5db);
-  border-radius: 12px;
-  background: var(--admin-surface, #fff);
+  border: var(--insight-border-width, 1px) solid var(--insight-divider, var(--admin-border, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--insight-radius-panel, 12px);
+  background: var(--insight-surface-panel, var(--admin-surface, #fff));
+}
+
+html[data-insight-theme] .insight-settings-section {
+  margin-bottom: 0;
+  padding: 18px 4px;
+  border-width: 0 0 var(--insight-border-width, 1px);
+  border-radius: 0;
+  background: transparent;
 }
 
 .insight-settings-section-title {
   margin: 0 0 12px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--admin-muted, #6b7280);
+  color: var(--insight-text-secondary, var(--admin-muted, #6b7280));
 }
 
 .insight-settings-field {
@@ -134,7 +99,7 @@
   display: block;
   margin-bottom: 6px;
   font-size: 12px;
-  color: var(--admin-muted, #6b7280);
+  color: var(--insight-text-secondary, var(--admin-muted, #6b7280));
 }
 
 .insight-settings-field input,
@@ -143,12 +108,30 @@
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
-  border: 1px solid var(--admin-border, #d1d5db);
-  border-radius: 8px;
-  background: var(--admin-surface, #fff);
+  border: var(--insight-border-width, 1px) solid var(--insight-input-border, var(--admin-border, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--insight-radius-sm, 6px);
+  background: var(--insight-surface-elevated, var(--admin-surface, #fff));
   font: inherit;
   font-size: 13px;
-  color: var(--admin-text, #374151);
+  color: var(--insight-text-primary, var(--admin-text, #374151));
+}
+
+.insight-settings-field input:focus-visible,
+.insight-settings-field select:focus-visible,
+.insight-settings-path-row input:focus-visible,
+.insight-settings-btn:focus-visible,
+.insight-settings-style-btn:focus-visible,
+.insight-settings-action:focus-visible {
+  outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, var(--insight-primary))));
+  outline-offset: 2px;
+}
+
+.insight-settings-field input.insight-settings-api-key {
+  padding-right: 42px;
+  border-radius: var(--insight-radius-control, 10px);
+  background: var(--insight-control-surface-bg);
+  color: var(--insight-text-primary);
+  font-size: var(--insight-font-role-control);
 }
 
 .insight-settings-path-row {
@@ -176,40 +159,34 @@
 
 .insight-settings-btn {
   padding: 8px 14px;
-  border: 1px solid var(--admin-border, #d1d5db);
-  border-radius: 8px;
-  background: var(--admin-surface, #fff);
-  color: var(--admin-text, #374151);
+  border: var(--insight-border-width, 1px) solid var(--insight-input-border, var(--admin-border, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--insight-radius-sm, 6px);
+  background: var(--insight-surface-elevated, var(--admin-surface, #fff));
+  color: var(--insight-text-primary, var(--admin-text, #374151));
   font: inherit;
   font-size: 13px;
   cursor: pointer;
 }
 
 .insight-settings-btn:hover {
-  background: var(--admin-hover, #f3f4f6);
-}
-
-.insight-settings-btn-primary {
-  background: var(--admin-accent, #5b96d1);
-  border-color: var(--admin-accent, #5b96d1);
-  color: #fff;
-}
-
-.insight-settings-btn-primary:hover {
-  background: var(--admin-accent-hover, #4a84bf);
+  background: var(--insight-control-hover, var(--admin-hover, #f3f4f6));
 }
 
 .insight-settings-hint {
   margin: 8px 0 0;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--admin-muted, #6b7280);
+  color: var(--insight-text-secondary, var(--admin-muted, #6b7280));
 }
 
 .insight-settings-error {
   margin: 8px 0 0;
   font-size: 13px;
-  color: #b91c1c;
+  color: var(--insight-danger, #b91c1c);
+}
+
+.insight-settings-error.is-success {
+  color: var(--insight-text-secondary, var(--admin-muted, #6b7280));
 }
 
 .insight-settings-sync-row {
@@ -223,19 +200,357 @@
 .insight-settings-sync-row input {
   width: 72px;
   padding: 8px 10px;
-  border: 1px solid var(--admin-border, #d1d5db);
+  border: 1px solid var(--admin-border, var(--insight-border-color, #d1d5db));
   border-radius: 8px;
   font: inherit;
   font-size: 13px;
   text-align: center;
 }
 
-.insight-settings-footer {
+.insight-settings-tab-style {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
-  padding: 12px 20px 20px;
-  border-top: 1px solid var(--admin-border, #e5e7eb);
-  background: var(--admin-surface, #fff);
+}
+
+.insight-settings-style-btn {
+  flex: 1;
+  padding: 8px 14px;
+  border: var(--insight-border-width, 1px) solid var(--insight-input-border, var(--admin-border, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--insight-radius-sm, 6px);
+  background: var(--insight-surface-elevated, var(--admin-surface, #fff));
+  color: var(--insight-text-primary, var(--admin-text, #374151));
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.insight-settings-style-btn:hover {
+  background: var(--insight-control-hover, var(--admin-hover, #f3f4f6));
+}
+
+.insight-settings-style-btn.is-active,
+.insight-settings-style-btn[aria-pressed="true"] {
+  background: var(--insight-control-selected, var(--admin-accent-bg, #ecf4fa));
+  border-color: var(--insight-primary, var(--admin-accent, #5b96d1));
+  color: var(--insight-text-primary, var(--admin-text, #374151));
+}
+
+.insight-settings-style-btn:disabled,
+.insight-settings-btn:disabled,
+.insight-settings-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.insight-settings-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 0 20px;
+  background: transparent;
+  border: none;
+}
+
+.insight-settings-action {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--insight-radius-sm, 6px);
+  background: transparent;
+  color: var(--insight-text-secondary, var(--admin-muted, #6b7280));
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.insight-settings-action:hover {
+  background: color-mix(in srgb, var(--insight-control-hover, #eef2f7) 80%, transparent);
+  color: var(--insight-text-primary, var(--admin-text, #374151));
+}
+
+.insight-settings-action-primary {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--insight-radius-sm, 6px);
+  background: var(--insight-primary, var(--admin-accent, #5b96d1));
+  color: var(--insight-on-primary, #fff);
+  font-weight: 500;
+}
+
+.insight-settings-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  margin-top: 14px;
+}
+
+.insight-settings-color-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  color: var(--insight-text-secondary, var(--admin-muted, #6b7280));
+  font-size: 12px;
+}
+
+.insight-settings-color-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.insight-settings-color-control input[type="color"] {
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--insight-input-border, var(--admin-border, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--insight-radius-sm, 6px);
+  background: var(--insight-control-surface-bg, #fff);
+  cursor: pointer;
+}
+
+.insight-settings-color-control input[type="text"] {
+  width: 88px;
+  padding: 6px 8px;
+  border: 1px solid var(--insight-input-border, var(--admin-border, var(--insight-border-color, #d1d5db)));
+  border-radius: var(--insight-radius-sm, 6px);
+  background: var(--insight-control-surface-bg, #fff);
+  color: var(--insight-text-primary, var(--admin-text, #374151));
+  font: inherit;
+  font-family: var(--font-code, ui-monospace, monospace);
+  font-size: 12px;
+}
+
+.insight-settings-color-control input:focus-visible {
+  outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, var(--insight-primary))));
+  outline-offset: 1px;
+}
+
+.insight-settings-color-control input[aria-invalid="true"] {
+  border-color: var(--insight-danger, #b91c1c);
+}
+
+.insight-settings-palette-error {
+  margin: 10px 0 0;
+  color: var(--insight-danger, #b91c1c);
+  font-size: 12px;
+}
+
+.insight-settings-action-primary:hover {
+  background: var(--insight-primary-hover, var(--admin-accent-hover, #4a84bf));
+  color: var(--insight-on-primary, #fff);
+}
+
+.insight-settings-action-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The settings page uses preference rows. Keep the rail as the navigation boundary and let the
+ * content use rows and quiet rules to establish its hierarchy. */
+html[data-insight-theme] .insight-settings .insight-chat-main {
+  padding-top: 0;
+  background: var(--insight-surface-page);
+}
+
+/* Keep settings navigation on the same two-level state palette as
+ * the conversation rail; only its surrounding page structure differs. */
+html[data-insight-theme] .insight-settings .insight-chat-rail-row {
+  border-radius: 10px;
+}
+
+html[data-insight-theme] .insight-settings .insight-chat-rail-row:hover:not(:has(.insight-chat-rail-item.is-active)) {
+  background: var(--insight-hover-sidebar, var(--insight-hover-bg));
+  box-shadow: none;
+}
+
+html[data-insight-theme] .insight-settings .insight-chat-rail-row:hover:not(:has(.insight-chat-rail-item.is-active)) .insight-chat-rail-item {
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-settings .insight-chat-rail-row:has(.insight-chat-rail-item.is-active) {
+  background: var(--insight-selected-bg);
+  box-shadow: none;
+}
+
+html[data-insight-theme] .insight-settings .insight-chat-rail-item {
+  border-radius: 10px;
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .insight-settings .insight-chat-rail-item.is-active {
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .insight-settings .insight-chat-rail-item:focus-visible {
+  outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, var(--insight-primary)));
+  outline-offset: 1px;
+}
+
+html[data-insight-theme] .insight-settings-body {
+  padding: 0 32px 28px;
+}
+
+html[data-insight-theme] .insight-settings-panels {
+  max-width: 760px;
+}
+
+html[data-insight-theme] .insight-settings-section {
+  margin: 0;
+  padding: 24px 0 22px;
+  border: 0;
+  border-bottom: 1px solid var(--insight-divider);
+  border-radius: 0;
+  background: transparent;
+}
+
+html[data-insight-theme] .insight-settings-section:first-child {
+  padding-top: 20px;
+}
+
+html[data-insight-theme] .insight-settings-section:last-child {
+  border-bottom: 0;
+}
+
+html[data-insight-theme] .insight-settings-section-title {
+  margin: 0 0 14px;
+  color: var(--insight-text-primary);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+html[data-insight-theme] .insight-settings-field {
+  margin: 0;
+  padding: 10px 0;
+}
+
+html[data-insight-theme] .insight-settings-section > .insight-settings-field {
+  display: grid;
+  grid-template-columns: minmax(116px, 150px) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 20px;
+  border-top: 1px solid color-mix(in srgb, var(--insight-divider) 72%, transparent);
+}
+
+html[data-insight-theme] .insight-settings-section > .insight-settings-field:first-of-type {
+  border-top: 0;
+}
+
+html[data-insight-theme] .insight-settings-field label,
+html[data-insight-theme] .insight-settings-label {
+  margin: 0;
+  color: var(--insight-text-secondary);
+  font-size: 12px;
+}
+
+html[data-insight-theme] .insight-settings-field input,
+html[data-insight-theme] .insight-settings-field select,
+html[data-insight-theme] .insight-settings-path-row input,
+html[data-insight-theme] .insight-settings-sync-row input {
+  border-radius: 3px;
+  background: var(--insight-surface-elevated);
+}
+
+html[data-insight-theme] .insight-settings-tab-style {
+  gap: 24px;
+  align-items: center;
+}
+
+html[data-insight-theme] .insight-settings-style-btn {
+  flex: 0 0 auto;
+  padding: 7px 0 8px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--insight-text-secondary);
+  font-size: 13px;
+}
+
+html[data-insight-theme] .insight-settings-style-btn:hover {
+  background: transparent;
+  color: var(--insight-text-primary);
+}
+
+html[data-insight-theme] .insight-settings-style-btn.is-active,
+html[data-insight-theme] .insight-settings-style-btn[aria-pressed="true"] {
+  border-bottom-color: var(--insight-primary);
+  background: transparent;
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .insight-settings-palette-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px 16px;
+  max-width: 720px;
+}
+
+html[data-insight-theme] .insight-settings-palette-group {
+  margin: 0 0 14px;
+}
+
+html[data-insight-theme] .insight-settings-palette-group:last-child {
+  margin-bottom: 0;
+}
+
+html[data-insight-theme] .insight-settings-palette-group-title {
+  margin: 0 0 4px;
+  color: var(--insight-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+html[data-insight-theme] .insight-settings-palette-btn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 4px 8px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+html[data-insight-theme] .insight-settings-palette-number {
+  flex: 0 0 22px;
+  color: var(--insight-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-insight-theme] .insight-settings-legacy-themes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  color: var(--insight-text-secondary);
+  font-size: 12px;
+}
+
+html[data-insight-theme] .insight-settings-hint {
+  margin: 8px 0 0;
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .insight-settings-actions {
+  padding: 12px 32px 20px;
+  border-top: 1px solid var(--insight-divider);
+}
+
+html[data-insight-theme] .insight-settings-action,
+html[data-insight-theme] .insight-settings-action-primary,
+html[data-insight-theme] .insight-settings-btn {
+  border-radius: 3px;
+}
+
+html[data-insight-theme] .insight-settings-action-primary {
+  border: 1px solid var(--insight-primary);
 }

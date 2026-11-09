@@ -8,7 +8,7 @@ export const ACTION_CHECK_ICON =
   '<svg class="orbita-action-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 export const ACTION_PENDING_SPINNER =
-  '<span class="orbita-action-spinner" aria-hidden="true"></span>';
+  '<span class="orbita-action-pending-loader" aria-hidden="true"><span></span><span></span><span></span></span>';
 
 const ACTION_MOTION_CLASSES = [
   "is-action-success",
@@ -89,11 +89,15 @@ export function applyActionPendingVisual(
   clearActionStates(btn);
   btn.classList.add("is-action-pending");
   btn.disabled = opts.disabled ?? true;
-  if (opts.spinning !== false) {
-    btn.innerHTML = `${ACTION_PENDING_SPINNER}${opts.label}`;
-  } else {
+  if (opts.spinning === false) {
     btn.textContent = opts.label;
+    return;
   }
+  const loader = document.createElement("span");
+  loader.className = "orbita-action-pending-loader";
+  loader.setAttribute("aria-hidden", "true");
+  loader.append(document.createElement("span"), document.createElement("span"), document.createElement("span"));
+  btn.replaceChildren(loader, document.createTextNode(opts.label));
 }
 
 export function applyActionSuccessVisual(btn: HTMLButtonElement): void {
@@ -141,4 +145,43 @@ export async function playRejectShake(el: HTMLElement, ms = ACTION_REJECT_MS): P
   el.classList.add("orbita-action-reject");
   await sleep(ms);
   el.classList.remove("orbita-action-reject");
+}
+
+export type ButtonActionOptions<T> = {
+  task: () => T | Promise<T>;
+  pending?: { label: string };
+  success?: boolean;
+  error?: boolean;
+};
+
+const buttonActionRuns = new WeakMap<HTMLButtonElement, Promise<unknown>>();
+
+export function runButtonAction<T>(btn: HTMLButtonElement, opts: ButtonActionOptions<T>): Promise<T> {
+  const current = buttonActionRuns.get(btn);
+  if (current) return current as Promise<T>;
+  const run = executeButtonAction(btn, opts).finally(() => {
+    buttonActionRuns.delete(btn);
+  });
+  buttonActionRuns.set(btn, run);
+  return run;
+}
+
+async function executeButtonAction<T>(btn: HTMLButtonElement, opts: ButtonActionOptions<T>): Promise<T> {
+  const label = btn.textContent ?? "";
+  const wasDisabled = btn.disabled;
+  ensureActionButton(btn);
+  try {
+    const result = opts.pending
+      ? await withActionPending(btn, { label: opts.pending.label, spinning: true }, opts.task)
+      : await opts.task();
+    if (opts.success) await playActionSuccess(btn);
+    return result;
+  } catch (error) {
+    if (opts.error) await playActionError(btn);
+    throw error;
+  } finally {
+    clearActionMotion(btn);
+    btn.textContent = label;
+    btn.disabled = wasDisabled;
+  }
 }

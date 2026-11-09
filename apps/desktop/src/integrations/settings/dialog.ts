@@ -8,6 +8,7 @@ import {
 import { applyThemePrefs, themeFromPrefs } from "../../core/data/theme-prefs";
 import { loadAiConfig } from "../ai/config";
 import { SETTINGS_GEAR_SVG } from "../ai/icons";
+import { bindBackdropPressDismiss } from "../../ui/backdrop-dismiss";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
 import { mountModalBackdrop } from "../../ui/modal-root";
 import type { DidaProject } from "../ticktick/types";
@@ -195,9 +196,7 @@ function mountSettingsDialog() {
   };
 
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(false));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(false);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(false));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) void close(false);
   });

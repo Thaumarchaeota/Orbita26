@@ -8,6 +8,7 @@ export type SearchableSelectOption = {
 };
 
 export type SearchableSelectPopoverOptions = {
+  className?: string;
   anchor: HTMLElement;
   options: SearchableSelectOption[];
   selected: ReadonlySet<string>;
@@ -36,7 +37,7 @@ export function mountSearchableSelectPopover(
   let query = "";
 
   const popover = document.createElement("div");
-  popover.className = "orbita-searchable-select scroll-slim motion-popover";
+  popover.className = ["orbita-searchable-select scroll-slim motion-popover", options.className].filter(Boolean).join(" ");
 
   const searchWrap = document.createElement("div");
   searchWrap.className = "orbita-searchable-select-search";

@@ -1,0 +1,376 @@
+.insight-tab-strip {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  align-self: stretch;
+  flex-shrink: 0;
+  /* The chrome row is a fixed tab-bar height. Fill that box; do not size to content. */
+  height: 100%;
+  min-height: 0;
+  max-width: 100%;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.insight-tab-strip-shape-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.insight-tab-strip-home,
+.insight-tab-strip-timeline,
+.insight-content-tab,
+.insight-tab-strip-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: var(--insight-tab-height);
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-bottom-width: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--insight-text-secondary);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  touch-action: none;
+  user-select: none;
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.insight-tab-strip-home::before,
+.insight-tab-strip-timeline::before,
+.insight-content-tab::before,
+.insight-tab-strip-new::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: var(--insight-tab-hover-inset-x, 5px);
+  bottom: 4px;
+  left: var(--insight-tab-hover-inset-x, 5px);
+  border-radius: var(--insight-tab-radius);
+  background: transparent;
+  pointer-events: none;
+  z-index: -1;
+  transition: background 140ms ease;
+}
+
+.insight-tab-strip-home > *,
+.insight-tab-strip-timeline > *,
+.insight-content-tab > *,
+.insight-tab-strip-new > * {
+  position: relative;
+  z-index: 1;
+}
+
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected)::after,
+.insight-tab-strip-timeline:not([aria-current="page"]):not(.is-selected)::after,
+.insight-content-tab:not(.is-selected):not(.is-exiting)::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 0;
+  bottom: 8px;
+  width: 1px;
+  background: var(--insight-border-subtle);
+  pointer-events: none;
+}
+
+.insight-tab-strip-home,
+.insight-tab-strip-timeline {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  justify-content: center;
+  padding-inline: var(--insight-tab-edge-pad-x, 3px);
+}
+
+.insight-tab-strip-timeline {
+  margin-left: var(--insight-tab-gap, 8px);
+}
+
+.insight-content-tab {
+  flex: 0 0 160px;
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+  padding: 0 8px 0 12px;
+  font-size: 14px;
+  font-weight: 400;
+  overflow: visible;
+}
+
+.insight-tab-strip-new {
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  justify-content: center;
+  margin-left: 2px;
+  padding-inline: var(--insight-tab-edge-pad-x, 3px);
+  transition: color 140ms ease;
+}
+
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected):hover,
+.insight-tab-strip-timeline:not([aria-current="page"]):not(.is-selected):hover,
+.insight-content-tab:not(.is-selected):not(.is-exiting):hover,
+.insight-tab-strip-new:hover {
+  color: var(--insight-text-primary);
+}
+
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected):hover::before,
+.insight-tab-strip-timeline:not([aria-current="page"]):not(.is-selected):hover::before,
+.insight-content-tab:not(.is-selected):not(.is-exiting):hover::before,
+.insight-tab-strip-new:hover::before {
+  background: var(--insight-hover-chrome, var(--insight-tab-hover-bg));
+}
+
+.insight-tab-strip-home[aria-current="page"]::before,
+.insight-tab-strip-home.is-selected::before,
+.insight-tab-strip-timeline[aria-current="page"]::before,
+.insight-tab-strip-timeline.is-selected::before,
+.insight-content-tab.is-selected::before {
+  transition: none;
+  background: transparent;
+}
+
+.insight-content-tab:not(.is-selected):not(.is-exiting):hover .insight-content-tab-close {
+  opacity: 0.72;
+}
+
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected):hover::after,
+.insight-tab-strip-timeline:not([aria-current="page"]):not(.is-selected):hover::after,
+.insight-content-tab:not(.is-selected):not(.is-exiting):hover::after,
+.insight-content-tab:not(.is-selected):has(+ .insight-content-tab:hover)::after,
+.insight-content-tab:not(.is-selected):has(+ .insight-content-tab.is-selected)::after,
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected):has(+ .insight-tab-strip-timeline:hover)::after,
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected):has(+ .insight-tab-strip-timeline.is-selected)::after,
+.insight-tab-strip-timeline:not([aria-current="page"]):not(.is-selected):has(
+    + .insight-tab-strip-scroll .insight-content-tab:first-child:hover
+  )::after,
+.insight-tab-strip-timeline:not([aria-current="page"]):not(.is-selected):has(
+    + .insight-tab-strip-scroll .insight-content-tab:first-child.is-selected
+  )::after,
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected):has(
+    + .insight-tab-strip-scroll .insight-content-tab:first-child:hover
+  )::after,
+.insight-tab-strip-home:not([aria-current="page"]):not(.is-selected):has(
+    + .insight-tab-strip-scroll .insight-content-tab:first-child.is-selected
+  )::after {
+  opacity: 0;
+}
+
+.insight-tab-strip-home[aria-current="page"],
+.insight-tab-strip-home.is-selected,
+.insight-tab-strip-timeline[aria-current="page"],
+.insight-tab-strip-timeline.is-selected,
+.insight-content-tab.is-selected {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-radius: var(--insight-tab-radius) var(--insight-tab-radius) 0 0;
+  color: var(--insight-text-primary);
+  font-weight: 500;
+  z-index: 2;
+  isolation: auto;
+  overflow: visible;
+}
+
+.insight-tab-selected-shape {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.insight-tab-selected-shape[hidden] {
+  display: none;
+}
+
+.insight-tab-strip-home,
+.insight-tab-strip-timeline,
+.insight-tab-strip-new {
+  /* Keep fixed controls above the bounded active-shape overlay at scroll edges. */
+  z-index: 2;
+}
+
+.insight-tab-selected-shape-fill {
+  fill: var(--insight-tab-active-bg);
+}
+
+.insight-tab-selected-shape-outline {
+  fill: none;
+  stroke: var(--insight-border-subtle);
+  stroke-width: 1px;
+  stroke-linecap: butt;
+  stroke-linejoin: round;
+}
+
+.insight-tab-strip-home[aria-current="page"]:hover,
+.insight-tab-strip-home.is-selected:hover,
+.insight-tab-strip-timeline[aria-current="page"]:hover,
+.insight-tab-strip-timeline.is-selected:hover,
+.insight-content-tab.is-selected:hover {
+  background: transparent;
+  color: var(--insight-text-primary);
+}
+
+.insight-tab-strip-home:focus-visible,
+.insight-tab-strip-timeline:focus-visible,
+.insight-content-tab:focus-visible,
+.insight-tab-strip-new:focus-visible {
+  outline: 2px solid var(--insight-primary);
+  outline-offset: -2px;
+}
+
+.insight-tab-strip-scroll {
+  position: relative;
+  z-index: 1;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  overflow-y: clip;
+  overflow-anchor: none;
+  scrollbar-width: none;
+}
+
+.insight-tab-strip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.insight-tab-strip-list {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  align-self: stretch;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+}
+
+.insight-tab-strip-rest {
+  flex: 1;
+  min-width: 12px;
+  height: auto;
+  min-height: 0;
+  align-self: stretch;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.insight-content-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.insight-content-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--insight-tab-close);
+  opacity: 1;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 140ms ease, background 140ms ease;
+}
+
+.insight-content-tab-close:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--insight-text-primary) 8%, transparent);
+}
+
+.insight-content-tab-close:focus-visible {
+  outline: 2px solid var(--insight-primary);
+  outline-offset: 0;
+  opacity: 1;
+}
+
+.insight-content-tab.is-dragging {
+  opacity: 0.92;
+  cursor: grabbing;
+  z-index: 3;
+}
+
+.insight-content-tab.is-entering {
+  animation: insight-tab-enter 150ms ease both;
+}
+
+.insight-content-tab.is-exiting {
+  animation: none !important;
+  min-width: 0 !important;
+  overflow: hidden;
+  flex-shrink: 1;
+  pointer-events: none;
+  margin-bottom: 0 !important;
+}
+
+.insight-content-tab.is-exiting::after {
+  opacity: 0;
+}
+
+@keyframes insight-tab-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .insight-content-tab.is-entering,
+  .insight-content-tab.is-exiting {
+    animation: none !important;
+  }
+
+  .insight-tab-strip-home,
+  .insight-tab-strip-timeline,
+  .insight-content-tab,
+  .insight-tab-strip-new,
+  .insight-tab-strip-home::before,
+  .insight-tab-strip-timeline::before,
+  .insight-content-tab::before,
+  .insight-tab-strip-new::before,
+  .insight-content-tab-close {
+    transition: none !important;
+  }
+}

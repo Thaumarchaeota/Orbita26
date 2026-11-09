@@ -63,6 +63,8 @@ export default defineConfig({
     include: [
       "src/integrations/ledger/**/*.test.ts",
       "src/integrations/admin/**/*.test.ts",
+      "src/integrations/ai/**/*.test.ts",
+      "src/integrations/finance-v2/**/*.test.ts",
       "src/integrations/journal/**/*.test.ts",
       "src/ui/**/*.test.ts",
     ],

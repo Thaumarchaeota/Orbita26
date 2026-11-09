@@ -1,4 +1,4 @@
-import { mountDateRangePicker, type DateRangePickerHandle } from "../../../ui/date-range-picker";
+import { mountDecoupledDateRangePicker, type DecoupledDateRangePickerHandle } from "../../../ui/decoupled-date-range-picker";
 import { mountSimpleSelect, type SimpleSelectHandle, type SimpleSelectOption } from "../../../ui/simple-select";
 import { getConfirmDialog, getNamePromptDialog } from "../../shell/dialog";
 import { fetchSettings, updateSettings } from "../api/client";
@@ -258,7 +258,7 @@ export function mountFinanceRailFilter(
   let undoTimer = 0;
   let undoSnapshot: { presets: FilterPreset[]; index: number; preset: FilterPreset } | null = null;
 
-  const datePicker: DateRangePickerHandle = mountDateRangePicker(dateMount, {
+  const datePicker: DecoupledDateRangePickerHandle = mountDecoupledDateRangePicker({ defaultTrigger: { container: dateMount },
     onChange: (value) => {
       if (syncing) return;
       store.dispatch({ type: "set-date-range", from: value.from, to: value.to });
@@ -267,7 +267,6 @@ export function mountFinanceRailFilter(
 
   const accountPicker: AccountTreeMultiPickerHandle = mountAccountTreeMultiPicker(accountMount, {
     selected: new Set(),
-    placeholder: "选择账户",
     onChange: (selected) => {
       if (syncing) return;
       syncedAccounts = new Set(selected);
@@ -276,7 +275,6 @@ export function mountFinanceRailFilter(
   });
 
   const presetPicker: SimpleSelectHandle = mountSimpleSelect(presetMount, {
-    placeholder: "预设（无）",
     options: [],
     role: "preset-select",
     onChange: (value) => {
@@ -287,7 +285,6 @@ export function mountFinanceRailFilter(
   const tagPicker: TagPickerHandle = mountTagPicker(tagMount, {
     tags: [],
     selected: new Set(),
-    placeholder: "选择标签",
     onChange: (selected) => {
       if (syncing) return;
       store.dispatch({ type: "set-tags", tags: selected });

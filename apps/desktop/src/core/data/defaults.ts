@@ -4,7 +4,7 @@ import { defaultFontPrefs } from "./fonts";
 import { DEFAULT_LIFE_RING_GOALS } from "./life-ring-goals";
 import { defaultLifeRingSlots } from "./life-ring-metrics";
 import { defaultThemePrefs } from "./theme-prefs";
-import type { AiConfig, GridPrefs, Integrations, IntegrationsCredentials, LifeRingColors, UiPrefs } from "./types";
+import type { AiConfig, GridPrefs, InsightPalette, Integrations, IntegrationsCredentials, LifeRingColors, UiPrefs } from "./types";
 
 export const DEFAULT_GRID_GAP = 8;
 export const DEFAULT_TOP_GRID: GridPrefs = { cols: 6, rows: 3, tileScale: 100, colGap: 8, rowGap: 8 };
@@ -15,11 +15,28 @@ export const DEFAULT_LIFE_RINGS: LifeRingColors = {
   ring3: "#ff9500",
 };
 
+export const DEFAULT_INSIGHT_PALETTE: InsightPalette = {
+  primary: "#4B78B8",
+  selected: "#D7E3F5",
+  hover: "#E5EBF3",
+  chrome: "#E4EBF3",
+  sidebar: "#F1F5F9",
+  page: "#F8FAFC",
+  surface: "#FFFFFF",
+  controlSurface: "#FFFFFF",
+  sunken: "#F1F5F9",
+  textPrimary: "#243044",
+  textSecondary: "#66758A",
+  border: "#D4DCE6",
+  danger: "#C0393B",
+};
+
 export function defaultCredentials(): IntegrationsCredentials {
   return {
     garmin: { email: "", password: "" },
     ticktick: { clientId: "", clientSecret: "", accessToken: "" },
     ai: { entries: {} },
+    variflight: { apiKey: "" },
   };
 }
 
@@ -29,6 +46,7 @@ export function defaultAiConfig(): AiConfig {
     defaultPrompt: "",
     activeEntryId: id,
     activeModel: "deepseek-chat",
+    searchEntryId: "",
     entries: [
       {
         id,
@@ -69,6 +87,8 @@ export function defaultUiPrefs(): UiPrefs {
     localTab: "file",
     activeConversationId: null,
     themePrefs: defaultThemePrefs(),
+    insightTheme: "cold",
+    insightPalette: { ...DEFAULT_INSIGHT_PALETTE },
     blockOpacity: 12,
     topGrid: { ...DEFAULT_TOP_GRID },
     lifeRings: { ...DEFAULT_LIFE_RINGS },
@@ -76,5 +96,6 @@ export function defaultUiPrefs(): UiPrefs {
     lifeRingGoals: { ...DEFAULT_LIFE_RING_GOALS },
     fonts: defaultFontPrefs(),
     healthTrackAxis: defaultHealthTrackAxisPrefs(),
+    travelEndpointSplit: { movingFrontEnd: "copy", movingRearStart: "copy" },
   };
 }

@@ -41,6 +41,34 @@ pub fn delete_ai_conversation(app: tauri::AppHandle, id: String) -> Result<(), S
 }
 
 #[tauri::command]
+pub fn list_insight_ai_conversations(
+    app: tauri::AppHandle,
+) -> Result<Vec<data::ConversationMeta>, String> {
+    data::list_insight_conversations(&app)
+}
+
+#[tauri::command]
+pub fn read_insight_ai_conversation(
+    app: tauri::AppHandle,
+    id: String,
+) -> Result<data::Conversation, String> {
+    data::read_insight_conversation(&app, id)
+}
+
+#[tauri::command]
+pub fn write_insight_ai_conversation(
+    app: tauri::AppHandle,
+    conversation: data::Conversation,
+) -> Result<(), String> {
+    data::write_insight_conversation(&app, conversation)
+}
+
+#[tauri::command]
+pub fn delete_insight_ai_conversation(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    data::delete_insight_conversation(&app, id)
+}
+
+#[tauri::command]
 pub fn read_bookmarks(app: tauri::AppHandle) -> Result<Vec<data::BookmarkEntry>, String> {
     data::read_bookmarks(&app)
 }

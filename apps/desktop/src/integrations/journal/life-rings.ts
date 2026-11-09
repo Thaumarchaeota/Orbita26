@@ -147,7 +147,7 @@ export function sleepStageRingHtml(opts: {
     </div>`;
 }
 
-const INTAKE_COLORS = ["#d4b896", "#d4925a", "#d47a48", "#c46858"];
+const INTAKE_COLORS = ["#d4b896", "#d4925a", "#d47a48", "#c46858", "#bd6c74", "#aa718d", "#8d7898", "#777f91"];
 const EXP_COLORS = ["#6aab7a", "#2f6e4a"];
 const HYDRATION_COLOR = "#5ba8d4";
 
@@ -188,7 +188,7 @@ export function calorieRingHtml(opts: {
   intakeKcal: number;
   totalCalories: number;
   activeCalories: number;
-  slotKcal: { breakfast: number; lunch: number; dinner: number; snack: number };
+  slotKcal: { breakfast: number; lunch: number; dinner: number; late_night: number; coffee: number; beverage: number; snack: number; other: number };
   goalIntake: number;
   goalExp: number;
 }): string {
@@ -201,7 +201,11 @@ export function calorieRingHtml(opts: {
     { value: opts.slotKcal.breakfast, color: INTAKE_COLORS[0], tip: `早餐：${opts.slotKcal.breakfast}kcal` },
     { value: opts.slotKcal.lunch, color: INTAKE_COLORS[1], tip: `午餐：${opts.slotKcal.lunch}kcal` },
     { value: opts.slotKcal.dinner, color: INTAKE_COLORS[2], tip: `晚餐：${opts.slotKcal.dinner}kcal` },
-    { value: opts.slotKcal.snack, color: INTAKE_COLORS[3], tip: `其他：${opts.slotKcal.snack}kcal` },
+    { value: opts.slotKcal.late_night, color: INTAKE_COLORS[3], tip: `夜宵：${opts.slotKcal.late_night}kcal` },
+    { value: opts.slotKcal.coffee, color: INTAKE_COLORS[4], tip: `咖啡：${opts.slotKcal.coffee}kcal` },
+    { value: opts.slotKcal.beverage, color: INTAKE_COLORS[5], tip: `饮料：${opts.slotKcal.beverage}kcal` },
+    { value: opts.slotKcal.snack, color: INTAKE_COLORS[6], tip: `零食：${opts.slotKcal.snack}kcal` },
+    { value: opts.slotKcal.other, color: INTAKE_COLORS[7], tip: `其他：${opts.slotKcal.other}kcal` },
   ];
   const expSegs = [
     { value: resting, color: EXP_COLORS[0], tip: `基础：${resting}kcal` },

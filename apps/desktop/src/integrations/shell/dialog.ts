@@ -1,11 +1,15 @@
+import { bindBackdropPressDismiss } from "../../ui/backdrop-dismiss";
+import { isInsightSurface } from "../../ui/insight-dialog";
+import "../../ui/insight-dialog.css";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
 import { mountModalBackdrop } from "../../ui/modal-root";
+import { registerOverlayNavigation } from "../../ui/overlay-navigation";
 
 type ConfirmFn = (
   title: string,
   message: string,
   trigger?: MotionTrigger,
-  opts?: { confirmLabel?: string; danger?: boolean },
+  opts?: { confirmLabel?: string; danger?: boolean; info?: boolean },
 ) => Promise<boolean>;
 
 let sharedConfirm: ConfirmFn | null = null;
@@ -26,52 +30,285 @@ function createConfirmDialog(): ConfirmFn {
   mountModalBackdrop(backdrop);
 
   const motion = bindDialog(backdrop);
+  const panel = backdrop.querySelector<HTMLElement>(".dialog-panel")!;
   const titleEl = backdrop.querySelector<HTMLElement>("#confirmDialogTitle")!;
   const messageEl = backdrop.querySelector<HTMLElement>("#confirmDialogMessage")!;
+  const cancelBtn = backdrop.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;
   const confirmBtn = backdrop.querySelector<HTMLButtonElement>('[data-action="confirm"]')!;
   let resolvePending: ((value: boolean) => void) | null = null;
+  let openGen = 0;
+  let triggerEl: HTMLElement | null = null;
+  let infoMode = false;
+
+  const focusableElements = () =>
+    Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]):not([hidden]), [href], input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])',
+      ),
+    ).filter((el) => !el.hidden && el.getAttribute("aria-hidden") !== "true");
 
   const close = async (value: boolean) => {
-    await motion.close();
-    resolvePending?.(value);
+    const resolve = resolvePending;
+    if (!resolve) return;
     resolvePending = null;
+    const restoreTrigger = triggerEl;
+    triggerEl = null;
+    openGen += 1;
+    await motion.close();
+    resolve(value);
+    if (!resolvePending && restoreTrigger?.isConnected) restoreTrigger.focus();
   };
 
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(false));
   backdrop.querySelector('[data-action="confirm"]')!.addEventListener("click", () => void close(true));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(false);
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && motion.isOpen()) void close(false);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(infoMode));
+  // Keep keyboard interaction inside the dialog. In particular, an Enter from the
+  // still-focused trigger must not confirm or re-open the singleton. See docs/DEV.md Dialog.
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (!resolvePending || e.isComposing) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        void close(infoMode);
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusables = focusableElements();
+        if (!focusables.length) return;
+        const active = document.activeElement;
+        if (!active || !panel.contains(active)) {
+          e.preventDefault();
+          e.stopPropagation();
+          (e.shiftKey ? focusables[focusables.length - 1] : focusables[0]).focus();
+          return;
+        }
+        const index = focusables.indexOf(active as HTMLElement);
+        if (index < 0 || (e.shiftKey && index === 0) || (!e.shiftKey && index === focusables.length - 1)) {
+          e.preventDefault();
+          e.stopPropagation();
+          (e.shiftKey ? focusables[focusables.length - 1] : focusables[0]).focus();
+        }
+        return;
+      }
+      if (e.key === "Enter") {
+        if (!panel.contains(e.target as Node)) {
+          e.preventDefault();
+          e.stopPropagation();
+          confirmBtn.focus();
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        void close(true);
+      }
+    },
+    true,
+  );
+  document.addEventListener(
+    "focusin",
+    (e) => {
+      if (!resolvePending || !motion.isOpen() || panel.contains(e.target as Node)) return;
+      e.stopPropagation();
+      confirmBtn.focus();
+    },
+    true,
+  );
 
   return (
     title: string,
     message: string,
     trigger?: MotionTrigger,
-    opts?: { confirmLabel?: string; danger?: boolean },
+    opts?: { confirmLabel?: string; danger?: boolean; info?: boolean },
   ) =>
     new Promise<boolean>((resolve) => {
       if (resolvePending) {
-        resolvePending(false);
+        resolve(false);
         resolvePending = null;
+        openGen += 1;
       }
       resolvePending = resolve;
+      triggerEl = trigger instanceof HTMLElement ? trigger : null;
+      infoMode = opts?.info === true;
       titleEl.textContent = title;
       messageEl.textContent = message;
+      cancelBtn.hidden = infoMode;
       confirmBtn.textContent = opts?.confirmLabel ?? "删除";
       confirmBtn.classList.toggle("dialog-btn-danger", opts?.danger !== false);
       confirmBtn.classList.toggle("dialog-btn-primary", opts?.danger === false);
+      const gen = ++openGen;
       void (async () => {
         if (motion.isOpen()) await motion.close();
+        if (gen !== openGen) return;
         await motion.open(trigger);
+        if (gen !== openGen) {
+          if (motion.isOpen()) await motion.close();
+          return;
+        }
+        confirmBtn.focus();
       })();
     });
 }
 
+function createInsightConfirmDialog(): ConfirmFn {
+  const backdrop = document.createElement("div");
+  backdrop.className = "insight-dialog-backdrop motion-dialog";
+  backdrop.innerHTML = `
+    <form class="insight-dialog-panel insight-confirm-dialog motion-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="insightConfirmTitle">
+      <div class="insight-dialog-header">
+        <h2 class="insight-dialog-title" id="insightConfirmTitle"></h2>
+      </div>
+      <div class="insight-dialog-body">
+        <p class="insight-dialog-hint" id="insightConfirmMessage"></p>
+      </div>
+      <div class="insight-dialog-footer">
+        <div class="insight-dialog-actions">
+          <button type="button" class="insight-dialog-btn" data-action="cancel">取消</button>
+          <button type="button" class="insight-dialog-btn insight-dialog-btn-danger" data-action="confirm">删除</button>
+        </div>
+      </div>
+    </form>`;
+  mountModalBackdrop(backdrop);
+
+  const panel = backdrop.querySelector<HTMLFormElement>(".insight-dialog-panel")!;
+  const motion = bindDialog(backdrop, panel);
+  const titleEl = backdrop.querySelector<HTMLElement>("#insightConfirmTitle")!;
+  const messageEl = backdrop.querySelector<HTMLElement>("#insightConfirmMessage")!;
+  const cancelBtn = backdrop.querySelector<HTMLButtonElement>('[data-action="cancel"]')!;
+  const confirmBtn = backdrop.querySelector<HTMLButtonElement>('[data-action="confirm"]')!;
+  let resolvePending: ((value: boolean) => void) | null = null;
+  type Request = { resolve: (value: boolean) => void; release: () => void; trigger: HTMLElement | null };
+  let pending: Request | null = null;
+  let operation: Promise<void> = Promise.resolve();
+  let infoMode = false;
+
+  const focusableElements = () =>
+    Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'button:not([disabled]):not([hidden]), [href], input:not([disabled]):not([hidden]), select:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])',
+      ),
+    ).filter((el) => !el.hidden && el.getAttribute("aria-hidden") !== "true");
+
+  const close = (value: boolean) => {
+    const request = pending;
+    if (!request) return operation;
+    pending = null;
+    resolvePending = null;
+    operation = operation.then(async () => {
+      try { await motion.close(); }
+      finally { request.release(); request.resolve(value); }
+      if (!pending) {
+        backdrop.remove();
+        if (request.trigger?.isConnected) request.trigger.focus();
+      }
+    });
+    return operation;
+  };
+
+  backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(false));
+  backdrop.querySelector('[data-action="confirm"]')!.addEventListener("click", () => void close(true));
+  bindBackdropPressDismiss(backdrop, () => void close(infoMode));
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (!resolvePending || e.isComposing) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        void close(infoMode);
+        return;
+      }
+      if (e.key === "Tab") {
+        const focusables = focusableElements();
+        if (!focusables.length) return;
+        const active = document.activeElement;
+        if (!active || !panel.contains(active)) {
+          e.preventDefault();
+          e.stopPropagation();
+          (e.shiftKey ? focusables[focusables.length - 1] : focusables[0]).focus();
+          return;
+        }
+        const index = focusables.indexOf(active as HTMLElement);
+        if (index < 0 || (e.shiftKey && index === 0) || (!e.shiftKey && index === focusables.length - 1)) {
+          e.preventDefault();
+          e.stopPropagation();
+          (e.shiftKey ? focusables[focusables.length - 1] : focusables[0]).focus();
+        }
+        return;
+      }
+      if (e.key === "Enter") {
+        if (!panel.contains(e.target as Node)) {
+          e.preventDefault();
+          e.stopPropagation();
+          confirmBtn.focus();
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        void close(true);
+      }
+    },
+    true,
+  );
+  document.addEventListener(
+    "focusin",
+    (e) => {
+      if (!resolvePending || !motion.isOpen() || panel.contains(e.target as Node)) return;
+      e.stopPropagation();
+      confirmBtn.focus();
+    },
+    true,
+  );
+
+  return (
+    title: string,
+    message: string,
+    trigger?: MotionTrigger,
+    opts?: { confirmLabel?: string; danger?: boolean; info?: boolean },
+  ) =>
+    new Promise<boolean>((resolve) => {
+      // Each request owns its resolver and navigation lease (SPEC-0014 §5).
+      const previous = pending;
+      previous?.resolve(false);
+      previous?.release();
+      const request: Request = {
+        resolve,
+        release: registerOverlayNavigation({ kind: "protected" }),
+        trigger: trigger instanceof HTMLElement ? trigger : null,
+      };
+      pending = request;
+      resolvePending = resolve;
+      infoMode = opts?.info === true;
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      cancelBtn.hidden = infoMode;
+      confirmBtn.textContent = opts?.confirmLabel ?? "删除";
+      confirmBtn.classList.toggle("insight-dialog-btn-danger", opts?.danger !== false);
+      confirmBtn.classList.toggle("insight-dialog-btn-primary", opts?.danger === false);
+      operation = operation.then(async () => {
+        if (pending !== request) return;
+        await motion.close();
+        if (pending !== request) return;
+        mountModalBackdrop(backdrop);
+        try { await motion.open(trigger); }
+        catch (error) { console.error("Confirmation could not open", error); }
+        if (pending !== request) return;
+        if (!motion.isOpen()) {
+          pending = null;
+          resolvePending = null;
+          request.release();
+          request.resolve(false);
+          backdrop.remove();
+          return;
+        }
+        confirmBtn.focus();
+      });
+    });
+}
+
 export function getConfirmDialog(): ConfirmFn {
-  if (!sharedConfirm) sharedConfirm = createConfirmDialog();
+  if (!sharedConfirm) sharedConfirm = isInsightSurface() ? createInsightConfirmDialog() : createConfirmDialog();
   return sharedConfirm;
 }
 
@@ -122,9 +359,7 @@ function createNamePromptDialog(): NamePromptFn {
     void close(name);
   });
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(null);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(null));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) void close(null);
   });
@@ -185,9 +420,7 @@ export function mountFolderRenameDialog(root: HTMLElement) {
     void close(name);
   });
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(null);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(null));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) void close(null);
   });
@@ -246,9 +479,7 @@ export function mountBookmarkDialog(root: HTMLElement) {
   });
 
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(null);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(null));
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) void close(null);
@@ -312,9 +543,7 @@ export function mountAppDialog(root: HTMLElement) {
   });
 
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(null);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(null));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) void close(null);
   });
@@ -417,9 +646,7 @@ export function mountLocalEntryDialog(root: HTMLElement) {
   });
 
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(null);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(null));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) void close(null);
   });

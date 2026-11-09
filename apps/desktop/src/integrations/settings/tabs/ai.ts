@@ -16,6 +16,13 @@ export const aiTabHtml = `
       <div id="aiEntriesList"></div>
       <button type="button" class="dialog-btn" id="aiAddEntry">添加 API</button>
     </div>
+    <div class="settings-section">
+      <div class="settings-section-title">默认网页搜索</div>
+      <div class="dialog-field"><label for="aiSearchEntry">ChatAnywhere API</label>
+        <select id="aiSearchEntry"></select>
+        <small>仅在问题需要最新公开信息时，当前模型才用 gpt-5-search-api 搜索；普通和本地问题不搜索。实际搜索会产生 ChatAnywhere 费用。</small>
+      </div>
+    </div>
   </div>`;
 
 export function renderEntryCard(entry: ApiEntry): string {
@@ -66,17 +73,30 @@ export function readEntries(listEl: HTMLElement): ApiEntry[] {
 export function bindAiTab(root: HTMLElement) {
   const promptEl = root.querySelector<HTMLTextAreaElement>("#aiDefaultPrompt")!;
   const listEl = root.querySelector<HTMLElement>("#aiEntriesList")!;
+  const searchEl = root.querySelector<HTMLSelectElement>("#aiSearchEntry")!;
+
+  function paintSearchOptions(selected: string) {
+    const entries = readEntries(listEl).filter((entry) => /^https:\/\/api\.chatanywhere\.(tech|org)(?:\/v1\/?)?\/?$/i.test(entry.baseUrl));
+    searchEl.innerHTML = `<option value="">自动选择 ChatAnywhere API</option>` + entries
+      .map((entry) => `<option value="${escAttr(entry.id)}">${escHtml(entry.name)}</option>`).join("");
+    searchEl.value = entries.some((entry) => entry.id === selected) ? selected : "";
+  }
 
   function paintEntries(entries: ApiEntry[]) {
     listEl.innerHTML = entries.map(renderEntryCard).join("");
     bindEntryEvents();
     enhancePasswordFields(listEl);
+    paintSearchOptions(searchEl.value);
   }
 
   function bindEntryEvents() {
+    listEl.querySelectorAll<HTMLInputElement>(".ai-entry-name, .ai-entry-url").forEach((input) => {
+      input.addEventListener("change", () => paintSearchOptions(searchEl.value));
+    });
     listEl.querySelectorAll<HTMLButtonElement>('[data-action="remove-entry"]').forEach((btn) => {
       btn.addEventListener("click", () => {
         btn.closest(".ai-entry-card")?.remove();
+        paintSearchOptions(searchEl.value);
       });
     });
     listEl.querySelectorAll<HTMLButtonElement>('[data-action="remove-model"]').forEach((btn) => {
@@ -123,6 +143,7 @@ export function bindAiTab(root: HTMLElement) {
     fill(config: AiConfig) {
       promptEl.value = config.defaultPrompt;
       paintEntries(config.entries);
+      paintSearchOptions(config.searchEntryId ?? "");
     },
     read(saved: AiConfig): AiConfig {
       const entries = readEntries(listEl).filter((e) => e.name && e.baseUrl);
@@ -139,6 +160,7 @@ export function bindAiTab(root: HTMLElement) {
         activeEntryId,
         activeModel,
         entries: entries.length ? entries : defaultAiConfig().entries,
+        searchEntryId: entries.some((entry) => entry.id === searchEl.value) ? searchEl.value : "",
       };
     },
   };

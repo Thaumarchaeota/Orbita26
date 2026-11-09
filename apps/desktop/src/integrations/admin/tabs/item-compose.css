@@ -1,0 +1,365 @@
+.work-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.work-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.work-filter-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--insight-text-primary, #374151);
+  cursor: pointer;
+}
+
+.work-filter-btn.is-active {
+  background: var(--insight-selected-bg, #eff6ff);
+  border-color: var(--insight-border-color, #bfdbfe);
+  color: var(--insight-primary, #1d4ed8);
+  font-weight: 600;
+}
+
+.work-filter-btn.is-drop-target {
+  background: var(--insight-selected-bg, #fef3c7);
+  border-color: var(--insight-primary, #fcd34d);
+}
+
+.work-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.work-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.work-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--insight-text-secondary, #6b7280);
+}
+
+.work-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.work-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--insight-surface-bg, #fff);
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, #e5e7eb));
+}
+
+.work-item-row.is-dragging {
+  opacity: 0.5;
+}
+
+.work-item-row.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--insight-primary);
+}
+
+.work-item-priority {
+  appearance: none;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, #e5e7eb));
+  background: var(--insight-sunken-bg, #f9fafb);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+  min-width: 28px;
+}
+
+.work-item-priority.is-high {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.work-item-priority.is-medium {
+  color: #d97706;
+  border-color: #fed7aa;
+  background: #fffbeb;
+}
+
+.work-item-priority.is-low {
+  color: var(--insight-primary);
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.work-item-title {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--insight-text-primary, #374151);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.work-item-title:focus {
+  outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, #bfdbfe));
+  background: var(--insight-surface-bg, #fff);
+}
+
+.work-item-title.is-done {
+  text-decoration: line-through;
+  color: var(--insight-text-secondary, #9ca3af);
+}
+
+.task-item-detail-dialog .task-item-detail-points-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .task-item-detail-dialog .task-item-detail-points-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.task-item-detail-dialog .task-item-detail-actions-section {
+  margin-top: 4px;
+}
+
+.task-item-detail-dialog .task-item-detail-actions-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.task-item-detail-dialog .task-item-detail-actions-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--insight-text-secondary);
+}
+
+.task-item-detail-dialog .task-item-detail-actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.task-item-detail-dialog .task-item-detail-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--insight-border-subtle, var(--insight-border-color));
+}
+
+.task-item-detail-dialog .task-item-detail-action:last-child {
+  border-bottom: none;
+}
+
+.task-item-detail-dialog .task-item-detail-action.is-running,
+.task-item-detail-dialog .task-item-detail-action.is-paused {
+  border-color: var(--insight-border-subtle, var(--insight-border-color));
+  background: transparent;
+}
+
+.task-item-detail-dialog .task-item-detail-action-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.task-item-detail-dialog .task-item-detail-action-head input {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-item-detail-dialog .task-item-detail-plan-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.task-item-detail-dialog .task-item-detail-exec {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.task-item-detail-dialog .task-item-detail-exec button {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.item-compose-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.item-compose-action-row {
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, #e5e7eb));
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-compose-action-row.is-running {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.item-compose-action-row.is-paused {
+  border-color: #fde047;
+  background: #fefce8;
+}
+
+.item-compose-action-head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.item-compose-action-head input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, #d1d5db));
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.item-compose-plan-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.item-compose-plan-row input,
+.item-compose-plan-row select {
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, #d1d5db));
+  border-radius: 6px;
+}
+
+.item-compose-exec {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.item-compose-exec button {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.item-compose-error {
+  color: var(--insight-danger, #dc2626);
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+.project-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.project-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--insight-surface-bg, #fff);
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, #e5e7eb));
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.project-tree-row.is-selected {
+  border-color: var(--insight-primary, #93c5fd);
+  background: var(--insight-selected-bg, #eff6ff);
+}
+
+.project-tree-row.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--insight-primary);
+}
+
+.project-tree-row.is-drop-child {
+  box-shadow: inset 0 0 0 2px var(--insight-primary);
+}
+
+.project-task-actions {
+  margin-top: 12px;
+  border-top: 1px solid var(--insight-border-color, var(--insight-border-color, #e5e7eb));
+  padding-top: 12px;
+}
+
+.productivity-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.productivity-panel-timeline {
+  pointer-events: none;
+  opacity: 0.92;
+}
+
+.productivity-panel-timeline .action-track-lanes {
+  pointer-events: none;
+}
+
+.productivity-panel-compose input[type="text"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, #d1d5db));
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.action-track-exec-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.action-track-exec-bar button {
+  font-size: 12px;
+  padding: 4px 10px;
+}

@@ -200,37 +200,11 @@ fn project_daily(conn: &Connection, date: &str) -> Result<Option<Value>, String>
         )
         .optional()
         .map_err(|e| e.to_string())?;
-    let meals = load_meals(conn, date)?;
-    if row.is_none() && meals.is_empty() {
+    let Some((id, source, fetched_at, data_json)) = row else {
         return Ok(None);
-    }
-    let (id, source, fetched_at, data_json) = row.unwrap_or_else(|| {
-        (
-            String::new(),
-            "manual".to_string(),
-            None,
-            "{}".to_string(),
-        )
-    });
-    let mut data: Map<String, Value> = serde_json::from_str(&data_json).unwrap_or_default();
-    data.insert("meals".into(), Value::Array(meals));
-    let id = if id.is_empty() {
-        conn.query_row(
-            "SELECT id FROM daily_metrics WHERE local_date = ?1 AND deleted_at_utc IS NULL LIMIT 1",
-            params![date],
-            |row| row.get::<_, String>(0),
-        )
-        .or_else(|_| {
-            conn.query_row(
-                "SELECT id FROM meals WHERE local_date = ?1 AND deleted_at_utc IS NULL LIMIT 1",
-                params![date],
-                |row| row.get::<_, String>(0),
-            )
-        })
-        .map_err(|_| format!("no daily anchor for {date}"))?
-    } else {
-        id
     };
+    let mut data: Map<String, Value> = serde_json::from_str(&data_json).unwrap_or_default();
+    data.remove("meals");
     let mut entry = json!({
         "id": id,
         "kind": "daily",
@@ -244,23 +218,6 @@ fn project_daily(conn: &Connection, date: &str) -> Result<Option<Value>, String>
         }
     }
     Ok(Some(entry))
-}
-
-fn load_meals(conn: &Connection, date: &str) -> Result<Vec<Value>, String> {
-    let mut stmt = conn
-        .prepare("SELECT meal_json FROM meals WHERE local_date = ?1 AND deleted_at_utc IS NULL ORDER BY rowid")
-        .map_err(|e| e.to_string())?;
-    let rows = stmt
-        .query_map(params![date], |row| row.get::<_, String>(0))
-        .map_err(|e| e.to_string())?;
-    let mut out = Vec::new();
-    for row in rows {
-        let raw: String = row.map_err(|e| e.to_string())?;
-        if let Ok(v) = serde_json::from_str::<Value>(&raw) {
-            out.push(v);
-        }
-    }
-    Ok(out)
 }
 
 fn project_routine(conn: &Connection, date: &str) -> Result<Option<Value>, String> {
@@ -375,13 +332,14 @@ fn upsert_daily(tx: &Transaction<'_>, date: &str, entry: &mut Value) -> Result<V
         .and_then(|d| d.as_object())
         .cloned()
         .unwrap_or_default();
-    let meals = data
-        .get("meals")
-        .and_then(|m| m.as_array())
-        .cloned()
-        .unwrap_or_default();
-
-    sync_meals(tx, date, &meals)?;
+    if data.contains_key("meals") {
+        let meals = data
+            .get("meals")
+            .and_then(|m| m.as_array())
+            .cloned()
+            .unwrap_or_default();
+        sync_meals(tx, date, &meals)?;
+    }
 
     let projected = project_daily(tx, date)?
         .ok_or_else(|| "daily projection failed".to_string())?;

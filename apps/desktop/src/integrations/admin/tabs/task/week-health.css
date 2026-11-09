@@ -1,0 +1,21 @@
+.week-health-event{position:absolute;top:0;left:0;width:24px;height:100%;pointer-events:none;color:var(--health-color);z-index:5}
+.week-health-segment{position:absolute;left:0;width:24px;pointer-events:auto;cursor:pointer;isolation:isolate}
+.week-health-point{position:absolute;left:0;transform:translateY(-50%);width:24px;height:24px;background:transparent;border:0;padding:0;color:inherit;display:grid;place-items:center;pointer-events:auto;cursor:pointer}
+.week-health-point.has-icon{isolation:isolate}
+.week-health-point::before{content:"";width:3.5px;height:3.5px;border-radius:50%;background:currentColor}
+.week-health-point:hover::before{width:4px;height:4px}
+.week-health-point.has-icon::before,
+.week-health-point.has-icon:hover::before{display:none}
+.week-health-point svg{width:16px;height:16px;position:relative;z-index:1}
+.week-health-point:hover:not(.has-icon){filter:brightness(1.2)}
+.week-health-event.is-selected{filter:drop-shadow(0 0 2px var(--insight-focus-ring,var(--insight-primary)))}
+.week-health-event.is-cancelled{opacity:.4}
+/* Mask the fixed Lucide asset with the surrounding health role color. */
+.week-health-point .week-health-meal-icon {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  -webkit-mask: var(--meal-icon-url) center / contain no-repeat;
+  mask: var(--meal-icon-url) center / contain no-repeat;
+}

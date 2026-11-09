@@ -1,6 +1,7 @@
 mod connection;
 mod garmin;
-mod health_query;
+pub(crate) mod health_query;
+pub(crate) use health_query::{HealthOverviewRequest, HealthOverviewResponse, HealthSyncStatus};
 mod project;
 mod schema;
 mod sync_meta;
@@ -17,10 +18,7 @@ pub use garmin::{
     GarminBodyMeasurementInput, GarminDailyInput, GarminExerciseInput, GarminRoutineInput,
     GarminSeriesInput, ingest_garmin_batch,
 };
-pub use health_query::{
-    health_overview_query, health_sync_status, HealthOverviewRequest, HealthOverviewResponse,
-    HealthSyncStatus,
-};
+pub use health_query::{health_overview_query, health_sync_status};
 pub use sync_meta::{set_garmin_sync_meta, set_garmin_sync_meta_app};
 pub use project::{journal_delete, journal_list, journal_upsert};
 

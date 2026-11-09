@@ -3,15 +3,28 @@ mod ai;
 mod capture;
 mod ticktick;
 mod icons;
+#[path = "garmin_sync.rs"]
+mod garmin_sync_commands;
+mod health;
 mod integration;
+mod journal_archive;
+mod productivity;
+mod workspace;
 mod shell;
 mod store;
+mod travel_query;
 
 pub use admin::*;
 pub use ai::*;
 pub use capture::*;
 pub use ticktick::*;
 pub use icons::*;
+pub use garmin_sync_commands::*;
+pub use health::*;
 pub use integration::*;
+pub use journal_archive::*;
+pub use productivity::*;
+pub use workspace::*;
 pub use shell::*;
 pub use store::*;
+pub use travel_query::*;

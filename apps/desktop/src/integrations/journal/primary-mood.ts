@@ -1,7 +1,7 @@
 import { MOOD_EMOJI_PRESETS } from "../../core/data/mood-emojis";
-import { getSettings } from "../../core/settings";
 import { closePopover, isPopoverOpen, openPopover } from "../../ui/motion";
-import { beijingToday, journalConfigured, journalDelete, journalList, journalUpsert } from "./client";
+
+const JOURNAL_WRITE_DISABLED = "旧 Journal 写入已停用";
 
 export function mountPrimaryMood(root: HTMLElement) {
   const mount = root.querySelector<HTMLElement>("#primaryMoodMount");
@@ -41,78 +41,30 @@ export function mountPrimaryMood(root: HTMLElement) {
       });
     });
     confirmBtn.addEventListener("mousedown", (e) => e.stopPropagation());
-    confirmBtn.addEventListener("click", async (e) => {
+    confirmBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (!pendingEmoji) return;
-      await savePrimary(pendingEmoji);
-      await closePopover(menu);
+      savePrimary(pendingEmoji);
     });
     const clearBtn = menu.querySelector<HTMLButtonElement>('[data-action="clear"]')!;
     clearBtn.addEventListener("mousedown", (e) => e.stopPropagation());
-    clearBtn.addEventListener("click", async (e) => {
+    clearBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      await clearPrimary();
-      await closePopover(menu);
+      clearPrimary();
     });
   };
 
-  async function loadPrimary() {
-    if (!journalConfigured(getSettings())) {
-      btn.textContent = "+";
-      btn.classList.remove("has-emoji");
-      return;
-    }
-    try {
-      const { entries } = await journalList({ date: beijingToday() });
-      const primary = entries.find((e) => e.kind === "mood" && e.primary === true);
-      if (primary && typeof primary.data === "object" && primary.data && "emoji" in (primary.data as object)) {
-        const emoji = String((primary.data as { emoji?: string }).emoji ?? "");
-        btn.textContent = emoji || "+";
-        btn.classList.toggle("has-emoji", !!emoji);
-      } else {
-        btn.textContent = "+";
-        btn.classList.remove("has-emoji");
-      }
-    } catch {
-      btn.textContent = "+";
-    }
+  function loadPrimary() {
+    btn.textContent = "+";
+    btn.classList.remove("has-emoji");
   }
 
-  async function savePrimary(emoji: string) {
-    if (!journalConfigured(getSettings())) {
-      alert("请先在设置中配置数据存储位置");
-      return;
-    }
-    try {
-      const date = beijingToday();
-      const { entries } = await journalList({ date });
-      const existing = entries.find((e) => e.kind === "mood" && e.primary === true);
-      await journalUpsert({
-        id: existing?.id ?? "",
-        kind: "mood",
-        date,
-        primary: true,
-        data: { emoji, note: "" },
-      });
-      await loadPrimary();
-      window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-    } catch (err) {
-      alert(String(err));
-    }
+  function savePrimary(_emoji: string) {
+    alert(JOURNAL_WRITE_DISABLED);
   }
 
-  async function clearPrimary() {
-    if (!journalConfigured(getSettings())) return;
-    try {
-      const date = beijingToday();
-      const { entries } = await journalList({ date });
-      const existing = entries.find((e) => e.kind === "mood" && e.primary === true);
-      if (existing?.id) await journalDelete(existing.id);
-      await loadPrimary();
-      window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-    } catch (err) {
-      alert(String(err));
-    }
+  function clearPrimary() {
+    alert(JOURNAL_WRITE_DISABLED);
   }
 
   btn.addEventListener("click", async (e) => {

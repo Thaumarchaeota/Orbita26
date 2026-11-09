@@ -415,7 +415,7 @@ impl AgentTool for TicktickListTasks {
         "滴答 · 查询任务"
     }
 
-    fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, args: Value) -> Result<String, String> {
         ensure_connected(app)?;
         let mut tasks = list_incomplete_tasks(app)?;
         if let Some(title) = opt_str(&args, "title") {
@@ -462,7 +462,7 @@ impl AgentTool for TicktickCreateTask {
         "滴答 · 创建任务"
     }
 
-    fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, args: Value) -> Result<String, String> {
         ensure_connected(app)?;
         let settings = read_settings(app)?;
         let project_id = default_project_id(&settings);
@@ -565,7 +565,7 @@ impl AgentTool for TicktickUpdateTask {
         "滴答 · 修改任务"
     }
 
-    fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, args: Value) -> Result<String, String> {
         ensure_connected(app)?;
         let task = resolve_task(app, &args)?;
         let task_id = task_id(&task)?;
@@ -666,7 +666,7 @@ impl AgentTool for TicktickDeleteTask {
         "滴答 · 删除任务"
     }
 
-    fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, args: Value) -> Result<String, String> {
         ensure_connected(app)?;
         let task = resolve_task(app, &args)?;
         let task_id = task_id(&task)?;

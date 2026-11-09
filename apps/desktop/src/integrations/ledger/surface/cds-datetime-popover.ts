@@ -1,6 +1,7 @@
-import { mountDatePicker, type DatePickerHandle } from "../../../ui/date-picker";
+import { mountDecoupledDatePicker, type DecoupledDatePickerHandle } from "../../../ui/decoupled-date-picker";
 import { mountPopoverPortal } from "../../../ui/popover-portal";
-import { mountTimePicker, normalizeHhMm, type TimePickerHandle } from "../../../ui/time-picker";
+import { mountDecoupledTimePicker, type DecoupledTimePickerHandle } from "../../../ui/decoupled-time-picker";
+import { normalizeHhMm } from "../../../ui/time-picker";
 import { buildValidatedPatch } from "../domain/field-validate";
 import { displayTxnTime, normalizeTimeInput, validateTxnTimeInput } from "../domain/txn-time";
 import type { Entry } from "../types";
@@ -18,9 +19,7 @@ function findEntry(store: CardDetailStore, id: string): Entry | undefined {
   return item as Entry;
 }
 
-function readTimePickerRaw(timePicker: TimePickerHandle): string {
-  const inputEl = timePicker.root.querySelector<HTMLInputElement>(".orbita-time-picker-input");
-  if (inputEl) return inputEl.value.trim();
+function readTimePickerRaw(timePicker: DecoupledTimePickerHandle): string {
   return timePicker.getValue();
 }
 
@@ -49,9 +48,8 @@ export function mountTxnDateTimePopover(options: {
   dateLabel.textContent = "日期";
   const dateMount = document.createElement("div");
   dateMount.className = "cds-datetime-popover-date-mount";
-  const datePicker: DatePickerHandle = mountDatePicker(dateMount, {
+  const datePicker: DecoupledDatePickerHandle = mountDecoupledDatePicker({ defaultTrigger: { container: dateMount },
     value: entry.date,
-    compact: true,
   });
   dateRow.append(dateLabel, dateMount);
 
@@ -62,7 +60,7 @@ export function mountTxnDateTimePopover(options: {
   timeLabel.textContent = "时间";
   const timeMount = document.createElement("div");
   timeMount.className = "cds-datetime-popover-time-mount";
-  const timePicker = mountTimePicker(timeMount, {
+  const timePicker = mountDecoupledTimePicker({ defaultTrigger: { container: timeMount },
     value: displayTxnTime(entry.metadata, entry.date),
   });
   timeRow.append(timeLabel, timeMount);
@@ -155,12 +153,9 @@ export function mountTxnDateTimePopover(options: {
       cancel();
     }
   };
-
-  const timeInput = timePicker.root.querySelector<HTMLInputElement>(".orbita-time-picker-input")!;
-  timeInput.addEventListener("keydown", onFieldKeydown, { capture: true, signal });
+  timeMount.addEventListener("keydown", onFieldKeydown, { capture: true, signal });
 
   void portal.open();
-  timeInput.focus();
 
   return {
     commit,

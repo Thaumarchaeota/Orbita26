@@ -50,17 +50,6 @@ function renderEngines(container: HTMLElement, indicator: HTMLElement) {
   requestAnimationFrame(() => moveIndicator(indicator, active));
 }
 
-function startClock(timeEl: HTMLElement, dateEl: HTMLElement) {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const tick = () => {
-    const n = new Date();
-    timeEl.textContent = n.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-    dateEl.textContent = `${months[n.getMonth()]}${n.getDate()}`;
-  };
-  tick();
-  setInterval(tick, 1000);
-}
-
 function mountSidebar(container: HTMLElement, root: HTMLElement) {
   const sidebar = document.createElement("div");
   sidebar.className = "shell-sidebar";
@@ -141,10 +130,6 @@ export function mountShell(root: HTMLElement) {
               <div class="engines" id="engines"></div>
             </div>
             <div class="search-bar-line">
-              <div class="clock-block">
-                <div class="time" id="time"></div>
-                <div class="date" id="date"></div>
-              </div>
               <form class="search-bar" id="searchForm">
                 <input type="text" id="searchInput" autofocus>
                 <button type="submit" class="search-btn">${SEARCH_SVG}</button>
@@ -158,13 +143,10 @@ export function mountShell(root: HTMLElement) {
     </div>
   `;
 
-  const timeEl = root.querySelector<HTMLElement>("#time")!;
-  const dateEl = root.querySelector<HTMLElement>("#date")!;
   const indicator = root.querySelector<HTMLElement>("#indicator")!;
   const enginesEl = root.querySelector<HTMLElement>("#engines")!;
   const input = root.querySelector<HTMLInputElement>("#searchInput")!;
 
-  startClock(timeEl, dateEl);
   mountTopToolkit(root);
   renderEngines(enginesEl, indicator);
   input.placeholder = LBL_SEARCH_IN(getCurrentEngine().name);
@@ -198,13 +180,7 @@ export function mountShell(root: HTMLElement) {
   const body = root.querySelector<HTMLElement>("#shellBody")!;
 
   mountSidebar(body, root);
-
-  const today = document.createElement("section");
-  today.className = "today-section";
-  today.id = "todayZone";
-  body.appendChild(today);
-
-  const work = document.createElement("section");
-  work.id = "workZone";
-  body.appendChild(work);
+  const aside = document.createElement("aside");
+  aside.className = "shell-aside shell-aside-tasks";
+  body.appendChild(aside);
 }

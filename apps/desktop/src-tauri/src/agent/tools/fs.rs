@@ -37,7 +37,7 @@ impl AgentTool for OpenPath {
         "本地 · 打开路径"
     }
 
-    fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, args: Value) -> Result<String, String> {
         let path = read_path(&args)?;
         paths::open_local_path(app, &path)?;
         Ok(json!({ "ok": true, "path": path }).to_string())
@@ -69,7 +69,7 @@ impl AgentTool for RevealPath {
         "本地 · 定位路径"
     }
 
-    fn execute(&self, app: &AppHandle, args: Value) -> Result<String, String> {
+    fn execute(&self, app: &AppHandle, _data_dir: &str, args: Value) -> Result<String, String> {
         let _ = app;
         let path = read_path(&args)?;
         paths::reveal_path_in_explorer(&path)?;

@@ -1,3 +1,4 @@
+import { bindBackdropPressDismiss } from "../../ui/backdrop-dismiss";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
 
 export function mountTextDialog(root: HTMLElement) {
@@ -34,9 +35,7 @@ export function mountTextDialog(root: HTMLElement) {
     void close(area.value);
   });
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) void close(null);
-  });
+  bindBackdropPressDismiss(backdrop, () => void close(null));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) void close(null);
   });

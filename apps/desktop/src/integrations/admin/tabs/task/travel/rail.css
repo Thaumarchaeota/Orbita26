@@ -1,0 +1,417 @@
+.travel-rail {
+  --travel-rail-axis-x: 12px;
+  --travel-rail-axis-width: 2px;
+  --travel-rail-marker-size: 16px;
+  --travel-rail-marker-offset: 5px;
+  --travel-rail-point-indent: 40px;
+  --travel-rail-interval-indent: 17px;
+  --travel-rail-point-space: 10px;
+  --travel-rail-interval-space: 12px;
+  --travel-rail-connector-before: 12px;
+  --travel-rail-connector-after: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px 20px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.travel-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  /* The containing detail rail already supplies the standard inset. */
+  margin: -12px -14px 0;
+}
+
+.travel-rail-title-slot {
+  flex: 1;
+  min-width: 72px;
+  font-size: var(--insight-font-role-page-title);
+}
+
+.travel-rail-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.travel-rail-icon-btn {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--insight-radius-control);
+  background: transparent;
+  color: var(--insight-text-secondary, #888);
+  cursor: pointer;
+}
+
+.travel-rail-icon-btn:hover:not(:disabled) {
+  color: var(--insight-text, #ddd);
+}
+
+.travel-rail-icon-btn:focus-visible {
+  outline: 2px solid var(--insight-focus-ring, #4b78b8);
+  outline-offset: 1px;
+}
+
+.travel-rail-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.travel-rail-save-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.travel-rail-save-hint {
+  font-size: var(--insight-font-caption);
+  color: var(--insight-text-secondary, #888);
+}
+
+.travel-rail-save-hint.is-failed {
+  color: var(--insight-danger, #c44);
+}
+
+.travel-rail-adoption-report {
+  font-size: var(--insight-font-caption);
+  color: var(--insight-text-secondary, #888);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.travel-rail-restore-row {
+  margin-top: 6px;
+}
+
+.travel-rail-flight-date-mount {
+  min-width: 0;
+}
+
+.travel-rail-transport-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.travel-rail-transport-draft input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--insight-border, rgba(255, 255, 255, 0.14));
+  border-radius: 6px;
+  color: var(--insight-text-primary);
+  background: var(--insight-surface-page);
+  font: inherit;
+}
+
+.travel-rail-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.travel-rail-add-row.is-empty-draft {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.travel-rail-draft-add {
+  width: 100%;
+  min-width: 0;
+}
+
+.travel-rail-axis {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.travel-rail-gap {
+  position: relative;
+  min-height: 24px;
+  margin-left: var(--travel-rail-axis-x);
+  padding: 6px 0 6px var(--travel-rail-interval-indent);
+  font-size: var(--insight-font-caption);
+  color: var(--insight-text-secondary, #888);
+}
+
+.travel-rail-gap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(-1 * var(--travel-rail-connector-before));
+  bottom: calc(-1 * var(--travel-rail-connector-after));
+  border-left: var(--travel-rail-axis-width) dashed currentColor;
+  opacity: 0.5;
+}
+
+.travel-rail-gap.solid::before {
+  border-left-style: solid;
+  opacity: 1;
+}
+
+.travel-rail-point-row {
+  display: grid;
+  grid-template-columns: var(--travel-rail-point-indent) 1fr;
+  gap: 0;
+  align-items: start;
+  padding: var(--travel-rail-point-space) 0;
+}
+
+.travel-rail-point-circle {
+  box-sizing: border-box;
+  width: var(--travel-rail-marker-size);
+  height: var(--travel-rail-marker-size);
+  margin-left: var(--travel-rail-marker-offset);
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--insight-text, #ddd);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.travel-rail-point-circle.has-actual {
+  border-style: solid;
+}
+
+.travel-rail-point-circle.no-actual {
+  border-style: dashed;
+}
+
+.travel-rail-point-circle.is-shared.has-actual,
+.travel-rail-point-circle.is-shared.has-partial-actual {
+  border-color: transparent;
+}
+
+.travel-rail-point-circle.is-shared.no-actual {
+  border-style: dashed;
+}
+
+.travel-rail-actual-half {
+  position: absolute;
+  inset: -1px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.travel-rail-actual-half.front {
+  clip-path: inset(0 50% 0 0);
+}
+
+.travel-rail-actual-half.rear {
+  clip-path: inset(0 0 0 50%);
+}
+
+.travel-rail-actual-half.is-lit {
+  opacity: 1;
+}
+
+.travel-rail-point-body {
+  --insight-text-placeholder: var(--insight-text-disabled);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 10px;
+  row-gap: 2px;
+  font-size: var(--insight-font-body);
+  font-weight: var(--insight-weight-semibold);
+  line-height: 1.45;
+  min-width: 0;
+}
+
+.travel-rail-point-field {
+  min-width: 0;
+}
+
+.travel-rail-point-time {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+button.travel-rail-point-time {
+  cursor: pointer;
+}
+
+.travel-rail-point-body strong {
+  font-weight: 600;
+}
+
+.travel-rail-segment {
+  position: relative;
+  padding: var(--travel-rail-interval-space) 0 var(--travel-rail-interval-space) var(--travel-rail-interval-indent);
+  margin-left: var(--travel-rail-axis-x);
+}
+
+.travel-rail-segment-line {
+  position: absolute;
+  left: 0;
+  top: calc(-1 * var(--travel-rail-connector-before));
+  bottom: calc(-1 * var(--travel-rail-connector-after));
+  border-left: var(--travel-rail-axis-width) dashed var(--insight-text-secondary, #888);
+  opacity: 0.55;
+}
+
+.travel-rail-segment-line.solid {
+  border-left-style: solid;
+  border-left-color: var(--insight-accent, currentColor);
+  opacity: 0.85;
+}
+
+.travel-rail-segment-heading {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 28px;
+}
+
+.travel-rail-segment-type {
+  display: block;
+  min-height: 28px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.travel-rail-segment-name {
+  --insight-text-placeholder: var(--insight-text-disabled);
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.travel-rail-segment-name-dot { padding: 0 6px; color: var(--insight-text-primary); }
+.travel-rail-segment-name.is-empty { opacity: 0; }
+.travel-rail-segment-heading:hover .travel-rail-segment-name.is-empty,
+.travel-rail-segment-heading:focus-within .travel-rail-segment-name.is-empty { opacity: 1; }
+
+button.travel-rail-segment-type {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.travel-rail-segment-duration {
+  font-size: var(--insight-font-caption);
+  color: var(--insight-text-secondary, #888);
+  margin-top: 2px;
+}
+
+.travel-rail-segment-fields {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.travel-rail-field-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  font-size: var(--insight-font-caption);
+}
+
+.travel-rail-field-row.travel-rail-flight-number {
+  font-size: 16px;
+  font-weight: 600;
+  gap: 4px;
+}
+
+/* Page-private: no registered icon-button primitive. Do not restyle shared controls. */
+.travel-rail-flight-refresh {
+  box-sizing: border-box;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--insight-icon-default, #888);
+  cursor: pointer;
+}
+
+.travel-rail-flight-refresh:hover:not(:disabled) {
+  color: var(--insight-text-secondary, #888);
+}
+
+.travel-rail-flight-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.travel-rail-flight-diff-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--insight-font-caption);
+}
+
+.travel-rail-field-label {
+  color: var(--insight-text-secondary, #888);
+}
+
+.travel-rail-flight-query {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.travel-rail-flight-query-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.travel-rail-actual-popover {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.travel-rail-actual-popover h4 {
+  margin: 0;
+  font-size: var(--insight-font-role-section);
+  font-weight: 600;
+}

@@ -112,6 +112,21 @@ pub(crate) fn default_font_life_ring_sub() -> String {
     "helvetica".into()
 }
 
+pub(crate) fn default_insight_primary() -> String { "#4B78B8".into() }
+pub(crate) fn default_insight_selected() -> String { "#D7E3F5".into() }
+pub(crate) fn default_insight_hover() -> String { "#E5EBF3".into() }
+pub(crate) fn default_insight_chrome() -> String { "#E4EBF3".into() }
+pub(crate) fn default_insight_sidebar() -> String { "#F1F5F9".into() }
+pub(crate) fn default_insight_page() -> String { "#F8FAFC".into() }
+pub(crate) fn default_insight_surface() -> String { "#FFFFFF".into() }
+pub(crate) fn default_insight_control_surface() -> String { "#FFFFFF".into() }
+pub(crate) fn default_insight_sunken() -> String { "#F1F5F9".into() }
+pub(crate) fn default_insight_text_primary() -> String { "#243044".into() }
+pub(crate) fn default_insight_text_secondary() -> String { "#66758A".into() }
+pub(crate) fn default_insight_border() -> String { "#D4DCE6".into() }
+pub(crate) fn default_insight_danger() -> String { "#C0393B".into() }
+pub(crate) fn default_insight_theme() -> String { "cold".into() }
+
 pub(crate) fn default_ring_sleep() -> String {
     "#5ac8fa".into()
 }
@@ -303,5 +318,6 @@ pub fn default_settings(data_dir: &str) -> AppSettings {
         ui: UiPrefs::default(),
         integrations: Integrations::default(),
         ai: AiConfig::default(),
+        extra: std::collections::HashMap::new(),
     }
 }

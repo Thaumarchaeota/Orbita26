@@ -203,60 +203,6 @@
   background: #c62828;
   color: #fff;
 }
-.local-ctx-menu {
-  position: fixed;
-  z-index: 220;
-  min-width: 156px;
-  padding: 4px;
-  border-radius: 12px;
-  background: rgba(18, 22, 32, 0.96);
-  backdrop-filter: blur(20px) saturate(1.35);
-  -webkit-backdrop-filter: blur(20px) saturate(1.35);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
-  transform-origin: top left;
-  color: var(--text);
-}
-[data-theme="light"] .local-ctx-menu,
-[data-theme="transparent-light"] .local-ctx-menu {
-  background: rgba(255, 255, 255, 0.98);
-  border-color: var(--border);
-  box-shadow: 0 12px 32px var(--shadow);
-}
-[data-theme="transparent-dark"] .local-ctx-menu {
-  background: hsl(var(--glass-tint-h) var(--glass-tint-s) var(--glass-tint-l) / 0.96);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-.local-ctx-item {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text);
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.18s var(--ease);
-}
-.local-ctx-item:hover {
-  background: var(--surface-active);
-}
-.local-ctx-item.is-danger {
-  color: #ff6b6b;
-}
-.local-ctx-item.is-danger:hover:not(.is-confirm) {
-  background: rgba(229, 57, 53, 0.12);
-}
-.local-ctx-item.is-danger.is-confirm {
-  background: #c62828;
-  color: #fff;
-}
-.local-ctx-item.is-danger.is-confirm:hover {
-  background: #b71c1c;
-  color: #fff;
-}
 .theme-toggle {
   position: fixed;
   top: 20px;

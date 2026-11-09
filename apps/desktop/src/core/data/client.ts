@@ -7,11 +7,13 @@ import {
   defaultIntegrations,
   defaultUiPrefs,
   DEFAULT_LIFE_RINGS,
+  DEFAULT_INSIGHT_PALETTE,
   DEFAULT_TOP_GRID,
 } from "./defaults";
 import { normalizeGarminSyncDays } from "./garmin-sync-days";
 import { normalizeHealthTrackAxisPrefs } from "./health-track-axis";
 import { normalizeThemePrefs, themeFromPrefs } from "./theme-prefs";
+import { validateUiThemeSettings } from "../../ui/color-system/theme-validation";
 import type {
   AppEntry,
   AppItem,
@@ -21,13 +23,39 @@ import type {
   BookmarkEntry,
   LocalEntry,
   GridPrefs,
+  InsightPalette,
   UiPrefs,
 } from "./types";
 
-export { DEFAULT_GRID_GAP, DEFAULT_TOP_GRID, DEFAULT_LIFE_RINGS, defaultAiConfig, defaultIntegrations, defaultUiPrefs } from "./defaults";
+export {
+  DEFAULT_GRID_GAP,
+  DEFAULT_TOP_GRID,
+  DEFAULT_LIFE_RINGS,
+  DEFAULT_INSIGHT_PALETTE,
+  defaultAiConfig,
+  defaultIntegrations,
+  defaultUiPrefs,
+} from "./defaults";
 
 export function isTauri() {
   return "__TAURI_INTERNALS__" in window;
+}
+
+const INSIGHT_PALETTE_KEYS: (keyof InsightPalette)[] = [
+  "primary", "selected", "hover", "chrome", "sidebar", "page", "surface",
+  "controlSurface", "sunken", "textPrimary", "textSecondary", "border", "danger",
+];
+
+function normalizeInsightPalette(raw: unknown): InsightPalette {
+  const input = raw && typeof raw === "object" ? raw as Partial<Record<keyof InsightPalette, unknown>> : {};
+  const next = { ...DEFAULT_INSIGHT_PALETTE };
+  for (const key of INSIGHT_PALETTE_KEYS) {
+    const value = input[key];
+    if (typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value.trim())) {
+      next[key] = value.trim().toUpperCase();
+    }
+  }
+  return next;
 }
 
 const WEB_PREFIX = "orbita.data.";
@@ -286,6 +314,7 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
   const theme = themeFromPrefs(themePrefs);
   const ui: UiPrefs = {
     ...base.ui,
+    ...(uiRaw ?? {}),
     engineId: typeof uiRaw?.engineId === "string" ? uiRaw.engineId : base.ui.engineId,
     localTab:
       uiRaw?.localTab === "literature" || uiRaw?.localTab === "note" || uiRaw?.localTab === "file"
@@ -293,6 +322,12 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
         : base.ui.localTab,
     activeConversationId: uiRaw?.activeConversationId ?? null,
     themePrefs,
+    insightTheme:
+      uiRaw?.insightTheme === "warm" || uiRaw?.insightTheme === "blue" || uiRaw?.insightTheme === "cold"
+        || (typeof uiRaw?.insightTheme === "string" && /^(?:[1-9]|[12]\d|30)$/.test(uiRaw.insightTheme))
+        ? uiRaw.insightTheme
+        : "cold",
+    insightPalette: normalizeInsightPalette(uiRaw?.insightPalette),
     blockOpacity: clampBlockOpacity(uiRaw?.blockOpacity),
     topGrid,
     lifeRings: normalizeLifeRings(uiRaw?.lifeRings),
@@ -303,9 +338,17 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
     fonts: normalizeFontPrefs(uiRaw?.fonts),
     healthTrackAxis: normalizeHealthTrackAxisPrefs(uiRaw?.healthTrackAxis),
   };
+  if (ui.insightThemePresets !== undefined || ui.appliedInsightTheme !== undefined || ui.insightThemeLibraryRevision !== undefined) {
+    validateUiThemeSettings({
+      insightThemePresets: ui.insightThemePresets,
+      appliedInsightTheme: ui.appliedInsightTheme,
+      insightThemeLibraryRevision: ui.insightThemeLibraryRevision,
+    });
+  }
   const intRaw = (migrated.integrations ?? raw.integrations ?? {}) as Partial<AppSettings["integrations"]>;
   const credRaw = intRaw.credentials ?? base.integrations.credentials;
   const settings: AppSettings = {
+    ...migrated,
     version: Math.max(typeof migrated.version === "number" ? migrated.version : 0, 7),
     theme,
     dataDir: migrated.dataDir ?? raw.dataDir,
@@ -352,6 +395,7 @@ function normalizeSettings(raw: Partial<AppSettings> & { dataDir: string; theme?
           accessToken: credRaw.ticktick?.accessToken ?? intRaw.ticktick?.accessToken ?? "",
         },
         ai: { entries: { ...credRaw.ai?.entries } },
+        variflight: { apiKey: credRaw.variflight?.apiKey ?? "" },
       },
     },
     ai: {

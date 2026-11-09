@@ -1,16 +1,314 @@
 .timeline-app {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100%;
   min-height: 0;
+  min-width: 0;
 }
 
 .timeline-scroll {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
 }
 
-.timeline-layer + .timeline-layer {
-  margin-top: 16px;
+.timeline-detail-rail {
+  flex: 0 0 320px;
+  min-width: 280px;
+  max-width: 38%;
+  box-sizing: border-box;
+  border-left: 1px solid var(--insight-border-color);
+  padding: 16px;
+  overflow: auto;
+  color: var(--insight-text-primary);
 }
+
+.timeline-layer + .timeline-layer {
+  margin-top: 8px;
+}
+
+.journal-track-card .health-track-card-plot {
+  padding: 8px 0;
+}
+
+.journal-track-card.is-loading {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.journal-track-card .health-track-card-legend {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-muted, #6b7280);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.journal-track-legend-icon {
+  color: var(--admin-accent, #5b96d1);
+}
+
+.journal-track-lanes {
+  position: relative;
+  height: 72px;
+  margin: 0;
+  cursor: crosshair;
+}
+
+.journal-track-axis {
+  position: absolute;
+  left: 70px;
+  right: 4px;
+  top: 50%;
+  height: 0;
+  border-top: 1px solid var(--admin-border, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  pointer-events: none;
+}
+
+.journal-track-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.journal-track-marker {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--admin-border, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  border-radius: 50%;
+  background: var(--admin-surface, #fff);
+  color: var(--admin-accent, #5b96d1);
+  cursor: pointer;
+  pointer-events: auto;
+  transform: translateX(-50%);
+  box-shadow: 0 1px 2px var(--insight-shadow-color-6);
+}
+
+.journal-track-marker.is-note {
+  bottom: calc(50% + 4px);
+}
+
+.journal-track-marker.is-document {
+  top: calc(50% + 4px);
+}
+
+.journal-track-marker.is-cluster {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--insight-on-primary, #fff);
+  background: var(--admin-accent, #5b96d1);
+  border-color: var(--admin-accent, #5b96d1);
+}
+
+.journal-track-marker-icon {
+  display: flex;
+  width: 14px;
+  height: 14px;
+}
+
+.journal-track-marker-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.journal-track-marker-count {
+  line-height: 1;
+}
+
+.journal-track-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #dc2626;
+  text-align: center;
+  pointer-events: none;
+}
+
+.journal-track-editor-backdrop .journal-track-editor-panel {
+  width: min(520px, calc(100vw - 32px));
+}
+
+.journal-track-editor-panel textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--admin-border, var(--insight-border-color, var(--insight-border-color, #d1d5db)));
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.journal-track-editor-error {
+  margin: 0;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+.journal-track-editor-status {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 13px;
+  color: var(--admin-muted, #6b7280);
+}
+
+.journal-track-editor-status.is-ok {
+  color: #059669;
+}
+
+.journal-track-editor-status.is-err {
+  color: #dc2626;
+}
+
+/* Timeline owns this domain marker; ordinary surfaces follow the Insight palette. */
+html[data-insight-theme] .timeline-app {
+  --timeline-session-color: #eab308;
+  color: var(--insight-text-primary);
+  background: var(--insight-surface-page);
+  font-family: inherit;
+  font-size: var(--insight-font-role-control);
+  font-weight: var(--insight-weight-regular);
+}
+
+html[data-insight-theme] .timeline-app .health-track-card {
+  background: var(--insight-surface-panel);
+  border-color: var(--insight-border-subtle);
+}
+
+html[data-insight-theme] .timeline-app .health-track-card-plot::before {
+  background: linear-gradient(to right, var(--insight-surface-panel), color-mix(in srgb, var(--insight-surface-panel) 88%, transparent) 50%, transparent);
+}
+
+html[data-insight-theme] .timeline-app .health-track-card-plot::after {
+  background: linear-gradient(to left, var(--insight-surface-panel), color-mix(in srgb, var(--insight-surface-panel) 72%, transparent) 45%, transparent);
+}
+
+html[data-insight-theme] .timeline-app .health-track-now {
+  background: var(--insight-danger);
+}
+
+html[data-insight-theme] .timeline-app .health-track-cursor {
+  background: var(--insight-primary);
+}
+
+html[data-insight-theme] .timeline-app :is(.health-track-card-legend, .orbita-swatch-toggle-cell, .orbita-swatch-toggle-label, .health-meal-marker) {
+  font-family: inherit;
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-regular);
+}
+
+html[data-insight-theme] .timeline-app :is(.journal-track-card .health-track-card-legend, .journal-track-marker.is-cluster) {
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-semibold);
+}
+
+html[data-insight-theme] .timeline-app .journal-track-card .health-track-card-legend {
+  color: var(--insight-text-secondary);
+}
+
+html[data-insight-theme] .timeline-app .journal-track-legend-icon {
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .timeline-app .journal-track-axis {
+  border-color: var(--insight-border-subtle);
+}
+
+html[data-insight-theme] .timeline-app .journal-track-marker {
+  background: var(--insight-surface-panel);
+  color: var(--insight-primary);
+  border-color: var(--insight-border-subtle);
+  box-shadow: var(--insight-shadow-panel);
+}
+
+html[data-insight-theme] .timeline-app .journal-track-marker.is-cluster {
+  background: var(--insight-primary);
+  border-color: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+html[data-insight-theme] .timeline-app .journal-track-error {
+  font-size: var(--insight-font-role-label);
+  color: var(--insight-danger);
+}
+
+html[data-insight-theme] .timeline-app .health-date-nav.orbita-picker-nav-arrow {
+  border-radius: var(--insight-radius-control);
+  background: transparent;
+  color: var(--insight-text-secondary);
+  font-weight: var(--insight-weight-regular);
+}
+
+html[data-insight-theme] .timeline-app .health-date-nav.orbita-picker-nav-arrow:hover:not(:disabled) {
+  background: var(--insight-control-hover);
+}
+
+html[data-insight-theme] .timeline-app .health-date-nav:disabled {
+  color: var(--insight-text-disabled);
+}
+
+html[data-insight-theme] .timeline-app .health-tracks-date-rail {
+  background: transparent;
+  border-color: var(--insight-border-subtle);
+}
+
+html[data-insight-theme] .timeline-app .health-date-nav.orbita-picker-nav-arrow {
+  font-size: var(--orbita-picker-nav-icon-size);
+}
+
+html[data-insight-theme] .timeline-app .health-track-tooltip {
+  background: var(--insight-surface-panel);
+  color: var(--insight-text-primary);
+  border-color: var(--insight-border-subtle);
+  box-shadow: var(--insight-shadow-panel);
+  font-family: inherit;
+  font-size: var(--insight-font-role-label);
+}
+
+html[data-insight-theme] .timeline-app .health-btn {
+  font-family: inherit;
+  font-size: var(--insight-font-role-control);
+  font-weight: var(--insight-weight-regular);
+}
+.arrangement-detail-empty { color: var(--insight-text-secondary); font-size: var(--insight-font-role-control); padding: 16px 4px; }
+.arrangement-detail-rail h3 { margin: 0; font-size: var(--insight-font-role-card-title); overflow-wrap: anywhere; }
+.arrangement-detail-rail h4 { margin: 12px 0 8px; font-size: var(--insight-font-role-section); }
+.arrangement-detail-head, .arrangement-section-head, .arrangement-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* 标准 Checkbox 自己画方框、勾和出现动画，右栏按钮样式不要盖上去。 */
+.arrangement-detail-rail button:where(:not(.orbita-checkbox):not(.orbita-button):not(.orbita-inline-text-field__display)) { cursor: pointer; color: var(--insight-text-primary); }
+.arrangement-detail-rail button:where(:not(.orbita-checkbox):not(.orbita-button)):disabled { opacity: .45; cursor: default; }
+.arrangement-field { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; font-size: var(--insight-font-role-label); color: var(--insight-text-secondary); }
+.arrangement-field input, .arrangement-field textarea, .arrangement-plan input, .arrangement-unscheduled select { box-sizing: border-box; width: 100%; border: 1px solid var(--insight-border-color); border-radius: 6px; background: var(--insight-control-surface-bg); color: var(--insight-text-primary); padding: 6px 8px; font: inherit; }
+.arrangement-field textarea { resize: vertical; min-height: 60px; }
+.arrangement-field.is-failed input, .arrangement-field.is-failed textarea, .arrangement-plan.is-failed input { border-color: var(--insight-warning, #d97706); }
+.arrangement-field small, .arrangement-plan small { color: var(--insight-warning, #d97706); }
+.arrangement-draft-actions { display: flex; gap: 6px; }
+.arrangement-name-row { display: flex; align-items: end; gap: 4px; }
+.arrangement-name-row .arrangement-field { flex: 1; }
+.arrangement-plan { display: grid; gap: 6px; font-size: var(--insight-font-role-label); color: var(--insight-text-secondary); margin: 10px 0; }
+.arrangement-action-controls { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.arrangement-action-controls button, .arrangement-card-head button, .arrangement-section-head button, .arrangement-detail-head button:where(:not(.orbita-checkbox, .orbita-inline-text-field__display)), .arrangement-draft-actions button, .arrangement-plan button { border: 1px solid var(--insight-border-color); border-radius: 5px; background: var(--insight-control-surface-bg); padding: 4px 7px; font-size: var(--insight-font-role-control); }
+.arrangement-action-summary.is-located { animation: arrangement-locate 1.3s ease-out; }
+@keyframes arrangement-locate { 0%,45% { box-shadow: 0 0 0 2px var(--insight-primary); } 100% { box-shadow: none; } }
+.arrangement-member { width: 100%; text-align: left; border: 1px solid var(--insight-border-color); border-radius: 5px; padding: 7px; background: var(--insight-control-surface-bg); margin-bottom: 5px; }
+.arrangement-unscheduled { display: flex; flex-direction: column; gap: 8px; }
+.arrangement-unscheduled label { font-size: var(--insight-font-role-label); }
+.arrangement-unscheduled-card { border: 1px solid var(--insight-border-color); border-radius: 8px; margin: 6px 0; cursor: grab; }
+.arrangement-unscheduled-card button { display: flex; flex-direction: column; gap: 3px; width: 100%; border: 0; text-align: left; background: transparent; padding: 9px; }
+.arrangement-unscheduled-card span, .arrangement-unscheduled-card small { color: var(--insight-text-secondary); }

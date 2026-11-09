@@ -73,7 +73,7 @@
   height: 14px;
   border-radius: 50%;
   background: var(--ledger-surface, #fff);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 2px var(--insight-shadow-color-12, rgba(0, 0, 0, 0.12));
   transition: transform 0.2s ease;
 }
 
@@ -83,4 +83,180 @@
 
 .orbita-toggle-switch.is-on .orbita-toggle-switch-thumb {
   transform: translateX(14px);
+}
+
+html[data-insight-theme] .orbita-tri-state-marker {
+  border-color: var(--insight-text-secondary);
+  border-radius: var(--insight-radius-xs);
+  color: var(--insight-primary);
+}
+
+html[data-insight-theme] .orbita-tri-state-marker.is-checked,
+html[data-insight-theme] .orbita-tri-state-marker.is-indeterminate {
+  border-color: var(--insight-primary);
+  background: var(--insight-control-selected);
+}
+
+html[data-insight-theme] .orbita-tri-state-marker:focus-visible,
+html[data-insight-theme] .orbita-toggle-switch:focus-visible {
+  outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, var(--insight-primary)));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--insight-focus-ring);
+}
+
+html[data-insight-theme] .orbita-tri-state-marker:disabled,
+html[data-insight-theme] .orbita-toggle-switch:disabled {
+  color: var(--insight-text-disabled);
+  cursor: default;
+  opacity: 0.7;
+}
+
+html[data-insight-theme] .orbita-toggle-switch-track {
+  background: var(--insight-divider);
+}
+
+html[data-insight-theme] .orbita-toggle-switch-thumb {
+  background: var(--insight-surface-panel);
+}
+
+html[data-insight-theme] .orbita-toggle-switch.is-on .orbita-toggle-switch-track {
+  background: var(--insight-primary);
+}
+
+.orbita-choice-radio,
+.orbita-choice-checkbox {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1.5px solid var(--insight-border-color, var(--insight-border-color, #d4dce6));
+  background: var(--insight-surface-bg, #fff);
+  cursor: pointer;
+  color: var(--insight-on-primary, #fff);
+}
+
+.orbita-choice-radio {
+  border-radius: 50%;
+}
+
+.orbita-choice-checkbox {
+  border-radius: 4px;
+}
+
+.orbita-choice-radio::after,
+.orbita-choice-checkbox::after {
+  content: "";
+  display: block;
+  opacity: 0;
+}
+
+.orbita-choice-radio.is-checked {
+  border-color: var(--insight-primary, #4b78b8);
+}
+
+.orbita-choice-radio.is-checked::after {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--insight-primary, #4b78b8);
+  opacity: 1;
+}
+
+.orbita-choice-checkbox.is-checked,
+.orbita-choice-checkbox.is-indeterminate {
+  border-color: var(--insight-primary, #4b78b8);
+  background: var(--insight-primary, #4b78b8);
+}
+
+.orbita-choice-checkbox.is-checked::after {
+  width: 4px;
+  height: 7px;
+  margin-top: -1px;
+  border: solid var(--insight-on-primary, #fff);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  opacity: 1;
+}
+
+.orbita-choice-checkbox.is-indeterminate::after {
+  width: 8px;
+  height: 0;
+  border-top: 1.5px solid var(--insight-on-primary, #fff);
+  opacity: 1;
+}
+
+.orbita-choice-radio:focus-visible,
+.orbita-choice-checkbox:focus-visible {
+  outline: 2px solid var(--insight-state-control-focus, var(--insight-focus-ring, #4b78b8));
+  outline-offset: 2px;
+}
+
+.orbita-choice-radio:disabled,
+.orbita-choice-checkbox:disabled {
+  border-color: var(--insight-text-disabled, #b2ada7);
+  background: var(--insight-surface-bg, #fff);
+  cursor: default;
+}
+
+.orbita-choice-radio-card {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px;
+  border: 1px solid var(--insight-border-color);
+  border-radius: var(--insight-radius-control, 10px);
+  background: var(--insight-control-surface-bg);
+  color: var(--insight-text-secondary);
+  font: inherit;
+  font-size: var(--insight-font-role-card-title);
+  text-align: left;
+}
+
+.orbita-choice-radio-card.is-checked {
+  border-color: var(--insight-primary);
+  background: var(--insight-state-control-selected, var(--insight-selected-bg, var(--insight-hover-bg)));
+  color: var(--insight-text-primary);
+}
+
+.orbita-choice-radio-card::after {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--insight-border-color);
+  border-radius: 50%;
+  background: transparent;
+  opacity: 1;
+}
+
+.orbita-choice-radio-card.is-checked::after {
+  box-sizing: border-box;
+  border: 0;
+  background: var(--insight-primary);
+  box-shadow: inset 0 0 0 4px var(--insight-primary);
+  position: relative;
+}
+
+.orbita-choice-radio-card.is-checked::before {
+  content: "";
+  position: absolute;
+  right: 21px;
+  width: 8px;
+  height: 4px;
+  border: solid var(--insight-on-primary, #fff);
+  border-width: 0 0 2px 2px;
+  transform: rotate(-45deg) translateY(-1px);
+  z-index: 1;
+}
+
+.orbita-choice-checkbox.is-checked:disabled,
+.orbita-choice-checkbox.is-indeterminate:disabled {
+  background: var(--insight-text-disabled, #b2ada7);
+  border-color: var(--insight-text-disabled, #b2ada7);
 }

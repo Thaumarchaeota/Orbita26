@@ -1,0 +1,110 @@
+.arrangement-week .arrangement-grid-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--insight-text-secondary) 65%, transparent) transparent;
+}
+.arrangement-week .arrangement-grid-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.arrangement-week .arrangement-grid-scroll::-webkit-scrollbar-track,
+.arrangement-week .arrangement-grid-scroll::-webkit-scrollbar-corner { background: transparent; }
+.arrangement-week .arrangement-grid-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--insight-text-secondary) 65%, transparent);
+  border-radius: 999px;
+}
+.arrangement-week .arrangement-grid-scroll::-webkit-scrollbar-thumb:hover { background: var(--insight-text-secondary); }
+.arrangement-week .arrangement-day-head { letter-spacing: .01em; }
+.arrangement-week .arrangement-action-copy > [hidden] { display: none; }
+.arrangement-week .arrangement-action:not(.is-flight) {
+  border-left-width: 4px;
+}
+@supports (background: linear-gradient(to bottom, color-mix(in srgb, currentColor 50%, transparent), currentColor)) {
+  .arrangement-week .arrangement-action:not(.is-flight) {
+    border-left-color: transparent;
+    --arrangement-stripe-soft: color-mix(in srgb, var(--arrangement-color) 65%, var(--arrangement-background, color-mix(in srgb, var(--arrangement-color) 16%, var(--insight-control-surface-bg))));
+    background:
+      linear-gradient(
+        var(--arrangement-background, color-mix(in srgb, var(--arrangement-color) 16%, var(--insight-control-surface-bg))),
+        var(--arrangement-background, color-mix(in srgb, var(--arrangement-color) 16%, var(--insight-control-surface-bg)))
+      ) padding-box,
+      linear-gradient(
+        to bottom,
+        var(--arrangement-stripe-stops, var(--arrangement-stripe-soft) 0%, var(--arrangement-color) 35%, var(--arrangement-color) 65%, var(--arrangement-stripe-soft) 100%)
+      ) border-box;
+  }
+}
+.arrangement-week .arrangement-action:not(.is-preview) {
+  transform-origin: center;
+  transition: transform 220ms ease-in-out, box-shadow 220ms ease-in-out;
+}
+@media (hover: hover) {
+  .arrangement-week .arrangement-action:not(.is-preview):hover {
+    z-index: 3;
+    transform: scale(1.01);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--arrangement-color) 22%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrangement-week .arrangement-action:not(.is-preview) { transition: none; }
+  .arrangement-week .arrangement-action:not(.is-preview):hover { transform: none; }
+}
+.arrangement-week .arrangement-session.is-selected { outline: 2px solid var(--arrangement-color, var(--insight-primary)); outline-offset: -2px; }
+.arrangement-week .arrangement-action.is-selected {
+  outline: none;
+  transform: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--arrangement-color) 42%, transparent), 0 0 8px color-mix(in srgb, var(--arrangement-color) 20%, transparent);
+}
+@media (hover: hover) {
+  .arrangement-week .arrangement-action:not(.is-preview).is-selected:hover {
+    transform: none;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--arrangement-color) 42%, transparent), 0 0 8px color-mix(in srgb, var(--arrangement-color) 20%, transparent);
+  }
+}
+.arrangement-week .arrangement-action:not(.is-preview):active,
+.arrangement-week .arrangement-action:not(.is-preview).is-selected:active {
+  transform: scale(.99);
+  transition-duration: 160ms;
+  transition-timing-function: ease-out;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--arrangement-color) 30%, transparent), 0 0 3px color-mix(in srgb, var(--arrangement-color) 18%, transparent);
+}
+.arrangement-week .arrangement-action:not(.is-preview):focus-visible {
+  outline: 2px solid var(--insight-focus-ring, var(--insight-primary));
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrangement-week .arrangement-action:not(.is-preview),
+  .arrangement-week .arrangement-action:not(.is-preview):hover,
+  .arrangement-week .arrangement-action:not(.is-preview):active,
+  .arrangement-week .arrangement-action:not(.is-preview).is-selected:active { transition: none; transform: none; }
+}
+.arrangement-week .arrangement-session.is-selected { --arrangement-color: var(--insight-primary); }
+.arrangement-week .arrangement-preview { border-radius: var(--insight-radius-control, 10px); box-shadow: var(--insight-shadow-panel, 0 8px 24px rgb(0 0 0 / 14%)); }
+.arrangement-week .arrangement-zoom { position: absolute; z-index: 10; right: 22px; bottom: 20px; display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--insight-border-color); border-radius: var(--insight-radius-control, 10px); background: var(--insight-control-surface-bg); box-shadow: var(--insight-shadow-panel, 0 8px 24px rgb(0 0 0 / 14%)); }
+.arrangement-week .arrangement-zoom button { min-width: 30px; height: 28px; padding: 0 7px; border: 0; border-radius: var(--insight-radius-control, 10px); background: transparent; color: var(--insight-text-primary); font: inherit; font-size: var(--insight-font-role-label, 11px); cursor: pointer; }
+.arrangement-week .arrangement-zoom button:hover:not(:disabled) { background: var(--insight-hover-control, var(--insight-control-surface-bg)); }
+.arrangement-week .arrangement-zoom button:disabled { color: var(--insight-text-placeholder); cursor: default; }
+/* Checkpoints reuse the Action shell; this only arranges their private content. */
+.arrangement-week .arrangement-action.is-checkpoint { height: 48px; }
+.arrangement-checkpoint-copy { display: flex; align-items: flex-start; gap: 5px; min-width: 0; height: 100%; padding: 3px 5px; overflow: hidden; }
+.arrangement-checkpoint-copy:has(.orbita-checkbox.is-checking) { overflow: visible; }
+.arrangement-checkpoint-checkbox-host { display: inline-flex; flex: 0 0 auto; align-items: flex-start; }
+.arrangement-checkpoint-text { display: flex; flex: 1 1 auto; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; text-align: left; }
+.arrangement-checkpoint-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--insight-font-body); font-weight: var(--insight-weight-medium); line-height: 1.2; color: var(--arrangement-title-color, var(--arrangement-color)); }
+.arrangement-checkpoint-time { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--insight-font-caption); font-weight: var(--insight-weight-regular); line-height: 1.2; color: var(--arrangement-color); }
+
+/* A completed Action remains one layout block; only its interior exposes pauses. */
+.arrangement-week .arrangement-action.has-actual-intervals:not(.is-flight) {
+  border: 0;
+  background:
+    repeating-linear-gradient(135deg, var(--arrangement-color) 0 2px, transparent 2px 4px) left top / 4px 100% no-repeat padding-box,
+    var(--arrangement-actual-fill) padding-box;
+}
+.arrangement-week .arrangement-action.has-actual-intervals:not(.is-flight)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--arrangement-stripe-stops, var(--arrangement-color) 0%, var(--arrangement-color) 100%));
+  mask-image: var(--arrangement-actual-mask);
+  pointer-events: none;
+}
+.arrangement-week .arrangement-action.has-actual-intervals .arrangement-action-copy { position: relative; padding-left: 9px; }

@@ -1,5 +1,41 @@
 use serde::{Deserialize, Serialize};
 
+fn valid_insight_hex(value: &str) -> bool {
+    value.len() == 7
+        && value.as_bytes()[0] == b'#'
+        && value.as_bytes()[1..].iter().all(|byte| byte.is_ascii_hexdigit())
+}
+
+macro_rules! insight_hex_deserializer {
+    ($name:ident, $default:ident) => {
+        fn $name<'de, D>(deserializer: D) -> Result<String, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let value = String::deserialize(deserializer)?;
+            Ok(if valid_insight_hex(&value) {
+                value.to_uppercase()
+            } else {
+                super::defaults::$default()
+            })
+        }
+    };
+}
+
+insight_hex_deserializer!(deserialize_insight_primary, default_insight_primary);
+insight_hex_deserializer!(deserialize_insight_selected, default_insight_selected);
+insight_hex_deserializer!(deserialize_insight_hover, default_insight_hover);
+insight_hex_deserializer!(deserialize_insight_chrome, default_insight_chrome);
+insight_hex_deserializer!(deserialize_insight_sidebar, default_insight_sidebar);
+insight_hex_deserializer!(deserialize_insight_page, default_insight_page);
+insight_hex_deserializer!(deserialize_insight_surface, default_insight_surface);
+insight_hex_deserializer!(deserialize_insight_control_surface, default_insight_control_surface);
+insight_hex_deserializer!(deserialize_insight_sunken, default_insight_sunken);
+insight_hex_deserializer!(deserialize_insight_text_primary, default_insight_text_primary);
+insight_hex_deserializer!(deserialize_insight_text_secondary, default_insight_text_secondary);
+insight_hex_deserializer!(deserialize_insight_border, default_insight_border);
+insight_hex_deserializer!(deserialize_insight_danger, default_insight_danger);
+
 #[derive(Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 pub struct GridPrefs {
@@ -197,6 +233,60 @@ pub struct ThemePrefs {
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct InsightPalette {
+    #[serde(default = "super::defaults::default_insight_primary", deserialize_with = "deserialize_insight_primary")]
+    pub primary: String,
+    #[serde(default = "super::defaults::default_insight_selected", deserialize_with = "deserialize_insight_selected")]
+    pub selected: String,
+    #[serde(default = "super::defaults::default_insight_hover", deserialize_with = "deserialize_insight_hover")]
+    pub hover: String,
+    #[serde(default = "super::defaults::default_insight_chrome", deserialize_with = "deserialize_insight_chrome")]
+    pub chrome: String,
+    #[serde(default = "super::defaults::default_insight_sidebar", deserialize_with = "deserialize_insight_sidebar")]
+    pub sidebar: String,
+    #[serde(default = "super::defaults::default_insight_page", deserialize_with = "deserialize_insight_page")]
+    pub page: String,
+    #[serde(default = "super::defaults::default_insight_surface", deserialize_with = "deserialize_insight_surface")]
+    pub surface: String,
+    #[serde(default = "super::defaults::default_insight_control_surface", deserialize_with = "deserialize_insight_control_surface")]
+    pub control_surface: String,
+    #[serde(default = "super::defaults::default_insight_sunken", deserialize_with = "deserialize_insight_sunken")]
+    pub sunken: String,
+    #[serde(default = "super::defaults::default_insight_text_primary", deserialize_with = "deserialize_insight_text_primary")]
+    pub text_primary: String,
+    #[serde(default = "super::defaults::default_insight_text_secondary", deserialize_with = "deserialize_insight_text_secondary")]
+    pub text_secondary: String,
+    #[serde(default = "super::defaults::default_insight_border", deserialize_with = "deserialize_insight_border")]
+    pub border: String,
+    #[serde(default = "super::defaults::default_insight_danger", deserialize_with = "deserialize_insight_danger")]
+    pub danger: String,
+}
+
+impl Default for InsightPalette {
+    fn default() -> Self {
+        Self {
+            primary: super::defaults::default_insight_primary(),
+            selected: super::defaults::default_insight_selected(),
+            hover: super::defaults::default_insight_hover(),
+            chrome: super::defaults::default_insight_chrome(),
+            sidebar: super::defaults::default_insight_sidebar(),
+            page: super::defaults::default_insight_page(),
+            surface: super::defaults::default_insight_surface(),
+            control_surface: super::defaults::default_insight_control_surface(),
+            sunken: super::defaults::default_insight_sunken(),
+            text_primary: super::defaults::default_insight_text_primary(),
+            text_secondary: super::defaults::default_insight_text_secondary(),
+            border: super::defaults::default_insight_border(),
+            danger: super::defaults::default_insight_danger(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+// Serde ignores the former insightStyle field when reading old settings; the next normal
+// save writes only this model. Do not rewrite settings on startup. See
+// docs/plans/v0.0.19-insight-ui-style-system.md (2026-10-08 Implementation).
 pub struct UiPrefs {
     #[serde(default = "super::defaults::default_engine_id")]
     pub engine_id: String,
@@ -206,6 +296,10 @@ pub struct UiPrefs {
     pub active_conversation_id: Option<String>,
     #[serde(default)]
     pub theme_prefs: ThemePrefs,
+    #[serde(default = "super::defaults::default_insight_theme")]
+    pub insight_theme: String,
+    #[serde(default)]
+    pub insight_palette: InsightPalette,
     #[serde(default = "super::defaults::default_block_opacity")]
     pub block_opacity: u8,
     #[serde(default = "super::defaults::default_top_grid")]
@@ -220,12 +314,21 @@ pub struct UiPrefs {
     pub fonts: FontPrefs,
     #[serde(default)]
     pub health_track_axis: HealthTrackAxisPrefs,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub insight_theme_presets: Option<Vec<serde_json::Value>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applied_insight_theme: Option<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub insight_theme_library_revision: Option<u64>,
     #[serde(default = "super::defaults::default_dock_left_grid", skip_serializing)]
     pub dock_left_grid: GridPrefs,
     #[serde(default = "super::defaults::default_bookmarks_grid", skip_serializing)]
     pub bookmarks_grid: GridPrefs,
     #[serde(default = "super::defaults::default_apps_grid", skip_serializing)]
     pub apps_grid: GridPrefs,
+    /// Preserve future and extension UI settings when older builds rewrite settings.json.
+    #[serde(flatten)]
+    pub extra: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl Default for UiPrefs {
@@ -235,6 +338,8 @@ impl Default for UiPrefs {
             local_tab: super::defaults::default_local_tab(),
             active_conversation_id: None,
             theme_prefs: ThemePrefs::default(),
+            insight_theme: super::defaults::default_insight_theme(),
+            insight_palette: InsightPalette::default(),
             block_opacity: super::defaults::default_block_opacity(),
             top_grid: super::defaults::default_top_grid(),
             life_rings: super::defaults::default_life_rings(),
@@ -242,9 +347,13 @@ impl Default for UiPrefs {
             life_ring_goals: LifeRingGoals::default(),
             fonts: FontPrefs::default(),
             health_track_axis: HealthTrackAxisPrefs::default(),
+            insight_theme_presets: None,
+            applied_insight_theme: None,
+            insight_theme_library_revision: None,
             dock_left_grid: super::defaults::default_dock_left_grid(),
             bookmarks_grid: super::defaults::default_bookmarks_grid(),
             apps_grid: super::defaults::default_apps_grid(),
+            extra: std::collections::HashMap::new(),
         }
     }
 }
@@ -424,6 +533,13 @@ pub struct AiCredentials {
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
+pub struct VariflightCredentials {
+    #[serde(default)]
+    pub api_key: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct IntegrationsCredentials {
     #[serde(default)]
     pub garmin: GarminCredentials,
@@ -431,6 +547,8 @@ pub struct IntegrationsCredentials {
     pub ticktick: TicktickCredentials,
     #[serde(default)]
     pub ai: AiCredentials,
+    #[serde(default)]
+    pub variflight: VariflightCredentials,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -473,6 +591,9 @@ pub struct AppSettings {
     pub integrations: Integrations,
     #[serde(default)]
     pub ai: AiConfig,
+    /// Keep settings introduced by newer builds intact across older-build writes.
+    #[serde(flatten)]
+    pub extra: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -481,9 +602,18 @@ pub(crate) struct Bootstrap {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub reasoning: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub created_at: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<crate::agent::web_search::WebSource>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub search_status: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -507,6 +637,8 @@ pub struct AiConfig {
     pub active_model: String,
     #[serde(default = "super::defaults::default_ai_entries")]
     pub entries: Vec<ApiEntry>,
+    #[serde(default)]
+    pub search_entry_id: String,
 }
 
 impl Default for AiConfig {
@@ -516,6 +648,7 @@ impl Default for AiConfig {
             active_entry_id: super::defaults::default_ai_entry_id(),
             active_model: super::defaults::default_ai_model(),
             entries: super::defaults::default_ai_entries(),
+            search_entry_id: String::new(),
         }
     }
 }
@@ -538,6 +671,10 @@ pub struct Conversation {
     pub active_entry_id: String,
     pub active_model: String,
     pub updated_at: String,
+    #[serde(default)]
+    pub title_locked: bool,
+    #[serde(default)]
+    pub thinking_effort: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

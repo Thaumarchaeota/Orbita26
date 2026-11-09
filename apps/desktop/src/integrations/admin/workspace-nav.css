@@ -1,0 +1,322 @@
+#adminTabs {
+  flex-shrink: 0;
+}
+
+.admin-workspace-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 8px 8px;
+  width: var(--admin-sidebar-width);
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid var(--insight-border-subtle);
+}
+
+.admin-app.is-sidebar-collapsed .admin-workspace-section {
+  width: 52px;
+  padding: 4px 6px 8px;
+}
+
+.admin-workspace-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+
+.admin-workspace-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--insight-text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.admin-workspace-btn:hover {
+  color: var(--insight-text-primary);
+  background: var(--insight-nav-hover);
+}
+
+.admin-app.is-sidebar-collapsed .admin-workspace-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.admin-app.is-sidebar-collapsed .admin-workspace-btn-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.admin-workspace-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-workspace-group-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--insight-text-placeholder);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.admin-workspace-group-toggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  cursor: pointer;
+  color: var(--insight-text-placeholder);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.admin-workspace-group-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-workspace-items {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-workspace-items.is-grouped {
+  padding-left: 12px;
+}
+
+.admin-workspace-item {
+  appearance: none;
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--insight-text-primary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.admin-workspace-item:hover {
+  background: var(--insight-nav-hover);
+  color: var(--insight-text-primary);
+}
+
+.admin-workspace-item.is-active {
+  color: var(--insight-icon-active);
+  font-weight: 500;
+  background: var(--insight-nav-active);
+}
+
+.admin-workspace-item-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.admin-workspace-item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-app.is-sidebar-collapsed .admin-workspace-item {
+  justify-content: center;
+  padding: 8px;
+}
+
+.admin-app.is-sidebar-collapsed .admin-workspace-item-label,
+.admin-app.is-sidebar-collapsed .admin-workspace-group-title,
+.admin-app.is-sidebar-collapsed .admin-workspace-group-toggle svg {
+  display: none;
+}
+
+.admin-app.is-sidebar-collapsed .admin-workspace-group-header {
+  justify-content: center;
+  padding: 4px;
+}
+
+.work-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.work-page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.work-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--insight-text-primary);
+  margin: 0;
+}
+
+.work-page-back {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--insight-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.work-page-back:hover {
+  background: var(--insight-nav-hover);
+  color: var(--insight-text-primary);
+}
+
+.work-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.work-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--insight-card-bg);
+  border: 1px solid var(--insight-border-subtle);
+}
+
+.work-list-row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--insight-text-primary);
+  cursor: pointer;
+}
+
+.work-list-row-title:hover {
+  color: var(--insight-text-primary);
+}
+
+.work-pin-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--insight-text-placeholder);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.work-pin-btn.is-pinned {
+  color: var(--insight-primary);
+}
+
+.work-pin-btn:hover {
+  background: var(--insight-nav-hover);
+}
+
+.project-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.project-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--insight-text-primary);
+  margin: 0;
+}
+
+.project-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.project-task-row {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--insight-card-bg);
+  border: 1px solid var(--insight-border-subtle);
+  font-size: 14px;
+  color: var(--insight-text-primary);
+}
+
+.project-create-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.project-create-row input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.project-create-row button {
+  appearance: none;
+  border: none;
+  background: var(--insight-primary);
+  color: var(--insight-card-bg);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.project-create-row button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

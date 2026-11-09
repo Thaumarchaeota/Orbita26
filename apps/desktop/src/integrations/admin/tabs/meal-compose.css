@@ -1,0 +1,484 @@
+.meal-compose-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.meal-compose-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--insight-content-bg) 70%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.meal-compose-card {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100%);
+  max-height: min(85vh, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  background: var(--insight-card-bg);
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.meal-compose-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 20px 0;
+}
+
+.meal-compose-title {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 16px 20px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--insight-text-primary);
+  border-bottom: 1px solid var(--insight-border-subtle);
+}
+
+.meal-compose-field {
+  margin-bottom: 12px;
+}
+
+.meal-compose-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--insight-text-secondary);
+  margin-bottom: 4px;
+}
+
+.meal-compose-field input,
+.meal-compose-field select,
+.meal-compose-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-chrome);
+  color: var(--insight-text-primary);
+}
+
+.meal-compose-field textarea {
+  resize: vertical;
+  min-height: 48px;
+}
+
+.meal-compose-field.is-error input,
+.meal-compose-field.is-error select {
+  border-color: var(--insight-danger, #e53e3e);
+}
+
+.meal-compose-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.meal-compose-datetime-pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.meal-compose-datetime-pickers .orbita-date-picker,
+.meal-compose-datetime-pickers .orbita-time-picker {
+  width: 100%;
+}
+
+.meal-compose-foods {
+  margin: 16px 0 8px;
+}
+
+.meal-compose-foods-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.meal-compose-foods-head span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--insight-text-primary);
+}
+
+.meal-compose-foods-head button {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: var(--admin-radius-sm);
+  background: transparent;
+  color: var(--admin-accent);
+  cursor: pointer;
+}
+
+.meal-food-empty {
+  margin: 0;
+  padding: 16px;
+  font-size: 12px;
+  color: var(--insight-text-secondary);
+  border: 1px dashed var(--insight-border-subtle);
+  border-radius: 10px;
+}
+
+.meal-food-card {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--admin-chrome) 55%, var(--insight-card-bg));
+}
+
+.meal-food-card + .meal-food-card {
+  margin-top: 0;
+}
+
+.meal-food-card.is-error {
+  border-color: var(--insight-danger, #e53e3e);
+}
+
+.meal-food-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--insight-border-subtle);
+}
+
+.meal-food-name {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--insight-text-primary);
+}
+
+.meal-food-name:focus {
+  outline: none;
+}
+
+.meal-food-card-head button {
+  padding: 2px 8px;
+  border: none;
+  background: transparent;
+  color: var(--insight-text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.meal-food-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.meal-food-field span {
+  font-size: 11px;
+  color: var(--insight-text-secondary);
+}
+
+.meal-food-field input {
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 13px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 6px;
+  background: var(--admin-chrome);
+  color: var(--insight-text-primary);
+}
+
+.meal-food-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.meal-food-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.meal-food-grid-4 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.meal-food-section {
+  margin: 12px 0 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--insight-border-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--insight-text-secondary);
+}
+
+.meal-compose-food-warn {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--insight-warning, #d97706);
+}
+
+.meal-compose-footer {
+  flex-shrink: 0;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--insight-border-subtle);
+  background: var(--insight-card-bg);
+}
+
+.meal-compose-ai {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.meal-compose-ai input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 13px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 20px;
+  background: var(--admin-chrome);
+  color: var(--insight-text-primary);
+}
+
+.meal-compose-ai button {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--admin-accent);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meal-compose-ai button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.meal-compose-ai-hint {
+  font-size: 12px;
+  color: var(--insight-danger, #e53e3e);
+  margin: -8px 0 10px;
+  min-height: 16px;
+}
+
+.meal-compose-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meal-compose-save {
+  padding: 8px 20px;
+  font-size: 13px;
+  border: 1px solid var(--insight-primary);
+  border-radius: var(--admin-radius-sm);
+  background: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+  cursor: pointer;
+}
+
+.meal-compose-save:hover:not(:disabled) {
+  border-color: var(--insight-primary-hover);
+  background: var(--insight-primary-hover);
+  color: var(--insight-user-bubble-text);
+}
+
+.meal-compose-save:disabled {
+  border-color: color-mix(in srgb, var(--insight-primary) 35%, var(--insight-border-color));
+  background: color-mix(in srgb, var(--insight-primary) 35%, var(--insight-sunken-bg));
+  color: var(--insight-user-bubble-text);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.meal-compose-status {
+  font-size: 13px;
+  color: var(--insight-text-secondary);
+}
+
+.meal-compose-status.is-ok {
+  color: var(--insight-success, #16a34a);
+}
+
+.meal-compose-status.is-err {
+  color: var(--insight-danger, #e53e3e);
+}
+
+.meal-compose-recent {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--insight-border-subtle);
+}
+
+.meal-compose-recent-head span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--insight-text-secondary);
+}
+
+.meal-compose-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.meal-compose-recent-item {
+  padding: 6px 8px;
+  font-size: 12px;
+  text-align: left;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--insight-text-primary);
+  cursor: pointer;
+}
+
+.meal-compose-recent-item:hover {
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+.meal-compose-recent-loading,
+.meal-compose-recent-empty {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--insight-text-secondary);
+}
+
+.meal-food-search-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.meal-food-search-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 6px;
+  background: var(--admin-chrome);
+  color: var(--insight-text-primary);
+}
+
+.meal-food-search-results {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 8px;
+  background: var(--insight-card-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.meal-food-search-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-bottom: 1px solid var(--insight-border-subtle);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.meal-food-search-hit:last-child {
+  border-bottom: none;
+}
+
+.meal-food-search-hit:hover {
+  background: color-mix(in srgb, var(--admin-accent) 8%, transparent);
+}
+
+.meal-food-search-hit-name {
+  font-size: 13px;
+  color: var(--insight-text-primary);
+}
+
+.meal-food-search-hit-meta {
+  font-size: 11px;
+  color: var(--insight-text-secondary);
+}
+
+.meal-food-search-empty {
+  margin: 0;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--insight-text-secondary);
+}
+
+.meal-compose-totals {
+  margin: 8px 0 16px;
+  padding: 12px;
+  border: 1px solid var(--insight-border-subtle);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--admin-chrome) 40%, var(--insight-card-bg));
+}
+
+.meal-compose-totals-head {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--insight-text-primary);
+}
+
+.meal-compose-totals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.meal-compose-total-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.meal-compose-total-label {
+  color: var(--insight-text-secondary);
+}
+
+.meal-compose-total-value {
+  color: var(--insight-text-primary);
+  font-weight: 500;
+}
+
+.meal-compose-total-warn {
+  font-size: 10px;
+  color: #d97706;
+  background: color-mix(in srgb, #d97706 12%, transparent);
+  padding: 1px 5px;
+  border-radius: 4px;
+}

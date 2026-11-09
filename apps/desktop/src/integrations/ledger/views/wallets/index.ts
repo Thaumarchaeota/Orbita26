@@ -1,3 +1,4 @@
+import { mountDecoupledDatePicker, type DecoupledDatePickerHandle } from "../../../../ui/decoupled-date-picker";
 import { getConfirmDialog } from "../../../shell/dialog";
 import {
   fetchAccounts,
@@ -41,7 +42,7 @@ export function mountWalletsView(panel: HTMLElement): () => void {
           <h3 class="wallets-section-title">新建账户</h3>
           <div class="wallets-form-grid">
             <label>账户名<input type="text" name="name" placeholder="Assets:Wallet" required></label>
-            <label>开户日<input type="date" name="open_date" value="2026-01-01" required></label>
+            <label>开户日<div data-region="open-date"></div></label>
             <label>币种<input type="text" name="extra" placeholder="CNY"></label>
             <label>标签<input type="text" name="label" placeholder="钱包"></label>
           </div>
@@ -70,6 +71,7 @@ export function mountWalletsView(panel: HTMLElement): () => void {
   const migrateEl = panel.querySelector<HTMLElement>("#wallets-migrate-panel")!;
   const createForm = panel.querySelector<HTMLFormElement>("#wallets-create-form")!;
   const migrateForm = panel.querySelector<HTMLFormElement>("#wallets-migrate-form")!;
+  const openDatePicker: DecoupledDatePickerHandle = mountDecoupledDatePicker({ defaultTrigger: { container: createForm.querySelector<HTMLElement>('[data-region="open-date"]')! }, value: "2026-01-01" });
 
   const ac = new AbortController();
   const { signal } = ac;
@@ -278,13 +280,17 @@ export function mountWalletsView(panel: HTMLElement): () => void {
       }
       const fd = new FormData(createForm);
       const name = String(fd.get("name") || "").trim();
-      const open_date = String(fd.get("open_date") || "").trim();
+      const open_date = openDatePicker.getValue().trim();
+      if (!open_date) {
+        alert("请填写开户日");
+        return;
+      }
       const extra = String(fd.get("extra") || "").trim();
       const label = String(fd.get("label") || "").trim();
       try {
         await postAccountCreate({ name, open_date, extra, label });
         createForm.reset();
-        (createForm.querySelector<HTMLInputElement>('input[name="open_date"]')!).value = open_date || "2026-01-01";
+        openDatePicker.setValue(open_date || "2026-01-01");
         await reloadAccounts();
       } catch (err) {
         alert(err instanceof Error ? err.message : "创建失败");
@@ -343,5 +349,8 @@ export function mountWalletsView(panel: HTMLElement): () => void {
     { signal },
   );
 
-  return () => ac.abort();
+  return () => {
+    ac.abort();
+    openDatePicker.dispose();
+  };
 }

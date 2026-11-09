@@ -1,0 +1,598 @@
+:is(html[data-insight-theme], html:not([data-insight-theme])) :is(
+  .orbita-standard-popover.orbita-date-picker-menu,
+  .orbita-standard-popover.orbita-date-range-picker-menu
+) {
+  box-sizing: border-box;
+  width: 260px;
+  min-width: 260px;
+  max-width: 260px;
+  padding: 8px;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger {
+  --orbita-decoupled-trigger-chars: 10;
+  box-sizing: border-box;
+  display: inline-block;
+  vertical-align: middle;
+  height: 32px;
+  width: calc(var(--orbita-decoupled-trigger-chars) * 1ch + 20px);
+  padding: 0 10px;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-surface-bg, #fff);
+  color: var(--insight-text-primary, inherit);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  appearance: none;
+  cursor: text;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger--date {
+  --orbita-decoupled-trigger-chars: 10;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger--range {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  padding: 0 10px;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger--time {
+  --orbita-decoupled-trigger-chars: 5;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger--datetime {
+  --orbita-decoupled-trigger-chars: 16;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger:hover,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger:focus,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger:focus-visible,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-field:hover,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-field:focus,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-field:focus-visible {
+  background: transparent;
+  outline: none;
+  box-shadow: none;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-field {
+  box-sizing: border-box;
+  width: 10ch;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  appearance: none;
+  cursor: text;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-field::placeholder,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger::placeholder {
+  color: var(--insight-text-secondary);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-range-sep {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 14px;
+  background: var(--insight-divider, var(--insight-border-color));
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-panel .orbita-mini-cal {
+  padding: 0;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) :is(
+  .orbita-standard-popover.orbita-date-picker-menu,
+  .orbita-standard-popover.orbita-date-range-picker-menu,
+  .orbita-standard-popover.orbita-time-wheel-menu,
+  .orbita-standard-popover.orbita-datetime-picker-menu,
+  .orbita-standard-popover.orbita-datetime-range-popover
+) {
+  background: var(--insight-surface-elevated, var(--insight-card-bg, #fff));
+  border: var(--insight-border-width, 1px) solid var(--insight-divider, var(--insight-border-color, var(--insight-border-color, var(--insight-border-color, #d4dce6))));
+  border-radius: var(--insight-radius-menu);
+  box-shadow: var(--insight-shadow-panel);
+  color: var(--insight-text-primary, inherit);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover :is(
+  .orbita-mini-cal-footer,
+  .orbita-date-range-shortcuts,
+  .orbita-time-panel-foot
+) {
+  border: 0;
+}
+
+html[data-insight-theme] .orbita-standard-popover.motion-popover,
+html:not([data-insight-theme]) :is(.orbita-standard-popover.orbita-date-picker-menu, .orbita-standard-popover.orbita-date-range-picker-menu, .orbita-standard-popover.orbita-time-wheel-menu, .orbita-standard-popover.orbita-datetime-picker-menu, .orbita-standard-popover.orbita-datetime-range-popover).motion-popover {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.96);
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s linear 180ms;
+}
+
+html[data-insight-theme] .orbita-standard-popover.motion-popover.is-open,
+html:not([data-insight-theme]) :is(.orbita-standard-popover.orbita-date-picker-menu, .orbita-standard-popover.orbita-date-range-picker-menu, .orbita-standard-popover.orbita-time-wheel-menu, .orbita-standard-popover.orbita-datetime-picker-menu, .orbita-standard-popover.orbita-datetime-range-popover).motion-popover.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+  transition:
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-insight-theme] .orbita-standard-popover.motion-popover,
+html:not([data-insight-theme]) :is(.orbita-standard-popover.orbita-date-picker-menu, .orbita-standard-popover.orbita-date-range-picker-menu, .orbita-standard-popover.orbita-time-wheel-menu, .orbita-standard-popover.orbita-datetime-picker-menu, .orbita-standard-popover.orbita-datetime-range-popover).motion-popover,
+  html[data-insight-theme] .orbita-standard-popover.motion-popover.is-open,
+html:not([data-insight-theme]) :is(.orbita-standard-popover.orbita-date-picker-menu, .orbita-standard-popover.orbita-date-range-picker-menu, .orbita-standard-popover.orbita-time-wheel-menu, .orbita-standard-popover.orbita-datetime-picker-menu, .orbita-standard-popover.orbita-datetime-range-popover).motion-popover.is-open {
+    transform: none;
+  }
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover.orbita-time-wheel-menu {
+  --orbita-time-item-h: 32px;
+  --orbita-time-viewport-h: calc(var(--orbita-time-item-h) * 5);
+  width: max-content;
+  min-width: 0;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger--datetime-point {
+  width: max-content;
+  min-width: calc(11ch + 20px);
+  cursor: pointer;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover.orbita-datetime-picker-menu {
+  box-sizing: border-box;
+  width: max-content;
+  min-width: 0;
+  padding: 10px 8px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-point-fields {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-point-foot {
+  display: flex;
+  gap: 8px;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-point-foot :is(
+  .orbita-datetime-point-clear,
+  .orbita-datetime-point-confirm
+) {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  border-radius: var(--insight-radius-control);
+  background: transparent;
+  color: var(--insight-text-primary, inherit);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+  cursor: pointer;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-point-foot .orbita-datetime-point-clear:hover {
+  background: var(--insight-hover-control, var(--insight-hover-bg));
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-point-foot .orbita-datetime-point-confirm {
+  border-color: var(--insight-primary, #4b78b8);
+  background: var(--insight-primary, #4b78b8);
+  color: var(--insight-on-primary, #fff);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-point-foot .orbita-datetime-point-confirm:hover {
+  border-color: var(--insight-primary-hover, var(--insight-primary, #4b78b8));
+  background: var(--insight-primary-hover, var(--insight-primary, #4b78b8));
+  color: var(--insight-on-primary, #fff);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheels {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Time-only foot under h|m; not datetime / old time-picker confirm chrome. See docs/plans/evidence/insight-controls-grill-checkpoint-2026-10-08.md */
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-time-wheel-menu .orbita-time-wheel-foot {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  min-width: 0;
+  margin-top: 4px;
+  box-sizing: border-box;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-time-wheel-menu .orbita-time-wheel-foot :is(.orbita-time-wheel-now, .orbita-time-wheel-confirm) {
+  box-sizing: border-box;
+  min-width: 0;
+  width: calc(100% - 8px);
+  margin-inline: auto;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--insight-radius-compact);
+  font: inherit;
+  font-size: var(--insight-font-role-date);
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-time-wheel-menu .orbita-time-wheel-foot .orbita-time-wheel-now {
+  background: transparent;
+  color: var(--insight-text-primary, inherit);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-time-wheel-menu .orbita-time-wheel-foot .orbita-time-wheel-now:hover {
+  background: var(--insight-hover-control, var(--insight-hover-bg));
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-time-wheel-menu .orbita-time-wheel-foot .orbita-time-wheel-confirm {
+  background: var(--insight-primary, #4b78b8);
+  color: var(--insight-on-primary, #fff);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-time-wheel-menu .orbita-time-wheel-foot .orbita-time-wheel-confirm:hover {
+  background: var(--insight-primary-hover, var(--insight-primary, #4b78b8));
+  color: var(--insight-on-primary, #fff);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-band {
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  top: calc((var(--orbita-time-viewport-h) - var(--orbita-time-item-h)) / 2);
+  height: var(--orbita-time-item-h);
+  border: 0;
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-hover-control, var(--insight-hover-bg));
+  pointer-events: none;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-col {
+  position: relative;
+  z-index: 1;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-scroll {
+  position: relative;
+  height: var(--orbita-time-viewport-h);
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  outline: none;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-pad {
+  height: calc((var(--orbita-time-viewport-h) - var(--orbita-time-item-h)) / 2);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-item {
+  display: block;
+  width: 100%;
+  height: var(--orbita-time-item-h);
+  padding: 0 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--insight-text-secondary);
+  font: inherit;
+  font-size: var(--insight-font-role-date);
+  line-height: var(--orbita-time-item-h);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  cursor: pointer;
+  scroll-snap-align: center;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-scroll .orbita-time-wheel-item:hover,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-scroll .orbita-time-wheel-item.is-selected {
+  background: transparent;
+  border-radius: 0;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-time-wheel-item.is-selected {
+  color: var(--insight-primary);
+  font-weight: 600;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--insight-radius-control);
+  background: transparent;
+  color: var(--insight-text-primary, inherit);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+  text-align: center;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover :is(
+  .orbita-mini-cal-footer button,
+  .orbita-time-panel-clear,
+  .orbita-time-panel-confirm
+) {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-surface-bg, #fff);
+  color: var(--insight-text-primary, inherit);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover :is(
+  .orbita-mini-cal-footer button:hover,
+  .orbita-time-panel-clear:hover
+) {
+  background: transparent;
+  color: var(--insight-text-primary, inherit);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-shortcut:hover {
+  background: var(--insight-hover-control, var(--insight-hover-bg));
+}
+
+/* Interior `.is-in-range` must keep selected-bg; this wipe was beating the fill. See docs/plans/evidence/insight-controls-grill-checkpoint-2026-10-08.md */
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-cell:hover:not(.is-active):not(.is-empty):not(.is-in-range) {
+  background: transparent;
+  color: inherit;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover :is(
+  .orbita-mini-cal-footer button[data-action="confirm"],
+  .orbita-time-panel-confirm
+) {
+  border-color: var(--insight-primary, #4b78b8);
+  background: var(--insight-primary, #4b78b8);
+  color: var(--insight-on-primary, #fff);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover :is(
+  .orbita-mini-cal-footer button[data-action="confirm"]:hover,
+  .orbita-time-panel-confirm:hover
+) {
+  border-color: var(--insight-primary-hover, var(--insight-primary, #4b78b8));
+  background: var(--insight-primary-hover, var(--insight-primary, #4b78b8));
+  color: var(--insight-on-primary, #fff);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-nav-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-head > .orbita-mini-cal-nav-group:first-child .orbita-mini-cal-year {
+  order: -1;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-head > .orbita-mini-cal-nav-group:last-child .orbita-mini-cal-year {
+  order: 1;
+}
+
+html[data-insight-theme] :is(.orbita-standard-popover .orbita-mini-cal-nav, .orbita-standard-popover .orbita-mini-cal-year, .orbita-picker-nav-arrow) {
+  width: auto;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--insight-text-secondary);
+  font: inherit;
+  --orbita-picker-nav-icon-size: 18px;
+  font-size: var(--orbita-picker-nav-icon-size);
+  line-height: 1;
+  cursor: pointer;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover :is(.orbita-mini-cal-cell, .orbita-mini-cal-nav, .orbita-mini-cal-year) {
+  border-radius: var(--insight-radius-control);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-head {
+  font-size: var(--insight-font-role-date);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-month {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-week {
+  font-size: var(--insight-font-role-label);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-cell {
+  font-size: var(--insight-font-role-date);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-cell.is-active {
+  background: var(--insight-primary, #4b78b8);
+  color: var(--insight-on-primary, #fff);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-grid,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-mini-cal-week,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-cal .orbita-mini-cal-grid {
+  gap: 4px 0;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-cal .orbita-mini-cal-cell.is-in-range,
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-cal .orbita-mini-cal-cell.is-in-range:hover:not(.is-active) {
+  border-radius: 0;
+  background: var(--insight-selected-bg, var(--insight-hover-bg));
+  color: var(--insight-primary, #4b78b8);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-cal .orbita-mini-cal-cell.is-range-row-start {
+  border-top-left-radius: var(--insight-radius-control);
+  border-bottom-left-radius: var(--insight-radius-control);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-cal .orbita-mini-cal-cell.is-range-row-end {
+  border-top-right-radius: var(--insight-radius-control);
+  border-bottom-right-radius: var(--insight-radius-control);
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-standard-popover .orbita-date-range-cal .orbita-mini-cal-cell.is-active {
+  background: var(--insight-primary, #4b78b8);
+  color: var(--insight-on-primary, #fff);
+}
+
+.orbita-datetime-range-trigger-part { white-space: nowrap; overflow-wrap: normal; }
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-decoupled-picker-trigger--datetime-range {
+  width: max-content;
+  min-width: calc(11ch + 20px);
+  cursor: pointer;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-popover {
+  box-sizing: border-box;
+  min-width: 280px;
+  padding: 10px 8px 10px 16px;
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: center;
+  background: var(--insight-surface-elevated, var(--insight-card-bg, #fff));
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-row {
+  display: contents;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-label {
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-label);
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-fields {
+  display: inline-flex;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-fields .orbita-decoupled-picker-trigger {
+  display: block;
+  width: 10ch;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-fields .orbita-decoupled-picker-trigger--time {
+  width: 5ch;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-foot {
+  grid-column: 2;
+  justify-self: end;
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-foot .orbita-datetime-range-clear {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--insight-border-color, var(--insight-border-color, var(--insight-border-color, #d4dce6)));
+  border-radius: var(--insight-radius-control);
+  background: transparent;
+  color: var(--insight-text-primary, inherit);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+  cursor: pointer;
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-foot .orbita-datetime-range-clear:hover {
+  background: var(--insight-hover-control, var(--insight-hover-bg));
+}
+
+:is(html[data-insight-theme], html:not([data-insight-theme])) .orbita-datetime-range-foot .orbita-datetime-range-confirm {
+  white-space: nowrap;
+}
+
+
+/* Fallback variables stay on the picker trigger/popover in Panel. */
+:where(html:not([data-insight-theme])) :is(.orbita-decoupled-picker-trigger, .orbita-standard-popover.orbita-date-picker-menu, .orbita-standard-popover.orbita-date-range-picker-menu, .orbita-standard-popover.orbita-time-wheel-menu, .orbita-standard-popover.orbita-datetime-picker-menu, .orbita-standard-popover.orbita-datetime-range-popover) {
+  --insight-border-color: var(--border-active, rgba(21, 101, 192, .32));
+  --insight-border-width: 1px;
+  --insight-card-bg: var(--surface, rgba(255, 255, 255, .55));
+  --insight-divider: var(--border, rgba(21, 101, 192, .14));
+  --insight-danger: #c43d3d;
+  --insight-font-role-control: 14px;
+  --insight-font-role-date: 14px;
+  --insight-font-role-label: 12px;
+  --insight-hover-bg: var(--glass-hover-bg, rgba(120, 140, 170, .1));
+  --insight-hover-control: var(--glass-hover-bg, rgba(120, 140, 170, .1));
+  --insight-on-primary: #fff;
+  --insight-primary: var(--btn-hover, #1565c0);
+  --insight-primary-hover: #0d57a6;
+  --insight-radius-compact: 5px;
+  --insight-radius-control: 6px;
+  --insight-radius-menu: 8px;
+  --insight-selected-bg: rgba(21, 101, 192, .12);
+  --insight-shadow-panel: 0 8px 24px rgba(15, 23, 42, .18);
+  --insight-surface-bg: var(--surface-active, rgba(255, 255, 255, .75));
+  --insight-surface-elevated: var(--surface-active, rgba(255, 255, 255, .75));
+  --insight-text-primary: var(--text, #1a3a5c);
+  --insight-text-secondary: var(--text, #1a3a5c);
+}

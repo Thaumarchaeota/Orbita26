@@ -1,8 +1,9 @@
+import { observeTimelineTheme, timelineTheme } from "../../timeline/theme";
 import type { ActivityEvent, HealthTrackData, MealEvent, SleepBlock, SleepStageKey, TimeSample } from "./types";
 import { getSettings } from "../../../../core/settings";
 import type { HealthTrackAxisMetricKey } from "../../../../core/data/health-track-axis";
 import { metricValueToY, resolveMetricYRange } from "../../../../core/data/health-track-axis";
-import { MEAL_SLOT_LABELS, normalizeMealSlot } from "../../../../core/data/meals";
+import { mealSlotLabel, normalizeMealSlot } from "../../../../core/data/meals";
 import { MEAL_UTENSILS_SVG } from "./icons";
 import type { LegendState } from "./legend";
 import { mountTrackLegends, syncLegendGrids } from "./legend";
@@ -14,7 +15,10 @@ import {
   clampViewWindow,
   formatHourLabel,
   formatMissing,
+  TRACK_MIN_VIEW_SPAN_SEC,
+  TRACK_VIEW_SPAN_SEC,
   unixToLocal,
+  zoomViewWindow,
 } from "./format";
 
 const GAP_BREAK_SEC = 180;
@@ -53,12 +57,16 @@ type TrackRenderCtx = {
 
 const TRACK_AXIS_PAD_LEFT = 70;
 const TRACK_AXIS_PAD_RIGHT = 4;
-const TRACK_AXIS_PAD_TOP = 16;
-const TRACK_AXIS_PAD_BOTTOM = 22;
+const PLOT_INSET = 8;
+const LABEL_BAND = 16;
 
-const TRACK2_PLOT_PAD_TOP = 8;
-const TRACK2_PLOT_PAD_BOTTOM = 4;
-const TRACK3_PAD_BOTTOM = 14;
+const TRACK1_SLEEP_BAR_H = 10;
+const TRACK1_CANVAS_BOTTOM_PAD = PLOT_INSET;
+const TRACK1_METRIC_PAD_TOP = PLOT_INSET;
+const TRACK1_METRIC_PAD_BOTTOM = TRACK1_CANVAS_BOTTOM_PAD + 2 + TRACK1_SLEEP_BAR_H + 2;
+const TRACK2_PLOT_PAD_TOP = PLOT_INSET;
+const TRACK2_PLOT_PAD_BOTTOM = PLOT_INSET;
+const TRACK3_PAD_BOTTOM = PLOT_INSET;
 
 const SPORT_LABELS: Record<string, string> = {
   strength: "力量",
@@ -91,6 +99,16 @@ const GRID_TIME_LABEL_COLOR = "rgba(107, 114, 128, 0.38)";
 const GRID_DATE_LABEL_COLOR = "rgba(107, 114, 128, 0.48)";
 
 const GRID_AXIS_COLOR = "rgba(15, 23, 42, 0.08)";
+const TICK_MIN_PX = 56;
+const TIME_TICK_STEPS_SEC = [15 * 60, 30 * 60, 3600, 2 * 3600, 3 * 3600, 6 * 3600, 12 * 3600];
+
+function timeTickStepSec(spanSec: number, innerW: number): number {
+  const span = Math.max(1, spanSec);
+  for (const step of TIME_TICK_STEPS_SEC) {
+    if ((step / span) * innerW >= TICK_MIN_PX) return step;
+  }
+  return TIME_TICK_STEPS_SEC[TIME_TICK_STEPS_SEC.length - 1];
+}
 
 export function drawSharedGrid(
   ctx: CanvasRenderingContext2D,
@@ -102,24 +120,40 @@ export function drawSharedGrid(
   legend?: LegendState,
 ): void {
   ctx.clearRect(0, 0, w, h);
-  const plotBottom = h - TRACK_AXIS_PAD_BOTTOM;
-  const track1 = stack ? canvasBandInStack(stack, 1) : null;
-  const dateLabelY = track1 ? track1.top + TRACK1_DATE_LABEL_INSET : TRACK_AXIS_PAD_TOP;
+  const plotBottom = h - LABEL_BAND;
+  const cards = stack
+    ? [...stack.querySelectorAll<HTMLElement>(".health-track-card")]
+    : [];
+  const sr = stack?.getBoundingClientRect();
+  const firstCard = cards[0];
+  const lastCard = cards[cards.length - 1];
+  const dateLabelY = firstCard && sr
+    ? firstCard.getBoundingClientRect().top - sr.top - 6
+    : LABEL_BAND / 2;
+  const timeLabelY = lastCard && sr
+    ? lastCard.getBoundingClientRect().bottom - sr.top + 12
+    : plotBottom + 12;
 
-  ctx.strokeStyle = GRID_AXIS_COLOR;
+  const axisY = lastCard && sr
+    ? lastCard.getBoundingClientRect().bottom - sr.top
+    : plotBottom;
+
+  const theme = timelineTheme(ctx.canvas);
+  ctx.strokeStyle = theme?.border ?? GRID_AXIS_COLOR;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(TRACK_AXIS_PAD_LEFT, plotBottom);
-  ctx.lineTo(w - TRACK_AXIS_PAD_RIGHT, plotBottom);
+  ctx.moveTo(TRACK_AXIS_PAD_LEFT, axisY);
+  ctx.lineTo(w - TRACK_AXIS_PAD_RIGHT, axisY);
   ctx.stroke();
 
-  ctx.strokeStyle = GRID_LINE_COLOR;
-  ctx.font = "10px system-ui, sans-serif";
-  const step = 2 * 3600;
+  ctx.strokeStyle = theme?.border ?? GRID_LINE_COLOR;
+  ctx.font = theme?.font ?? "10px system-ui, sans-serif";
+  const innerW = plotInnerWidth(w);
+  const step = timeTickStepSec(toUtc - fromUtc, innerW);
   let lastDate = "";
   const plotBands = stack
     ? trackPlotBands(stack)
-    : [{ top: TRACK_AXIS_PAD_TOP, bottom: plotBottom }];
+    : [{ top: PLOT_INSET, bottom: plotBottom }];
   for (let t = Math.ceil(fromUtc / step) * step; t <= toUtc; t += step) {
     const x = xForTime(t, fromUtc, toUtc, w);
     for (const band of plotBands) {
@@ -130,16 +164,16 @@ export function drawSharedGrid(
     }
     const { date, time } = unixToLocal(t);
     if (date !== lastDate) {
-      ctx.fillStyle = GRID_DATE_LABEL_COLOR;
-      ctx.font = "600 10px system-ui, sans-serif";
+      ctx.fillStyle = theme?.secondary ?? GRID_DATE_LABEL_COLOR;
+      ctx.font = theme?.strongFont ?? "600 10px system-ui, sans-serif";
       ctx.textBaseline = "middle";
       ctx.fillText(date.slice(5), x + 3, dateLabelY);
       ctx.textBaseline = "alphabetic";
-      ctx.font = "10px system-ui, sans-serif";
+      ctx.font = theme?.font ?? "10px system-ui, sans-serif";
       lastDate = date;
     }
-    ctx.fillStyle = GRID_TIME_LABEL_COLOR;
-    ctx.fillText(time, x + 3, plotBottom + 14);
+    ctx.fillStyle = theme?.secondary ?? GRID_TIME_LABEL_COLOR;
+    ctx.fillText(time, x + 3, timeLabelY);
   }
 
   if (stack) drawTrackYAxes(ctx, stack, w, legend);
@@ -161,8 +195,9 @@ function canvasBandInStack(
 function trackPlotBands(stack: HTMLElement): { top: number; bottom: number }[] {
   const specs: { track: number; padTop: number; padBottom: number }[] = [
     { track: 1, padTop: TRACK1_METRIC_PAD_TOP, padBottom: TRACK1_METRIC_PAD_BOTTOM },
-    { track: 2, padTop: TRACK2_PLOT_PAD_TOP, padBottom: TRACK2_PLOT_PAD_BOTTOM },
-    { track: 3, padTop: 0, padBottom: TRACK3_PAD_BOTTOM },
+    { track: 2, padTop: PLOT_INSET, padBottom: PLOT_INSET },
+    { track: 3, padTop: PLOT_INSET, padBottom: PLOT_INSET },
+    { track: 4, padTop: PLOT_INSET, padBottom: PLOT_INSET },
   ];
   const bands: { top: number; bottom: number }[] = [];
   for (const s of specs) {
@@ -195,15 +230,16 @@ function drawTrackBandYAxis(
   w: number,
   opts: TrackBandAxisOpts,
 ): void {
+  const theme = timelineTheme(ctx.canvas);
   const band = canvasBandInStack(stack, opts.track);
   if (!band) return;
   const plotTop = band.top + opts.padTop;
   const plotBottom = band.top + band.h - opts.padBottom;
   const innerH = Math.max(1, plotBottom - plotTop);
   const span = opts.vmax - opts.vmin || 1;
-  ctx.strokeStyle = GRID_LINE_COLOR;
-  ctx.fillStyle = opts.labelColor ?? GRID_TIME_LABEL_COLOR;
-  ctx.font = "9px system-ui, sans-serif";
+  ctx.strokeStyle = theme?.border ?? GRID_LINE_COLOR;
+  ctx.fillStyle = opts.labelColor ?? theme?.secondary ?? GRID_TIME_LABEL_COLOR;
+  ctx.font = theme?.font ?? "9px system-ui, sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   for (const v of opts.ticks) {
@@ -329,12 +365,6 @@ function drawSleepStackedBar(
   ctx.restore();
 }
 
-const TRACK1_DATE_LABEL_INSET = 12;
-const TRACK1_METRIC_PAD_TOP = 34;
-const TRACK1_METRIC_PAD_BOTTOM = 22;
-const TRACK1_SLEEP_BAR_H = 10;
-const TRACK1_CANVAS_BOTTOM_PAD = 2;
-
 function track1MetricBaselineY(h: number): number {
   return h - TRACK1_METRIC_PAD_BOTTOM;
 }
@@ -412,7 +442,7 @@ function track3Zones(h: number): Track3Zones {
 }
 
 function drawTrack3Divider(ctx: CanvasRenderingContext2D, zones: Track3Zones, w: number): void {
-  ctx.strokeStyle = "#e5e7eb";
+  ctx.strokeStyle = timelineTheme(ctx.canvas)?.border ?? "#e5e7eb";
   ctx.lineWidth = 1;
   for (const y of [zones.steps.top, zones.dividerY]) {
     ctx.beginPath();
@@ -422,10 +452,48 @@ function drawTrack3Divider(ctx: CanvasRenderingContext2D, zones: Track3Zones, w:
   }
 }
 
-function activityEndUtc(a: ActivityEvent): number | null {
+export function activityEndUtc(a: ActivityEvent): number | null {
   if (a.endUtc != null && a.endUtc > a.startUtc) return a.endUtc;
-  if (a.durationSec != null && a.durationSec > 0) return a.startUtc + a.durationSec;
   return null;
+}
+
+function formatDurationSec(sec: number): string {
+  const s = Math.round(sec);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+  return `${m}:${String(r).padStart(2, "0")}`;
+}
+
+function activityDurationSec(a: ActivityEvent): number | null {
+  const sec = a.durationSec;
+  if (sec == null || !Number.isFinite(sec) || sec <= 0) return null;
+  return sec;
+}
+
+function activityElapsedDurationSec(a: ActivityEvent): number | null {
+  const raw = a as ActivityEvent & {
+    elapsedDurationSec?: number | null;
+    elapsedDuration?: number | null;
+    elapsed_duration_sec?: number | null;
+  };
+  const sec = raw.elapsedDurationSec ?? raw.elapsedDuration ?? raw.elapsed_duration_sec ?? null;
+  if (sec == null || !Number.isFinite(sec) || sec <= 0) return null;
+  return sec;
+}
+
+function activityBarLabel(a: ActivityEvent): string {
+  const elapsed = activityElapsedDurationSec(a);
+  if (elapsed != null) return formatDurationSec(elapsed);
+  return activityLabel(a);
+}
+
+function activityTooltipDetail(a: ActivityEvent, end: number): string {
+  const parts = [`${formatHourLabel(a.startUtc)}–${formatHourLabel(end)}`];
+  const duration = activityDurationSec(a);
+  if (duration != null) parts.push(formatDurationSec(duration));
+  return parts.join(" · ");
 }
 
 function activityIntersectsView(a: ActivityEvent, fromUtc: number, toUtc: number): boolean {
@@ -754,7 +822,7 @@ function drawTrack3Activities(
   const zoneH = zones.activity.bottom - zones.activity.top;
   const barH = Math.max(8, Math.min(16, zoneH * 0.55));
   const yMid = (zones.activity.top + zones.activity.bottom) / 2;
-  ctx.font = "600 9px system-ui, sans-serif";
+  ctx.font = timelineTheme(ctx.canvas)?.strongFont ?? "600 9px system-ui, sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   for (const a of data.activities) {
@@ -789,7 +857,7 @@ function drawTrack3Activities(
     ctx.globalAlpha = 1;
     if (barW >= 24) {
       ctx.fillStyle = "#166534";
-      ctx.fillText(activityLabel(a), x0 + barW / 2, yMid);
+      ctx.fillText(activityBarLabel(a), x0 + barW / 2, yMid);
     }
   }
   ctx.textAlign = "start";
@@ -797,7 +865,7 @@ function drawTrack3Activities(
 }
 
 function mealTagLabel(m: MealEvent): string {
-  if (m.mealType) return MEAL_SLOT_LABELS[normalizeMealSlot(m.mealType)];
+  if (m.mealType) return mealSlotLabel(normalizeMealSlot(m.mealType));
   if (m.kcal) return `${Math.round(m.kcal)}千卡`;
   return "餐食";
 }
@@ -966,6 +1034,7 @@ export function mountTracks(
       <div class="health-tracks-stack">
         <div class="health-tracks-overlay" aria-hidden="true">
           <canvas class="health-tracks-grid-canvas"></canvas>
+          <div class="health-track-now" hidden></div>
           <div class="health-track-cursor" hidden></div>
         </div>
         <article class="health-track-card" data-track="1">
@@ -997,6 +1066,7 @@ export function mountTracks(
   const plotPane = stack.querySelector<HTMLElement>(".health-track-card-plot")!;
   const overlay = stack.querySelector<HTMLElement>(".health-tracks-overlay")!;
   const gridCanvas = stack.querySelector<HTMLCanvasElement>(".health-tracks-grid-canvas")!;
+  const nowLine = stack.querySelector<HTMLElement>(".health-track-now")!;
   const cursor = stack.querySelector<HTMLElement>(".health-track-cursor")!;
   const tooltip = shell.querySelector<HTMLElement>(".health-track-tooltip")!;
   const canvases = [...stack.querySelectorAll<HTMLCanvasElement>(".health-track-canvas")];
@@ -1030,9 +1100,24 @@ export function mountTracks(
     window.removeEventListener("orbita:settings-changed", onSettingsChanged);
   });
 
+  function updateNowLine(): void {
+    const now = beijingNowUnix();
+    if (now < fromUtc || now > toUtc) {
+      nowLine.hidden = true;
+      return;
+    }
+    const overlayRect = overlay.getBoundingClientRect();
+    const plotRect = plotPane.getBoundingClientRect();
+    const innerX = xForTime(now, fromUtc, toUtc, plotRect.width) + (plotRect.left - overlayRect.left);
+    nowLine.hidden = false;
+    nowLine.style.left = `${innerX}px`;
+  }
+
   function updateFade(): void {
-    const atNow = toUtc >= beijingNowUnix() - 120;
+    const now = beijingNowUnix();
+    const atNow = toUtc >= now - 120 && toUtc <= now + 180;
     stack.classList.toggle("is-at-now", atNow);
+    updateNowLine();
   }
 
   function checkEdge(): void {
@@ -1045,6 +1130,27 @@ export function mountTracks(
     const span = toUtc - fromUtc;
     const deltaSec = (dx / plotInnerWidth(plotPane.clientWidth)) * span;
     const next = clampViewWindow(fromUtc - deltaSec, toUtc - deltaSec, minFromUtc, maxToUtc);
+    fromUtc = next.fromUtc;
+    toUtc = next.toUtc;
+    updateFade();
+    redrawTracks();
+    onViewChange(fromUtc, toUtc);
+    checkEdge();
+  }
+
+  function zoomAtClientX(clientX: number, factor: number): void {
+    const ts = tsAtClientX(clientX) ?? (fromUtc + toUtc) / 2;
+    const next = zoomViewWindow(
+      fromUtc,
+      toUtc,
+      ts,
+      factor,
+      minFromUtc,
+      maxToUtc,
+      TRACK_MIN_VIEW_SPAN_SEC,
+      TRACK_VIEW_SPAN_SEC,
+    );
+    if (next.fromUtc === fromUtc && next.toUtc === toUtc) return;
     fromUtc = next.fromUtc;
     toUtc = next.toUtc;
     updateFade();
@@ -1081,6 +1187,7 @@ export function mountTracks(
     renderTrack({ canvas: canvases[1], trackIndex: 2, fromUtc, toUtc, data, legend });
     renderTrack({ canvas: canvases[2], trackIndex: 3, fromUtc, toUtc, data, legend });
     syncMealMarkers(mealLayer, canvases[2], data, legend, fromUtc, toUtc);
+    updateNowLine();
   }
 
   const redraw = redrawTracks;
@@ -1144,7 +1251,7 @@ export function mountTracks(
     for (const a of data.activities) {
       const end = activityEndUtc(a);
       if (end != null && ts >= a.startUtc && ts < end && legend.activity) {
-        add(activityLabel(a), `${formatHourLabel(a.startUtc)}–${formatHourLabel(end)}`);
+        add(activityLabel(a), activityTooltipDetail(a, end));
       }
     }
     for (const m of data.meals) {
@@ -1175,10 +1282,7 @@ export function mountTracks(
     const innerX = xForTime(ts, fromUtc, toUtc, plotRect.width) + (plotRect.left - overlayRect.left);
     cursor.hidden = false;
     cursor.style.left = `${innerX}px`;
-    tooltip.hidden = false;
-    tooltip.style.left = `${clientX + 12}px`;
-    tooltip.style.top = `${clientY + 12}px`;
-    tooltip.innerHTML = buildTooltip(ts);
+    tooltip.hidden = true;
     onHover(ts);
   }
 
@@ -1206,6 +1310,11 @@ export function mountTracks(
     (e) => {
       e.preventDefault();
       stopInertia();
+      if (e.ctrlKey) {
+        const factor = e.deltaY > 0 ? 1.18 : 1 / 1.18;
+        zoomAtClientX(e.clientX, factor);
+        return;
+      }
       const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       shiftByPx(-dx);
     },
@@ -1246,11 +1355,15 @@ export function mountTracks(
   stack.addEventListener("pointerup", endTouch, { signal });
   stack.addEventListener("pointercancel", endTouch, { signal });
 
+  const unbindTheme = observeTimelineTheme(container, redraw);
   const ro = new ResizeObserver(() => redraw());
   ro.observe(stack);
+  const nowTick = window.setInterval(() => updateNowLine(), 1000);
   signal.addEventListener("abort", () => {
     ro.disconnect();
+    unbindTheme();
     stopInertia();
+    window.clearInterval(nowTick);
   });
 
   updateFade();

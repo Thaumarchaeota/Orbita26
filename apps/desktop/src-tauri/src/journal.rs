@@ -1,19 +1,25 @@
 use chrono::{Datelike, FixedOffset, TimeZone, Utc};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::collections::HashSet;
 use tauri::AppHandle;
 
 use crate::data;
+use crate::health_db::{
+    list_activities, list_meals, ListActivitiesQuery, ListMealsQuery,
+};
+use crate::journal_archive_db::{self, ListEntriesQuery};
 use crate::journal_db::{
-    self, GarminBodyMeasurementInput, GarminDailyInput, GarminExerciseInput, GarminRoutineInput,
-    GarminSeriesInput, ingest_garmin_batch, set_garmin_sync_meta,
+    GarminBodyMeasurementInput, GarminDailyInput, GarminExerciseInput, GarminRoutineInput,
+    GarminSeriesInput,
 };
 
 pub use crate::journal_db::{
     JournalDeleteRequest, JournalListRequest, JournalListResponse, JournalUpsertRequest,
     JournalUpsertResponse,
 };
+
+const JOURNAL_WRITE_DISABLED: &str = "旧 Journal 写入已停用";
 
 pub fn journal_root(app: &AppHandle) -> Result<String, String> {
     let settings = data::read_settings(app)?;
@@ -24,24 +30,114 @@ pub fn journal_root(app: &AppHandle) -> Result<String, String> {
     Ok(root.to_string())
 }
 
-fn with_root<F, T>(app: &AppHandle, f: F) -> Result<T, String>
-where
-    F: FnOnce(&str) -> Result<T, String>,
-{
-    let root = journal_root(app)?;
-    f(&root)
-}
-
 pub fn journal_list(app: &AppHandle, req: JournalListRequest) -> Result<JournalListResponse, String> {
-    with_root(app, |root| journal_db::journal_list(root, req))
+    let data_dir = data::get_data_dir(app)?;
+    journal_list_in(&data_dir, req)
 }
 
-pub fn journal_upsert(app: &AppHandle, req: JournalUpsertRequest) -> Result<JournalUpsertResponse, String> {
-    with_root(app, |root| journal_db::journal_upsert(root, req))
+pub fn journal_list_in(data_dir: &str, req: JournalListRequest) -> Result<JournalListResponse, String> {
+    let (from, to) = resolve_query_range(&req)?;
+    let mut entries = Vec::new();
+
+    let archive = journal_archive_db::list_entries(data_dir, ListEntriesQuery::default())?;
+    for entry in archive.entries {
+        if entry.deleted_at.is_some() {
+            continue;
+        }
+        let local_date = crate::health_db::util::local_date_from_instant(&entry.started_at)?;
+        if local_date < from || local_date > to {
+            continue;
+        }
+        let mut value = serde_json::to_value(&entry).map_err(|e| e.to_string())?;
+        if let Some(obj) = value.as_object_mut() {
+            obj.insert("date".into(), json!(local_date));
+        }
+        entries.push(value);
+    }
+
+    let meals = list_meals(
+        data_dir,
+        ListMealsQuery {
+            local_date_from: Some(from.clone()),
+            local_date_to: Some(to.clone()),
+            include_deleted: false,
+        },
+    )?;
+    for meal in meals.meals {
+        let date = crate::health_db::util::local_date_from_instant(&meal.started_at)?;
+        let mut value = serde_json::to_value(&meal).map_err(|e| e.to_string())?;
+        if let Some(obj) = value.as_object_mut() {
+            obj.insert("kind".into(), json!("meal"));
+            obj.insert("date".into(), json!(date));
+        }
+        entries.push(value);
+    }
+
+    for night in crate::health_db::read::list_sleep_nights(data_dir, &from, &to)? {
+        let sleep_hours = sleep_hours_from_night(&night.night);
+        let mut value = json!({
+            "kind": "sleep",
+            "id": night.id,
+            "date": night.wake_local_date,
+            "wakeLocalDate": night.wake_local_date,
+            "source": night.source,
+            "night": night.night,
+        });
+        if let Some(hours) = sleep_hours {
+            value["sleepHours"] = json!(hours);
+        }
+        entries.push(value);
+    }
+
+    let activities = list_activities(
+        data_dir,
+        ListActivitiesQuery {
+            local_date_from: Some(from.clone()),
+            local_date_to: Some(to.clone()),
+            limit: 500,
+            offset: 0,
+        },
+    )?;
+    for activity in activities.activities {
+        let mut value = json!({
+            "kind": "activity",
+            "id": activity.id,
+            "date": activity.local_date,
+        });
+        if let Some(name) = activity.title {
+            value["name"] = json!(name);
+        }
+        if let Some(elapsed) = activity.elapsed_duration_seconds {
+            value["elapsedDuration"] = json!(elapsed);
+        }
+        entries.push(value);
+    }
+
+    for nap in crate::health_db::read::list_naps(data_dir, &from, &to)? {
+        entries.push(json!({
+            "kind": "nap",
+            "id": nap.id,
+            "date": nap.wake_local_date,
+            "wakeLocalDate": nap.wake_local_date,
+            "source": nap.source,
+            "startedAt": nap.started_at,
+            "endedAt": nap.ended_at,
+            "nap": nap.nap,
+        }));
+    }
+
+    Ok(JournalListResponse { entries })
 }
 
-pub fn journal_delete(app: &AppHandle, req: JournalDeleteRequest) -> Result<(), String> {
-    with_root(app, |root| journal_db::journal_delete(root, req))
+pub fn journal_upsert(
+    _app: &AppHandle,
+    _req: JournalUpsertRequest,
+) -> Result<JournalUpsertResponse, String> {
+    Err(JOURNAL_WRITE_DISABLED.into())
+}
+
+pub fn journal_delete(_app: &AppHandle, _req: JournalDeleteRequest) -> Result<(), String> {
+    Err(JOURNAL_WRITE_DISABLED.into())
 }
 
 pub fn beijing_today() -> String {
@@ -126,12 +222,40 @@ fn week_start_beijing(date: &str) -> Result<String, String> {
     Ok(start.format("%Y-%m-%d").to_string())
 }
 
-fn entry_kind(entry: &Value) -> Option<&str> {
-    entry.get("kind").and_then(|k| k.as_str())
+fn resolve_query_range(req: &JournalListRequest) -> Result<(String, String), String> {
+    if let Some(ref d) = req.date {
+        return Ok((d.clone(), d.clone()));
+    }
+    if let (Some(ref f), Some(ref t)) = (&req.from, &req.to) {
+        return Ok((f.clone(), t.clone()));
+    }
+    let tz = FixedOffset::east_opt(8 * 3600).ok_or("tz")?;
+    let y = Utc::now()
+        .with_timezone(&tz)
+        .format("%Y")
+        .to_string()
+        .parse::<i32>()
+        .map_err(|_| "invalid year")?;
+    Ok((format!("{y:04}-01-01"), format!("{y:04}-12-31")))
 }
 
-fn is_primary_mood(entry: &Value) -> bool {
-    entry.get("primary").and_then(|p| p.as_bool()).unwrap_or(false)
+fn sleep_hours_from_night(night: &Value) -> Option<f64> {
+    if let Some(stages) = night.get("stages") {
+        let deep = stages.get("deep").and_then(|v| v.as_i64()).unwrap_or(0);
+        let light = stages.get("light").and_then(|v| v.as_i64()).unwrap_or(0);
+        let rem = stages.get("rem").and_then(|v| v.as_i64()).unwrap_or(0);
+        let total = deep + light + rem;
+        if total > 0 {
+            return Some(total as f64 / 3600.0);
+        }
+    }
+    let sleep = night.get("sleep").and_then(|v| v.as_i64())?;
+    let wake = night.get("wake").and_then(|v| v.as_i64())?;
+    if wake > sleep {
+        Some((wake - sleep) as f64 / 3600.0)
+    } else {
+        None
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -152,121 +276,80 @@ pub struct JournalSnapshot {
 }
 
 pub fn build_journal_snapshot(app: &AppHandle, date: Option<&str>) -> Result<JournalSnapshot, String> {
+    let data_dir = data::get_data_dir(app)?;
+    build_journal_snapshot_in(&data_dir, date)
+}
+
+pub fn build_journal_snapshot_in(
+    data_dir: &str,
+    date: Option<&str>,
+) -> Result<JournalSnapshot, String> {
     let date = date
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(str::to_string)
         .unwrap_or_else(beijing_today);
-    let _root = journal_root(app)?;
-    let configured = !data::get_data_dir(app)?.is_empty();
+    let configured = !data_dir.trim().is_empty();
 
-    let day_entries = journal_list(
-        app,
-        JournalListRequest {
-            date: Some(date.clone()),
-            from: None,
-            to: None,
-        },
-    )?
-    .entries;
+    let nights = crate::health_db::read::list_sleep_nights(data_dir, &date, &date)?;
+    let sleep_hours = nights.first().and_then(|n| sleep_hours_from_night(&n.night));
 
-    let routine = day_entries
-        .iter()
-        .find(|e| entry_kind(e) == Some("routine"));
-    let sleep_hours = routine.and_then(|r| {
-        let night = r.get("data")?.get("night")?;
-        if let Some(stages) = night.get("stages") {
-            let deep = stages.get("deep").and_then(|v| v.as_i64()).unwrap_or(0);
-            let light = stages.get("light").and_then(|v| v.as_i64()).unwrap_or(0);
-            let rem = stages.get("rem").and_then(|v| v.as_i64()).unwrap_or(0);
-            let total = deep + light + rem;
-            if total > 0 {
-                return Some(total as f64 / 3600.0);
-            }
-        }
-        let sleep = night.get("sleep")?.as_i64()?;
-        let wake = night.get("wake")?.as_i64()?;
-        if wake > sleep {
-            Some((wake - sleep) as f64 / 3600.0)
-        } else {
-            None
-        }
-    });
-
-    let daily = day_entries
-        .iter()
-        .find(|e| entry_kind(e) == Some("daily"));
-    let hydration_ml = daily.and_then(|d| {
-        d.get("data")?
-            .get("hydrationMl")?
-            .as_i64()
-            .filter(|v| *v > 0)
-    });
+    let hydration_ml = crate::health_db::read::hydration_ml_for_date(data_dir, &date)?;
 
     let week_start = week_start_beijing(&date)?;
-    let week_entries = journal_list(
-        app,
-        JournalListRequest {
-            date: None,
-            from: Some(week_start),
-            to: Some(date.clone()),
+    let week_activities = list_activities(
+        data_dir,
+        ListActivitiesQuery {
+            local_date_from: Some(week_start),
+            local_date_to: Some(date.clone()),
+            limit: 500,
+            offset: 0,
         },
-    )?
-    .entries;
-    let week_exercise_days = week_entries
+    )?;
+    let week_exercise_days = week_activities
+        .activities
         .iter()
-        .filter(|e| entry_kind(e) == Some("exercise"))
-        .filter_map(|e| e.get("date").and_then(|d| d.as_str()))
+        .map(|a| a.local_date.as_str())
         .collect::<HashSet<_>>()
         .len() as u32;
 
-    let events: Vec<String> = day_entries
-        .iter()
-        .filter(|e| entry_kind(e) == Some("event"))
-        .filter_map(|e| e.get("remark").and_then(|v| v.as_str()).map(str::to_string))
-        .collect();
-    let moods: Vec<String> = day_entries
-        .iter()
-        .filter(|e| entry_kind(e) == Some("mood") && !is_primary_mood(e))
-        .filter_map(|e| {
-            let emoji = e
-                .get("data")
-                .and_then(|d| d.get("emoji"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let note = e
-                .get("data")
-                .and_then(|d| d.get("note"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let label = format!("{emoji} {note}").trim().to_string();
-            if label.is_empty() {
-                None
-            } else {
-                Some(label)
-            }
-        })
-        .collect();
+    let archive = journal_archive_db::list_entries(data_dir, ListEntriesQuery::default())?;
+    let mut moods = Vec::new();
+    for entry in archive.entries.iter().filter(|e| e.deleted_at.is_none()) {
+        let local_date = crate::health_db::util::local_date_from_instant(&entry.started_at)?;
+        if local_date != date {
+            continue;
+        }
+        let mood = entry.mood.as_deref().unwrap_or("").trim();
+        if !mood.is_empty() {
+            moods.push(mood.to_string());
+        }
+    }
 
     let mut intake_kcal: u32 = 0;
     let mut meals_summary: Vec<String> = Vec::new();
-    if let Some(d) = daily {
-        if let Some(meals) = d.get("data").and_then(|x| x.get("meals")).and_then(|m| m.as_array()) {
-            for m in meals {
-                let kcal = m.get("kcal").and_then(|v| v.as_i64()).unwrap_or(0);
-                if kcal > 0 {
-                    intake_kcal += kcal as u32;
-                }
-                let slot = m.get("slot").and_then(|v| v.as_str()).unwrap_or("snack");
-                let slot_label = match slot {
-                    "breakfast" => "早餐",
-                    "lunch" => "午餐",
-                    "dinner" => "晚餐",
-                    _ => "其他",
-                };
-                let text = m.get("text").and_then(|v| v.as_str()).unwrap_or("");
-                meals_summary.push(format!("{slot_label} {kcal}kcal {text}").trim().to_string());
+    if configured {
+        let resp = list_meals(
+            data_dir,
+            ListMealsQuery {
+                local_date_from: Some(date.clone()),
+                local_date_to: Some(date.clone()),
+                include_deleted: false,
+            },
+        )?;
+        for m in resp.meals {
+            let kcal = m.kcal.map(|v| v.round() as u32).unwrap_or(0);
+            if kcal > 0 {
+                intake_kcal += kcal;
             }
+            let slot_label = match m.slot.as_deref().unwrap_or("other") {
+                "breakfast" => "早餐",
+                "lunch" => "午餐",
+                "dinner" => "晚餐",
+                _ => "其他",
+            };
+            let text = m.text.as_deref().unwrap_or("");
+            meals_summary.push(format!("{slot_label} {kcal}kcal {text}").trim().to_string());
         }
     }
     let meal_count = meals_summary.len() as u32;
@@ -282,50 +365,63 @@ pub fn build_journal_snapshot(app: &AppHandle, date: Option<&str>) -> Result<Jou
         sleep_hours,
         hydration_ml,
         week_exercise_days,
-        event_count: events.len() as u32,
+        event_count: 0,
         mood_count: moods.len() as u32,
         intake_kcal,
         meal_count,
         meals_summary,
-        events,
+        events: Vec::new(),
         moods,
     })
 }
 
 pub fn ingest_garmin_sync(
-    app: &AppHandle,
-    dailies: Vec<GarminDailyInput>,
-    routines: Vec<GarminRoutineInput>,
-    exercises: Vec<GarminExerciseInput>,
-    series: Vec<GarminSeriesInput>,
-    measurements: Vec<GarminBodyMeasurementInput>,
+    _app: &AppHandle,
+    _dailies: Vec<GarminDailyInput>,
+    _routines: Vec<GarminRoutineInput>,
+    _exercises: Vec<GarminExerciseInput>,
+    _series: Vec<GarminSeriesInput>,
+    _measurements: Vec<GarminBodyMeasurementInput>,
 ) -> Result<(), String> {
-    with_root(app, |root| {
-        journal_db::with_connection(root, |conn| {
-            let tx = conn
-                .unchecked_transaction()
-                .map_err(|e| format!("begin transaction: {e}"))?;
-            ingest_garmin_batch(&tx, &dailies, &routines, &exercises, &series, &measurements)?;
-            let now = journal_db::util::utc_now();
-            set_garmin_sync_meta(
-                &tx,
-                &[
-                    ("last_success_at", now.as_str()),
-                    ("last_error", ""),
-                    ("syncing", "0"),
-                ],
-            )?;
-            if let (Some(first), Some(last)) = (dailies.first(), dailies.last()) {
-                set_garmin_sync_meta(
-                    &tx,
-                    &[
-                        ("earliest_local_date", first.date.as_str()),
-                        ("latest_local_date", last.date.as_str()),
-                    ],
-                )?;
-            }
-            tx.commit().map_err(|e| format!("commit transaction: {e}"))?;
-            Ok(())
-        })
-    })
+    Err(JOURNAL_WRITE_DISABLED.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+    use uuid::Uuid;
+
+    fn temp_data_dir() -> PathBuf {
+        let mut dir = std::env::temp_dir();
+        dir.push(format!("orbita-journal-list-test-{}", Uuid::new_v4()));
+        fs::create_dir_all(&dir).expect("temp dir");
+        dir
+    }
+
+    #[test]
+    fn journal_list_in_without_archive_errors_and_skips_journal_sqlite() {
+        crate::health_db::host_lock::release();
+        let data_dir = temp_data_dir();
+        let journal_path = data_dir.join("journal.sqlite");
+        assert!(!journal_path.exists());
+
+        let err = journal_list_in(
+            &data_dir.to_string_lossy(),
+            JournalListRequest {
+                date: Some("2026-01-01".into()),
+                from: None,
+                to: None,
+            },
+        );
+        assert!(err.is_err(), "expected archive-not-initialized error");
+        assert!(!journal_path.exists(), "journal.sqlite must not be created");
+        fs::remove_dir_all(&data_dir).ok();
+    }
+
+    #[test]
+    fn journal_legacy_write_returns_disabled_without_opening_db() {
+        assert_eq!(JOURNAL_WRITE_DISABLED, "旧 Journal 写入已停用");
+    }
 }

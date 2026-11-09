@@ -1,0 +1,54 @@
+.orbita-category-color-picker {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+  background: #fff;
+  border: var(--insight-border-width, 1px) solid var(--insight-divider, var(--insight-border-color, #d4dce6));
+  border-radius: var(--insight-radius-menu);
+  box-shadow: var(--insight-shadow-panel, 0 8px 24px rgb(20 30 45 / 12%));
+  color: var(--insight-text-primary, #253242);
+}
+.orbita-category-color-picker-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.orbita-category-color-picker-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 36px);
+  gap: 0;
+  justify-content: start;
+}
+.orbita-category-color-swatch {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  margin: 6px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: var(--category-color-main);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--insight-text-primary, #253242) 22%, transparent);
+  cursor: pointer;
+}
+.orbita-category-color-swatch:hover:not(:disabled) { transform: scale(1.08); }
+.orbita-category-color-swatch.is-selected { border-color: var(--insight-text-primary, #253242); box-shadow: 0 0 0 2px var(--insight-control-surface-bg, #fff), 0 0 0 4px var(--insight-primary, #4879ed); }
+.orbita-category-color-swatch:focus-visible, .orbita-category-color-picker-inherit:focus-visible { outline: 2px solid var(--insight-primary, #4879ed); outline-offset: 3px; }
+.orbita-category-color-swatch:disabled { opacity: .45; cursor: default; }
+.orbita-category-color-picker-inherit {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 7px 10px;
+  border: 1px solid var(--insight-border-color, #d1d5db);
+  border-radius: var(--insight-radius-control, 10px);
+  background: transparent;
+  color: var(--insight-text-primary, #253242);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.orbita-category-color-picker-inherit.is-selected { background: var(--insight-control-hover, #eef2f7); }

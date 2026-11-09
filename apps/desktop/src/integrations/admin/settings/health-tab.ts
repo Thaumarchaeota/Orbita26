@@ -9,14 +9,16 @@ import {
   type HealthTrackAxisPrefs,
 } from "../../../core/data/health-track-axis";
 import { normalizeGarminSyncDays } from "../../../core/data/garmin-sync-days";
+import { enhancePasswordField } from "../../settings/form-controls";
 import { pickLocalFolder } from "../../shell/adapter";
+import { getConfirmDialog } from "../../shell/dialog";
+import { bindGarminSyncButton, garminSyncButtonMarkup } from "../../journal/garmin-sync-button";
 import {
-  formatGarminError,
   formatGarminLoginError,
   garminLogin,
   garminStatus,
-  garminSync,
-  syncFromDate,
+  isGarminSyncing,
+  subscribeGarminSyncing,
 } from "../../journal/client";
 
 export const healthTabHtml = `
@@ -62,13 +64,20 @@ export const healthTabHtml = `
           <span>同步最近</span>
           <input id="insight-garmin-sync-days" type="number" min="1" max="365" step="1" inputmode="numeric">
           <span>天佳明数据</span>
-          <button type="button" class="insight-settings-btn insight-settings-btn-primary" id="insight-garmin-sync-btn">同步</button>
+          ${garminSyncButtonMarkup({ id: "insight-garmin-sync-btn" })}
         </div>
       </div>
       <div class="insight-settings-row">
         <button type="button" class="insight-settings-btn" id="insight-garmin-login-btn">重新登录</button>
       </div>
       <p class="insight-settings-hint" id="insight-garmin-sync-status"></p>
+    </div>
+    <div class="insight-settings-section">
+      <h3 class="insight-settings-section-title">飞常准</h3>
+      <div class="insight-settings-field">
+        <label for="insight-variflight-api-key">API Key</label>
+        <input id="insight-variflight-api-key" class="insight-settings-api-key" type="password" autocomplete="off">
+      </div>
     </div>
     <div class="insight-settings-section">
       <h3 class="insight-settings-section-title">健康轨道</h3>
@@ -100,12 +109,18 @@ export type HealthSettingsDraft = {
   garminPassword: string;
   garminTokenDir: string;
   garminSyncDays: number;
+  variflightApiKey: string;
   healthTrackAxis: HealthTrackAxisPrefs;
 };
 
-async function refreshGarminStatus(loginStatusEl: HTMLElement, loginBtn: HTMLButtonElement) {
+async function refreshGarminStatus(
+  loginStatusEl: HTMLElement,
+  loginBtn: HTMLButtonElement,
+  isActive: () => boolean = () => true,
+) {
   try {
     const st = await garminStatus();
+    if (!isActive()) return;
     if (st.rateLimited) {
       loginStatusEl.textContent = "佳明状态：登录冷却中（429），请稍后再试";
       loginBtn.disabled = true;
@@ -117,23 +132,58 @@ async function refreshGarminStatus(loginStatusEl: HTMLElement, loginBtn: HTMLBut
       loginBtn.disabled = false;
     }
   } catch {
+    if (!isActive()) return;
     loginStatusEl.textContent = "佳明状态：--";
     loginBtn.disabled = false;
   }
 }
 
 export function bindHealthTab(root: HTMLElement) {
+  let disposed = false;
   const goalIntakeEl = root.querySelector<HTMLInputElement>("#insight-goal-intake")!;
   const goalExpEl = root.querySelector<HTMLInputElement>("#insight-goal-exp")!;
   const goalHydrationEl = root.querySelector<HTMLInputElement>("#insight-goal-hydration")!;
   const emailEl = root.querySelector<HTMLInputElement>("#insight-garmin-email")!;
   const passEl = root.querySelector<HTMLInputElement>("#insight-garmin-password")!;
   const tokenEl = root.querySelector<HTMLInputElement>("#insight-garmin-token-dir")!;
+  const variflightApiKeyEl = root.querySelector<HTMLInputElement>("#insight-variflight-api-key")!;
+  enhancePasswordField(variflightApiKeyEl);
   const loginBtn = root.querySelector<HTMLButtonElement>("#insight-garmin-login-btn")!;
   const loginStatusEl = root.querySelector<HTMLElement>("#insight-garmin-login-status")!;
   const syncBtn = root.querySelector<HTMLButtonElement>("#insight-garmin-sync-btn")!;
   const syncDaysEl = root.querySelector<HTMLInputElement>("#insight-garmin-sync-days")!;
   const syncStatus = root.querySelector<HTMLElement>("#insight-garmin-sync-status")!;
+  const confirmDialog = getConfirmDialog();
+  const unsubscribeGarminSyncing = subscribeGarminSyncing((busy) => {
+    syncDaysEl.disabled = busy;
+  });
+  const disposeGarminSyncButton = bindGarminSyncButton(syncBtn, {
+    beforeSync: async () => {
+      const days = normalizeGarminSyncDays(Number(syncDaysEl.value));
+      syncDaysEl.value = String(days);
+      const current = getSettings();
+      if (normalizeGarminSyncDays(current.integrations.garmin.syncDays) !== days) {
+        await patchSettings({
+          integrations: {
+            ...current.integrations,
+            garmin: { ...current.integrations.garmin, syncDays: days },
+          },
+        });
+      }
+    },
+    onSuccess: (result) => {
+      syncStatus.textContent = `完成：daily ${result.dailyCount ?? 0}，睡眠 ${result.routineCount ?? 0}，活动 ${result.exerciseCount ?? 0}`;
+      window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
+    },
+    onError: async (message) => {
+      syncStatus.textContent = message;
+      await confirmDialog("佳明同步失败", message, syncBtn, {
+        confirmLabel: "确定",
+        danger: false,
+        info: true,
+      });
+    },
+  });
   const axisModeEl = root.querySelector<HTMLSelectElement>("#insight-health-axis-mode")!;
   const axisRangesEl = root.querySelector<HTMLElement>("#insight-health-axis-ranges")!;
 
@@ -153,12 +203,19 @@ export function bindHealthTab(root: HTMLElement) {
 
   loginBtn.addEventListener("click", async () => {
     if (!emailEl.value.trim() || !passEl.value) {
-      alert("请先填写佳明邮箱和密码");
+      await confirmDialog("佳明登录", "请先填写佳明邮箱和密码", loginBtn, {
+        confirmLabel: "确定",
+        danger: false,
+      });
       return;
     }
-    const ok = confirm(
+    const ok = await confirmDialog(
+      "佳明登录",
       "将向佳明 SSO 发起登录；429 冷却期内请勿重复；国内建议先开 v2ray HTTP 10808。",
+      loginBtn,
+      { confirmLabel: "继续登录", danger: false },
     );
+    if (disposed) return;
     if (!ok) return;
     loginBtn.disabled = true;
     loginStatusEl.textContent = "佳明状态：登录中…";
@@ -167,52 +224,28 @@ export function bindHealthTab(root: HTMLElement) {
         email: emailEl.value.trim(),
         password: passEl.value,
       });
+      if (disposed) return;
       if (res.ok) {
         loginStatusEl.textContent = "佳明状态：已登录";
         syncStatus.textContent = "登录成功";
       } else {
-        alert(formatGarminLoginError(res.reason, res.message));
+        await confirmDialog("佳明登录失败", formatGarminLoginError(res.reason, res.message), loginBtn, {
+          confirmLabel: "确定",
+          danger: false,
+        });
         loginStatusEl.textContent = "佳明状态：登录失败";
         syncStatus.textContent = res.message ?? "登录失败";
       }
     } catch (e) {
+      if (disposed) return;
       const msg = String(e);
-      alert(msg);
+      await confirmDialog("佳明登录失败", msg, loginBtn, {
+        confirmLabel: "确定",
+        danger: false,
+      });
       syncStatus.textContent = msg;
     } finally {
-      void refreshGarminStatus(loginStatusEl, loginBtn);
-    }
-  });
-
-  syncBtn.addEventListener("click", async () => {
-    const days = normalizeGarminSyncDays(Number(syncDaysEl.value));
-    syncDaysEl.value = String(days);
-    syncBtn.disabled = true;
-    syncStatus.textContent = "同步中…";
-    try {
-      const current = getSettings();
-      if (normalizeGarminSyncDays(current.integrations.garmin.syncDays) !== days) {
-        await patchSettings({
-          integrations: {
-            ...current.integrations,
-            garmin: { ...current.integrations.garmin, syncDays: days },
-          },
-        });
-      }
-      const res = await garminSync({ from: syncFromDate(days), to: undefined });
-      if (res.ok) {
-        syncStatus.textContent = `完成：daily ${res.dailyCount ?? 0}，睡眠 ${res.routineCount ?? 0}，活动 ${res.exerciseCount ?? 0}`;
-        window.dispatchEvent(new CustomEvent("orbita:journal-changed"));
-      } else {
-        alert(formatGarminError(res.reason, res.message));
-        syncStatus.textContent = formatGarminError(res.reason, res.message);
-      }
-    } catch (e) {
-      const msg = String(e);
-      alert(msg);
-      syncStatus.textContent = msg;
-    } finally {
-      syncBtn.disabled = false;
+      void refreshGarminStatus(loginStatusEl, loginBtn, () => !disposed);
     }
   });
 
@@ -225,6 +258,7 @@ export function bindHealthTab(root: HTMLElement) {
       emailEl.value = settings.integrations.credentials.garmin.email;
       passEl.value = settings.integrations.credentials.garmin.password;
       tokenEl.value = settings.integrations.garmin.tokenDir;
+      variflightApiKeyEl.value = settings.integrations.credentials.variflight.apiKey;
       syncDaysEl.value = String(normalizeGarminSyncDays(settings.integrations.garmin.syncDays));
       const axis = settings.ui.healthTrackAxis;
       axisModeEl.value = axis.mode;
@@ -238,8 +272,8 @@ export function bindHealthTab(root: HTMLElement) {
         maxEl.value = String(range.max);
       }
       syncAxisRangeEnabled();
-      syncStatus.textContent = "";
-      void refreshGarminStatus(loginStatusEl, loginBtn);
+      if (!isGarminSyncing()) syncStatus.textContent = "";
+      void refreshGarminStatus(loginStatusEl, loginBtn, () => !disposed);
     },
     read(): HealthSettingsDraft {
       const ranges = {} as HealthTrackAxisPrefs["ranges"];
@@ -262,11 +296,17 @@ export function bindHealthTab(root: HTMLElement) {
         garminPassword: passEl.value,
         garminTokenDir: tokenEl.value.trim(),
         garminSyncDays: normalizeGarminSyncDays(Number(syncDaysEl.value)),
+        variflightApiKey: variflightApiKeyEl.value.trim(),
         healthTrackAxis: normalizeHealthTrackAxisPrefs({
           mode: axisModeEl.value === "dynamic" ? "dynamic" : "fixed",
           ranges,
         }),
       };
+    },
+    dispose() {
+      disposed = true;
+      disposeGarminSyncButton();
+      unsubscribeGarminSyncing();
     },
   };
 }

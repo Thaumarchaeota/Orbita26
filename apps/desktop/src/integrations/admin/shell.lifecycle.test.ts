@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { FixedDestId } from "./tab-host/identity";
 import type { InsightDestination, InsightDestinationId, InsightHostContext } from "./types";
 
 vi.mock("./settings", () => ({
@@ -7,6 +8,21 @@ vi.mock("./settings", () => ({
 
 vi.mock("../../core/settings", () => ({
   getSettings: () => ({ dataDir: "" }),
+}));
+
+vi.mock("../productivity/client", () => ({
+  productivityListProjects: vi.fn(() => Promise.resolve({ projects: [] })),
+  productivityListLists: vi.fn(() => Promise.resolve({ lists: [] })),
+  productivityCreateProject: vi.fn(),
+}));
+
+vi.mock("../shell/dialog", () => ({
+  getNamePromptDialog: () => async () => null,
+  getConfirmDialog: () => async () => true,
+}));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn(),
 }));
 
 type StubOpts = {
@@ -60,12 +76,10 @@ async function setup(stubs: ReturnType<typeof makeStub>[]) {
   return root;
 }
 
-function clickTab(root: HTMLElement, id: InsightDestinationId): void {
-  root.querySelector<HTMLButtonElement>(`[data-tab="${id}"]`)!.click();
-}
-
-function toggleSidebar(root: HTMLElement): void {
-  root.querySelector<HTMLButtonElement>("#adminSidebarToggle")!.click();
+async function openFixedDest(dest: FixedDestId): Promise<void> {
+  const { openInsightContentTab } = await import("./tab-host/host-api");
+  openInsightContentTab({ kind: "fixed", dest });
+  await flush();
 }
 
 function countCachedRoots(root: HTMLElement): number {
@@ -78,6 +92,10 @@ function getActiveTab(root: HTMLElement): string | undefined {
 
 function getActiveDest(root: HTMLElement): string | undefined {
   return root.querySelector<HTMLElement>(".insight-dest-root.is-active")?.dataset.dest;
+}
+
+function getActiveSurface(root: HTMLElement): string | undefined {
+  return root.querySelector<HTMLElement>(".insight-dest-root.is-active")?.dataset.surface;
 }
 
 type InteractiveFlags = { listener: boolean; timer: boolean; async: boolean };
@@ -156,19 +174,25 @@ describe("admin shell destination lifecycle", () => {
     localStorage.clear();
   });
 
+  it("defaults to home with no sidebar tab active", async () => {
+    const finance = makeStub("finance");
+    const health = makeStub("health");
+    const root = await setup([finance, health]);
+
+    expect(getActiveTab(root)).toBeUndefined();
+    expect(getActiveDest(root)).toBe("home");
+    expect(getActiveSurface(root)).toBe("home");
+  });
+
   it("mounts each destination once across switches", async () => {
     const finance = makeStub("finance");
     const health = makeStub("health");
     const root = await setup([finance, health]);
 
-    clickTab(root, "health");
-    await flush();
-    clickTab(root, "finance");
-    await flush();
-    clickTab(root, "health");
-    await flush();
-    clickTab(root, "finance");
-    await flush();
+    await openFixedDest("health");
+    await openFixedDest("finance");
+    await openFixedDest("health");
+    await openFixedDest("finance");
 
     expect(finance.calls.filter((c) => c === "mount")).toHaveLength(1);
     expect(health.calls.filter((c) => c === "mount")).toHaveLength(1);
@@ -180,11 +204,13 @@ describe("admin shell destination lifecycle", () => {
     const health = makeStub("health", { canDispose: () => allowDispose });
     const root = await setup([finance, health]);
 
-    clickTab(root, "health");
-    await flush();
+    await openFixedDest("finance");
+    await openFixedDest("health");
 
     const { notifyDataDirChanged } = await import("../../core/data/dir-sync");
     notifyDataDirChanged();
+    await flush();
+    await flush();
     await flush();
 
     expect(finance.calls).not.toContain("dispose");
@@ -193,18 +219,23 @@ describe("admin shell destination lifecycle", () => {
     allowDispose = true;
     notifyDataDirChanged();
     await flush();
+    await flush();
+    await flush();
+    await flush();
 
     expect(finance.calls).toContain("dispose");
     expect(health.calls).toContain("dispose");
+    expect(getActiveDest(root)).toBe("home");
+    expect(getActiveTab(root)).toBeUndefined();
   });
 
-  it("does not remount or re-activate when clicking the active tab", async () => {
+  it("does not remount or re-activate when opening the active fixed dest again", async () => {
     const finance = makeStub("finance");
     const health = makeStub("health");
     const root = await setup([finance, health]);
 
-    clickTab(root, "finance");
-    await flush();
+    await openFixedDest("finance");
+    await openFixedDest("finance");
 
     expect(finance.calls.filter((c) => c === "mount")).toHaveLength(1);
     expect(finance.calls.filter((c) => c === "activate")).toHaveLength(1);
@@ -216,8 +247,8 @@ describe("admin shell destination lifecycle", () => {
     const health = makeStub("health", { onEvent: (e) => order.push(e) });
     const root = await setup([finance, health]);
 
-    clickTab(root, "health");
-    await flush();
+    await openFixedDest("finance");
+    await openFixedDest("health");
 
     const deactivateIdx = order.indexOf("finance:deactivate");
     const activateIdx = order.indexOf("health:activate");
@@ -232,8 +263,8 @@ describe("admin shell destination lifecycle", () => {
     const health = makeInteractiveStub("health");
     const root = await setup([finance, health]);
 
-    clickTab(root, "health");
-    await flush();
+    await openFixedDest("finance");
+    await openFixedDest("health");
 
     fireInteractiveTriggers();
     vi.advanceTimersByTime(200);
@@ -251,8 +282,7 @@ describe("admin shell destination lifecycle", () => {
     const health = makeInteractiveStub("health", { canDispose: () => allowDispose });
     const root = await setup([finance, health]);
 
-    clickTab(root, "health");
-    await flush();
+    await openFixedDest("health");
 
     const { notifyDataDirChanged } = await import("../../core/data/dir-sync");
     notifyDataDirChanged();
@@ -270,21 +300,23 @@ describe("admin shell destination lifecycle", () => {
     vi.useRealTimers();
   });
 
-  it("keeps sidebar active state aligned with visible content root", async () => {
+  it("keeps active dest aligned with visible content root", async () => {
     const finance = makeStub("finance");
     const health = makeStub("health");
+    const timeline = makeStub("timeline");
     const journal = makeStub("journal");
-    const root = await setup([finance, health, journal]);
+    const root = await setup([finance, health, timeline, journal]);
 
-    clickTab(root, "health");
-    await flush();
-    expect(getActiveTab(root)).toBe("health");
+    expect(root.querySelectorAll(".admin-tab-btn")).toHaveLength(0);
+    expect(root.querySelectorAll(".admin-quick-btn")).toHaveLength(1);
+
+    await openFixedDest("health");
     expect(getActiveDest(root)).toBe("health");
+    expect(getActiveSurface(root)).toBe("fixed:health");
 
-    clickTab(root, "journal");
-    await flush();
-    expect(getActiveTab(root)).toBe("journal");
-    expect(getActiveDest(root)).toBe("journal");
+    await openFixedDest("timeline");
+    expect(getActiveDest(root)).toBe("timeline");
+    expect(getActiveSurface(root)).toBe("fixed:timeline");
     expect(root.querySelector(".insight-dest-root[data-dest='health'].is-active")).toBeNull();
   });
 
@@ -293,16 +325,13 @@ describe("admin shell destination lifecycle", () => {
     const health = makeStub("health");
     const root = await setup([finance, health]);
 
-    clickTab(root, "health");
-    await flush();
+    await openFixedDest("health");
     const before = countCachedRoots(root);
-    expect(getActiveTab(root)).toBe("health");
-
-    toggleSidebar(root);
-    toggleSidebar(root);
+    expect(getActiveDest(root)).toBe("health");
 
     expect(countCachedRoots(root)).toBe(before);
-    expect(getActiveTab(root)).toBe("health");
     expect(getActiveDest(root)).toBe("health");
+    expect(getActiveSurface(root)).toBe("fixed:health");
+    expect(root.querySelector("#adminSidebarToggle")).toBeNull();
   });
 });

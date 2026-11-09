@@ -1,0 +1,162 @@
+.orbita-markdown {
+  --orbita-md-body-size: 14px;
+  --orbita-md-body-weight: 400;
+  --orbita-md-body-leading: 1.65;
+  --orbita-md-h1-size: 24px;
+  --orbita-md-h2-size: 20px;
+  --orbita-md-h3-size: 18px;
+  --orbita-md-h4-size: 16px;
+  --orbita-md-h5-size: 14px;
+  --orbita-md-h6-size: 13px;
+  --orbita-md-heading-weight: 650;
+  --orbita-md-strong-weight: 700;
+  --orbita-md-heading-leading: 1.5;
+  --orbita-md-h1-leading: 1.4;
+  --orbita-md-h2-leading: 1.4;
+  --orbita-md-h3-leading: 1.45;
+  --orbita-md-h1-margin: 28px 0 14px;
+  --orbita-md-h2-margin: 24px 0 12px;
+  --orbita-md-h3-margin: 20px 0 10px;
+  --orbita-md-h4-margin: 16px 0 8px;
+  --orbita-md-h5-margin: 12px 0 6px;
+  --orbita-md-h6-margin: 12px 0 6px;
+  --orbita-md-paragraph-space: 0.45em;
+  --orbita-md-list-indent: 1.35em;
+  --orbita-md-list-item-space: 0.2em;
+  --orbita-md-inline-code-radius: 6px;
+  --orbita-md-inline-code-size: 0.92em;
+  --orbita-md-inline-code-padding: 0.15em 0.45em;
+  --orbita-md-block-radius: 8px;
+  --orbita-md-block-space: 0.5em;
+  --orbita-md-block-padding: 8px 10px;
+  --orbita-md-block-code-size: 0.9em;
+  --orbita-md-hr-border-size: 2px;
+  --orbita-md-hr-space: 18px 0;
+  --orbita-md-quote-padding: 10px;
+  --orbita-md-quote-border-size: 3px;
+  --orbita-md-quote-opacity: 0.9;
+  --orbita-md-table-size: 0.92em;
+  --orbita-md-table-cell-padding: 6px 8px;
+  --orbita-md-table-heading-weight: 600;
+  font-size: var(--orbita-md-body-size);
+  font-weight: var(--orbita-md-body-weight);
+  line-height: var(--orbita-md-body-leading);
+  word-break: break-word;
+}
+
+.orbita-markdown > :first-child { margin-top: 0; }
+.orbita-markdown > :last-child { margin-bottom: 0; }
+.orbita-markdown p { margin: var(--orbita-md-paragraph-space) 0; }
+.orbita-markdown ul,
+.orbita-markdown ol {
+  margin: var(--orbita-md-paragraph-space) 0;
+  padding-left: var(--orbita-md-list-indent);
+}
+.orbita-markdown li { margin: var(--orbita-md-list-item-space) 0; }
+.orbita-markdown strong,
+.orbita-markdown b { font-weight: var(--orbita-md-strong-weight); }
+
+.orbita-markdown h1,
+.orbita-markdown h2,
+.orbita-markdown h3,
+.orbita-markdown h4,
+.orbita-markdown h5,
+.orbita-markdown h6 {
+  font-weight: var(--orbita-md-heading-weight);
+  line-height: var(--orbita-md-heading-leading);
+}
+.orbita-markdown h1 {
+  font-size: var(--orbita-md-h1-size);
+  font-weight: var(--orbita-md-strong-weight);
+  line-height: var(--orbita-md-h1-leading);
+  margin: var(--orbita-md-h1-margin);
+}
+.orbita-markdown h2 {
+  font-size: var(--orbita-md-h2-size);
+  font-weight: var(--orbita-md-strong-weight);
+  line-height: var(--orbita-md-h2-leading);
+  margin: var(--orbita-md-h2-margin);
+}
+.orbita-markdown h3 {
+  font-size: var(--orbita-md-h3-size);
+  line-height: var(--orbita-md-h3-leading);
+  margin: var(--orbita-md-h3-margin);
+}
+.orbita-markdown h4 {
+  font-size: var(--orbita-md-h4-size);
+  margin: var(--orbita-md-h4-margin);
+}
+.orbita-markdown h5 {
+  font-size: var(--orbita-md-h5-size);
+  font-weight: var(--orbita-md-strong-weight);
+  margin: var(--orbita-md-h5-margin);
+}
+.orbita-markdown h6 {
+  font-size: var(--orbita-md-h6-size);
+  margin: var(--orbita-md-h6-margin);
+}
+
+.orbita-markdown .katex-display,
+.orbita-markdown .katex-block {
+  overflow: visible;
+  height: auto;
+  max-height: none;
+  max-width: 100%;
+}
+.orbita-markdown hr {
+  border: none;
+  height: 0;
+  border-top: var(--orbita-md-hr-border-size) solid var(--insight-border-subtle);
+  margin: var(--orbita-md-hr-space);
+}
+.orbita-markdown :not(pre) > code {
+  font-family: var(--font-code);
+  font-size: var(--orbita-md-inline-code-size);
+  padding: var(--orbita-md-inline-code-padding);
+  border-radius: var(--orbita-md-inline-code-radius);
+  background: var(--insight-md-inline-code);
+}
+.insight-chat-msg-user .orbita-markdown :not(pre) > code {
+  background: color-mix(in srgb, var(--insight-user-bubble-text) 28%, transparent);
+}
+.orbita-markdown pre {
+  margin: var(--orbita-md-block-space) 0;
+  padding: var(--orbita-md-block-padding);
+  border-radius: var(--orbita-md-block-radius);
+  overflow-x: auto;
+  background: var(--insight-md-code);
+}
+
+html[data-insight-theme] .orbita-markdown pre {
+  border: var(--insight-border-width) solid var(--insight-divider);
+  background: var(--insight-surface-sunken);
+}
+.insight-chat-msg-user .orbita-markdown pre {
+  background: color-mix(in srgb, var(--insight-user-bubble-text) 15%, transparent);
+}
+.orbita-markdown pre code {
+  padding: 0;
+  background: none;
+  font-family: var(--font-code);
+  font-size: var(--orbita-md-block-code-size);
+}
+.orbita-markdown blockquote {
+  margin: var(--orbita-md-paragraph-space) 0;
+  padding-left: var(--orbita-md-quote-padding);
+  border-left: var(--orbita-md-quote-border-size) solid color-mix(in srgb, var(--insight-border-subtle) 70%, transparent);
+  opacity: var(--orbita-md-quote-opacity);
+}
+.orbita-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--orbita-md-table-size);
+}
+.orbita-markdown th,
+.orbita-markdown td {
+  border: 1px solid var(--insight-md-table-border);
+  padding: var(--orbita-md-table-cell-padding);
+}
+.orbita-markdown th {
+  background: var(--insight-md-table-head);
+  font-weight: var(--orbita-md-table-heading-weight);
+}

@@ -1,0 +1,717 @@
+.insight-dialog-backdrop[hidden] {
+  display: none !important;
+}
+
+#orbita-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+#orbita-modal-root > .insight-dialog-backdrop.is-open {
+  pointer-events: auto;
+}
+
+.insight-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--insight-text-primary) 22%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* A scoped confirmation belongs to its owning floating surface and must not dim the app behind it. */
+.insight-dialog-backdrop[data-dialog-scope="local"] {
+  position: absolute;
+  inset: 0;
+  z-index: 1000;
+  padding: 10px;
+  background: color-mix(in srgb, var(--insight-text-primary) 22%, transparent);
+}
+
+.insight-dialog-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.insight-dialog-panel {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(85vh, calc(100vh - 32px));
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--insight-surface-elevated, var(--insight-surface-bg));
+  color: var(--insight-text-primary);
+  border: 1px solid var(--insight-border-color);
+  border-radius: var(--insight-radius-card);
+  box-shadow: var(--insight-shadow-panel, 0 8px 24px color-mix(in srgb, var(--insight-text-primary) 16%, transparent));
+}
+
+.insight-dialog-panel.motion-dialog-panel {
+  transform: translate(var(--motion-fly-x, 0px), var(--motion-fly-y, 10px))
+    scale(var(--motion-fly-scale, 0.94));
+  opacity: 0;
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.34s ease;
+}
+
+.insight-dialog-backdrop.is-open .insight-dialog-panel.motion-dialog-panel {
+  transform: translate(0, 0) scale(1);
+  opacity: 1;
+}
+
+.insight-dialog-backdrop:not(.is-open) .insight-dialog-panel.motion-dialog-panel {
+  pointer-events: none;
+}
+
+.insight-dialog-panel.task-item-detail-dialog {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.insight-dialog-panel.insight-confirm-dialog {
+  width: min(360px, calc(100vw - 32px));
+  padding: 20px;
+  border-radius: var(--insight-radius-card);
+}
+
+.insight-confirm-dialog .insight-dialog-header,
+.insight-confirm-dialog .insight-dialog-footer {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.insight-confirm-dialog .insight-dialog-title {
+  margin-bottom: 14px;
+  font-size: var(--insight-font-role-dialog-title);
+  font-weight: 600;
+}
+
+.insight-confirm-dialog .insight-dialog-body {
+  padding: 0;
+}
+
+.insight-confirm-dialog .insight-dialog-hint {
+  margin: 0;
+}
+
+.insight-confirm-dialog .insight-dialog-footer {
+  padding-top: 16px;
+}
+
+.insight-confirm-dialog .insight-dialog-btn {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 17px;
+}
+
+.insight-dialog-header {
+  flex: 0 0 auto;
+  padding: 20px 20px 12px;
+}
+
+.insight-dialog-title {
+  margin: 0;
+  font-size: var(--insight-font-role-dialog-title);
+  font-weight: var(--insight-weight-semibold);
+  color: var(--insight-text-primary);
+}
+
+.insight-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 20px 0;
+  font-size: var(--insight-font-role-dialog-body);
+  color: var(--insight-text-secondary);
+}
+
+.insight-dialog-hint {
+  margin: 0 0 12px;
+  font-size: var(--insight-font-role-dialog-body);
+  line-height: 1.45;
+  color: var(--insight-text-secondary);
+}
+
+.insight-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.insight-dialog-field > label,
+.insight-dialog-label {
+  font-size: var(--insight-font-role-label);
+  color: var(--insight-text-secondary);
+}
+
+.insight-dialog-field input,
+.insight-dialog-field select,
+.insight-dialog-field textarea,
+.insight-dialog-panel input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
+.insight-dialog-panel select,
+.insight-dialog-panel textarea {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--insight-input-border, var(--insight-border-color));
+  border-radius: var(--insight-radius-control);
+  background: var(--insight-control-surface-bg);
+  color: var(--insight-text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.insight-dialog-field input:focus,
+.insight-dialog-field select:focus,
+.insight-dialog-field textarea:focus,
+.insight-dialog-panel input:focus-visible,
+.insight-dialog-panel select:focus-visible,
+.insight-dialog-panel textarea:focus-visible {
+  border-color: var(--insight-primary);
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+.insight-dialog-field.is-error input,
+.insight-dialog-field.is-error select,
+.insight-dialog-range-slot.is-error {
+  outline: 2px solid var(--insight-danger);
+  outline-offset: 1px;
+  border-radius: var(--insight-radius-sm, 6px);
+}
+
+.insight-dialog-field-msg {
+  margin: 0;
+  font-size: var(--insight-font-role-label);
+  color: var(--insight-danger);
+}
+
+.insight-dialog-footer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 20px 20px;
+}
+
+.insight-dialog-error {
+  margin: 0;
+  font-size: var(--insight-font-role-label);
+  color: var(--insight-danger);
+}
+
+.insight-dialog-error[hidden] {
+  display: none !important;
+}
+
+.insight-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.insight-dialog-btn {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: var(--insight-radius-control);
+  border: 1px solid var(--insight-border-color);
+  background: var(--insight-control-surface-bg);
+  color: var(--insight-text-primary);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+  cursor: pointer;
+}
+
+.insight-dialog-btn:hover:not(:disabled) {
+  background: var(--insight-hover-control, var(--insight-hover-bg));
+}
+
+.insight-dialog-btn:focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+  border-color: var(--insight-primary);
+}
+
+.insight-dialog-btn:disabled {
+  color: var(--insight-text-disabled);
+  background: var(--insight-sunken-bg);
+  border-color: var(--insight-border-subtle, var(--insight-border-color));
+  cursor: not-allowed;
+}
+
+.insight-dialog-btn-primary {
+  border-color: var(--insight-primary);
+  background: var(--insight-primary);
+  color: var(--insight-user-bubble-text);
+}
+
+.insight-dialog-btn-primary:hover:not(:disabled) {
+  border-color: var(--insight-primary-hover);
+  background: var(--insight-primary-hover);
+  color: var(--insight-user-bubble-text);
+}
+
+.insight-dialog-btn-primary:disabled {
+  border-color: color-mix(in srgb, var(--insight-primary) 35%, var(--insight-border-color));
+  background: color-mix(in srgb, var(--insight-primary) 35%, var(--insight-sunken-bg));
+  color: var(--insight-user-bubble-text);
+  opacity: 1;
+}
+
+.insight-dialog-btn-danger {
+  border-color: var(--insight-danger);
+  background: var(--insight-danger);
+  color: var(--insight-user-bubble-text);
+}
+
+.insight-dialog-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--insight-danger) 84%, var(--insight-text-primary));
+  color: var(--insight-user-bubble-text);
+}
+
+.insight-dialog-btn-danger:disabled {
+  background: color-mix(in srgb, var(--insight-danger) 35%, var(--insight-sunken-bg));
+  color: var(--insight-user-bubble-text);
+  opacity: 1;
+}
+
+.insight-dialog-btn-primary:focus-visible,
+.insight-dialog-btn-danger:focus-visible {
+  outline: 2px solid var(--insight-focus-ring);
+  outline-offset: 1px;
+}
+
+.insight-tool-confirm-card.insight-dialog-panel {
+  width: 100%;
+  max-width: none;
+  max-height: min(85vh, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.insight-chat-viewport {
+  container-type: size;
+  container-name: insight-chat;
+}
+
+.insight-tool-confirm .insight-tool-confirm-card.insight-dialog-panel {
+  max-height: calc(100cqh - var(--insight-chat-fade-top, 0px) - var(--insight-chat-fade-bottom, 0px) - 24px);
+  min-height: 0;
+}
+
+.insight-tool-confirm-card .insight-dialog-body,
+.insight-tool-confirm-dialog .insight-dialog-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  align-content: start;
+}
+
+.insight-tool-confirm-card .insight-dialog-hint,
+.insight-tool-confirm-card .insight-dialog-field:has(.meal-slot-row),
+.insight-tool-confirm-card .insight-dialog-field:has(.meal-tags),
+.insight-tool-confirm-card .insight-dialog-field:has(textarea),
+.insight-tool-confirm-card .insight-dialog-field:has(input[name="text"]),
+.insight-tool-confirm-card .primary-mood-grid,
+.insight-tool-confirm-dialog .insight-dialog-hint,
+.insight-tool-confirm-dialog .insight-dialog-field:has(.meal-slot-row),
+.insight-tool-confirm-dialog .insight-dialog-field:has(.meal-tags),
+.insight-tool-confirm-dialog .insight-dialog-field:has(textarea),
+.insight-tool-confirm-dialog .insight-dialog-field:has(input[name="text"]),
+.insight-tool-confirm-dialog .primary-mood-grid {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 560px) {
+  .insight-tool-confirm-card .insight-dialog-body,
+  .insight-tool-confirm-dialog .insight-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.insight-dialog-backdrop .insight-dialog-panel.insight-meal-confirm-dialog {
+  width: max-content;
+  max-width: min(96vw, calc(100vw - 32px));
+}
+
+.insight-chat-msg-assistant:has(.insight-meal-confirm-dialog) {
+  width: max-content;
+  max-width: min(96cqw, calc(100vw - 32px));
+}
+
+.insight-tool-confirm:has(.insight-meal-confirm-dialog) {
+  width: max-content;
+  max-width: 100%;
+}
+
+.insight-tool-confirm-card.insight-dialog-panel.insight-meal-confirm-dialog {
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  max-width: 100%;
+}
+
+.insight-meal-confirm-dialog .insight-dialog-header {
+  border-bottom: none;
+  padding: 24px 32px 16px;
+}
+
+.insight-meal-confirm-dialog .insight-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+.insight-meal-confirm-dialog .insight-dialog-footer {
+  padding-left: 32px;
+  padding-right: 32px;
+}
+
+.insight-tool-confirm-card .meal-compose-field,
+.insight-tool-confirm-dialog .meal-compose-field,
+.insight-tool-confirm-card .meal-compose-foods,
+.insight-tool-confirm-dialog .meal-compose-foods,
+.insight-tool-confirm-card .meal-compose-totals,
+.insight-tool-confirm-dialog .meal-compose-totals,
+.insight-tool-confirm-card .insight-dialog-error,
+.insight-tool-confirm-dialog .insight-dialog-error,
+.insight-tool-confirm-card .meal-property-rows,
+.insight-tool-confirm-dialog .meal-property-rows {
+  grid-column: 1 / -1;
+}
+
+.insight-meal-confirm-dialog .meal-property-rows {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 36px;
+  row-gap: 14px;
+  align-items: center;
+  width: 100%;
+}
+
+.insight-meal-confirm-dialog .meal-property-row {
+  display: contents;
+}
+
+.insight-meal-confirm-dialog .meal-property-label {
+  margin: 0;
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-chat-body);
+  font-weight: var(--insight-weight-regular);
+  line-height: 1.65;
+  text-align: left;
+}
+
+.insight-meal-confirm-dialog .meal-property-row:has(textarea) .meal-property-label,
+.insight-meal-confirm-dialog .meal-property-row-foods .meal-property-label {
+  align-self: start;
+  padding-top: 2px;
+}
+
+.insight-meal-confirm-dialog .meal-foods-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.insight-meal-confirm-dialog .meal-foods-block {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding-left: 36px;
+}
+
+.insight-meal-confirm-dialog .meal-property-value {
+  min-width: 0;
+}
+
+.insight-meal-confirm-dialog .meal-property-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
+.insight-meal-confirm-dialog .meal-property-when [data-region="picker-date"],
+.insight-meal-confirm-dialog .meal-property-when [data-region="picker-time"],
+.insight-meal-confirm-dialog .meal-property-when [data-region="picker-slot"] {
+  display: inline-flex;
+  width: auto;
+  min-width: 0;
+}
+
+.insight-meal-confirm-dialog input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.insight-meal-confirm-dialog input[type="number"]::-webkit-inner-spin-button,
+.insight-meal-confirm-dialog input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+  display: none;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]),
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value textarea,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-slot-trigger,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-item input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  padding: 2px 0 3px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  color: var(--insight-text-primary);
+  font-size: var(--insight-font-role-chat-body);
+  line-height: 1.65;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger {
+  width: calc(var(--orbita-decoupled-trigger-chars) * 1ch);
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value > input[name="title"],
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value > textarea {
+  width: 100%;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-slot-trigger {
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value textarea {
+  display: block;
+  field-sizing: content;
+  resize: none;
+  overflow: hidden;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value input:focus,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value input:focus-visible,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value textarea:focus,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-value textarea:focus-visible,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger:focus,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-when .orbita-decoupled-picker-trigger:focus-visible,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-slot-trigger:focus,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-property-slot-trigger:focus-visible,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-item input:focus,
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-item input:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background-color: transparent;
+  background-image: linear-gradient(var(--insight-primary), var(--insight-primary));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 2px;
+}
+
+.insight-meal-confirm-dialog .meal-compose-when-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 14px;
+  width: 100%;
+}
+
+.insight-meal-confirm-dialog .meal-compose-when-row > .insight-dialog-field,
+.insight-meal-confirm-dialog .meal-compose-when-row > .meal-compose-field {
+  grid-column: auto;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.insight-meal-confirm-dialog .meal-compose-field p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.insight-meal-confirm-dialog .meal-food-add {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-chat-body);
+  font-weight: var(--insight-weight-regular);
+  line-height: 1;
+  cursor: pointer;
+  min-height: 0;
+  min-width: 0;
+}
+
+.insight-meal-confirm-dialog .meal-food-empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-chat-body);
+  line-height: 1.65;
+}
+
+.insight-meal-confirm-dialog .meal-food-item {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+.insight-meal-confirm-dialog .meal-food-item + .meal-food-item {
+  margin-top: 14px;
+  border-top: 0;
+}
+
+.insight-meal-confirm-dialog .meal-food-row-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.insight-meal-confirm-dialog .meal-food-field {
+  display: block;
+  min-width: 0;
+}
+
+.insight-meal-confirm-dialog .meal-food-field-name {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-row-main input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+  font-size: var(--insight-font-role-chat-body);
+  font-weight: var(--insight-weight-medium);
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-field-name input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+  width: auto;
+  max-width: none;
+  field-sizing: content;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-field-kcal {
+  flex: 0 0 auto;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-field-kcal input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+  width: auto;
+  min-width: 1ch;
+  max-width: 4ch;
+  field-sizing: content;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-field-serving {
+  flex: 0 0 auto;
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-field-serving input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+  width: auto;
+  min-width: 1ch;
+  max-width: 8ch;
+  field-sizing: content;
+}
+
+.insight-meal-confirm-dialog .meal-food-del {
+  flex: 0 0 auto;
+  align-self: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  color: var(--insight-text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.insight-meal-confirm-dialog .meal-food-row-nutrients {
+  display: block;
+  margin-top: 8px;
+  overflow: visible;
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-regular);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.insight-meal-confirm-dialog .meal-food-field.meal-food-field-nutrient {
+  display: inline-flex;
+  flex-direction: row;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-right: 16px;
+  white-space: nowrap;
+}
+
+.insight-meal-confirm-dialog .meal-food-field.meal-food-field-nutrient:last-child {
+  margin-right: 0;
+}
+
+.insight-meal-confirm-dialog .meal-food-nutrient-value {
+  display: inline-flex;
+  flex: 0 0 calc(3ch + 4px + 2ch);
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 4px;
+  width: calc(3ch + 4px + 2ch);
+  min-width: calc(3ch + 4px + 2ch);
+}
+
+.insight-dialog-panel.insight-meal-confirm-dialog .meal-food-row-nutrients input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+  box-sizing: content-box;
+  width: auto;
+  min-width: 1ch;
+  max-width: 3ch;
+  field-sizing: content;
+  padding: 2px 0;
+  color: var(--insight-text-secondary);
+  font-size: var(--insight-font-role-label);
+  font-weight: var(--insight-weight-regular);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.insight-meal-confirm-dialog .meal-food-item.is-error input[data-f="text"],
+.insight-meal-confirm-dialog .meal-food-item.is-error input[data-f="kcal"] {
+  background-image: linear-gradient(var(--insight-danger), var(--insight-danger));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 2px;
+}
+

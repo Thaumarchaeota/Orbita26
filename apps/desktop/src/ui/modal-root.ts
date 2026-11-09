@@ -24,3 +24,15 @@ export function hideModalBackdrop(backdrop: HTMLElement) {
   backdrop.setAttribute("hidden", "");
   backdrop.style.removeProperty("z-index");
 }
+
+/** Highest z-index among visible modal-root children, excluding `except`. */
+export function topModalRootZ(except?: HTMLElement): number {
+  let max = 0;
+  for (const child of getModalRoot().children) {
+    if (!(child instanceof HTMLElement) || child === except || child.hidden) continue;
+    const raw = child.style.zIndex || getComputedStyle(child).zIndex;
+    const z = Number(raw);
+    if (Number.isFinite(z)) max = Math.max(max, z);
+  }
+  return max;
+}

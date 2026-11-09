@@ -1,0 +1,89 @@
+.orbita-slider-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.orbita-slider-field input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 16px;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  outline: none;
+  --orbita-slider-pct: 0%;
+}
+
+.orbita-slider-field input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border: 0;
+  border-radius: var(--insight-radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--insight-primary) 0 var(--orbita-slider-pct),
+    var(--insight-border-color) var(--orbita-slider-pct) 100%
+  );
+}
+
+.orbita-slider-field input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  /* 16px thumb on a 4px track; pull it up by half the difference so it sits on the track. */
+  margin-top: -6px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--insight-surface-bg);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--insight-text-primary) 22%, transparent);
+}
+
+.orbita-slider-field input[type="range"]:hover::-webkit-slider-thumb,
+.orbita-slider-field input[type="range"]:active::-webkit-slider-thumb,
+.orbita-slider-field input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 2px var(--insight-primary),
+    0 1px 2px color-mix(in srgb, var(--insight-text-primary) 22%, transparent);
+}
+
+.orbita-slider-field input[type="range"]:disabled::-webkit-slider-runnable-track {
+  background: var(--insight-border-color);
+}
+
+.orbita-slider-field input[type="range"]:disabled::-webkit-slider-thumb {
+  background: var(--insight-text-disabled);
+  box-shadow: none;
+}
+
+.orbita-slider-field input[type="number"] {
+  align-self: center;
+  box-sizing: border-box;
+  width: 4.5em;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--insight-text-primary, inherit);
+  font: inherit;
+  font-size: var(--insight-font-role-control);
+  text-align: center;
+  appearance: textfield;
+}
+
+.orbita-slider-field input[type="number"]::-webkit-inner-spin-button,
+.orbita-slider-field input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.orbita-slider-field input[type="number"]:focus {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}

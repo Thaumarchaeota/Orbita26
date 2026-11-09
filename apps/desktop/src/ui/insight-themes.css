@@ -1,0 +1,175 @@
+@import "./insight-menu-adapter.css";
+@import "./insight-forms-adapter.css";
+@import "./insight-domain-adapter.css";
+
+/* 三套配色只定义 13 个基础语义色；组件别名和派生公式共用。健康语义色未纳入。 */
+html[data-insight-theme="cold"] {
+  --insight-primary: #4b78b8;
+  --insight-selected-bg: #d7e3f5;
+  --insight-hover-bg: #e5ebf3;
+  --insight-chrome-bg: #e4ebf3;
+  --insight-sidebar-bg: #f1f5f9;
+  --insight-page-bg: #f8fafc;
+  --insight-surface-bg: #ffffff;
+  --insight-control-surface-bg: #ffffff;
+  --insight-sunken-bg: #f1f5f9;
+  --insight-text-primary: #243044;
+  --insight-text-secondary: #66758a;
+  --insight-border-color: #d4dce6;
+  --insight-danger: #c0393b;
+}
+
+html[data-insight-theme="warm"] {
+  --insight-primary: #8b6b4f;
+  --insight-selected-bg: #ede9e3;
+  --insight-hover-bg: #f3f0eb;
+  --insight-chrome-bg: #eeeae4;
+  --insight-sidebar-bg: #f6f3ee;
+  --insight-page-bg: #faf9f7;
+  --insight-surface-bg: #ffffff;
+  --insight-control-surface-bg: #ffffff;
+  --insight-sunken-bg: #f3efe9;
+  --insight-text-primary: #27292f;
+  --insight-text-secondary: #787280;
+  --insight-border-color: #d9d4cc;
+  --insight-danger: #b91c1c;
+}
+
+html[data-insight-theme="blue"] {
+  --insight-primary: #3b82f6;
+  --insight-selected-bg: #e4edfc;
+  --insight-hover-bg: #edf2f9;
+  --insight-chrome-bg: #e5ebf3;
+  --insight-sidebar-bg: #f1f5fa;
+  --insight-page-bg: #f8fafc;
+  --insight-surface-bg: #ffffff;
+  --insight-control-surface-bg: #ffffff;
+  --insight-sunken-bg: #eef3f9;
+  --insight-text-primary: #1f2937;
+  --insight-text-secondary: #6b7280;
+  --insight-border-color: #cbd5e1;
+  --insight-danger: #b91c1c;
+}
+
+html[data-insight-theme] {
+  /* Legacy startup remains readable before the runtime role adapter runs. */
+  --insight-focus-ring: color-mix(in srgb, var(--insight-primary) 30%, transparent);
+  --insight-primary-hover: color-mix(in srgb, var(--insight-primary) 84%, var(--insight-text-primary));
+  --insight-danger-bg: color-mix(in srgb, var(--insight-danger) 10%, var(--insight-surface-bg));
+  --insight-danger-surface: var(--insight-danger-bg);
+  --insight-text-placeholder: color-mix(in srgb, var(--insight-text-secondary) 62%, var(--insight-surface-bg));
+  --insight-text-disabled: color-mix(in srgb, var(--insight-text-secondary) 45%, var(--insight-surface-bg));
+  --insight-overlay-backdrop: color-mix(in srgb, var(--insight-text-primary) 35%, transparent);
+  --insight-shadow-color-6: color-mix(in srgb, var(--insight-text-primary) 6%, transparent);
+  --insight-shadow-color-8: color-mix(in srgb, var(--insight-text-primary) 8%, transparent);
+  --insight-shadow-color-12: color-mix(in srgb, var(--insight-text-primary) 12%, transparent);
+  --insight-shadow-color-14: color-mix(in srgb, var(--insight-text-primary) 14%, transparent);
+  --insight-shadow-color-16: color-mix(in srgb, var(--insight-text-primary) 16%, transparent);
+  --insight-shadow-color-18: color-mix(in srgb, var(--insight-text-primary) 18%, transparent);
+  --insight-overlay-backdrop-soft: color-mix(in srgb, var(--insight-text-primary) 18%, transparent);
+  --insight-titlebar: var(--insight-chrome-bg);
+  --insight-tab-strip-bg: var(--insight-titlebar);
+  --insight-sidebar: var(--insight-sidebar-bg);
+  --insight-content-bg: var(--insight-page-bg);
+  --insight-tab-active-bg: var(--insight-content-bg);
+  --insight-chat-list-bg: var(--insight-sidebar);
+  --insight-card-bg: var(--insight-surface-bg);
+  --insight-composer-bg: var(--insight-control-surface-bg);
+  --insight-surface-subtle: var(--insight-sunken-bg);
+  --insight-border-subtle: var(--insight-border-color);
+  --insight-week-grid: var(--insight-border-color);
+  --insight-tab-hover-bg: var(--insight-hover-chrome, var(--insight-hover-bg));
+  --insight-tab-close: color-mix(in srgb, var(--insight-text-secondary) 78%, var(--insight-surface-bg));
+  --insight-nav-hover: var(--insight-hover-sidebar, var(--insight-hover-bg));
+  --insight-nav-active: var(--insight-selected-bg);
+  --insight-list-selected: var(--insight-selected-bg);
+  --insight-icon-default: var(--insight-text-secondary);
+  --insight-icon-active: var(--insight-primary);
+  --insight-user-bubble: var(--insight-primary);
+  --insight-user-bubble-text: #ffffff;
+  --insight-md-code: var(--insight-surface-subtle);
+  --insight-md-inline-code: var(--insight-sunken-bg);
+  --insight-md-table-head: var(--insight-surface-subtle);
+  --insight-md-table-border: var(--insight-border-subtle);
+  --insight-input-border: var(--insight-border-subtle);
+}
+
+html[data-insight-theme] {
+  --admin-chrome: var(--insight-titlebar);
+  --admin-accent: var(--insight-primary);
+  --admin-accent-hover: var(--insight-primary-hover);
+  --admin-accent-bg: var(--insight-nav-active);
+  --admin-surface: var(--insight-card-bg);
+  --admin-border: var(--insight-border-subtle);
+  --admin-text: var(--insight-text-primary);
+  --admin-muted: var(--insight-text-secondary);
+  --admin-hover: var(--insight-nav-hover);
+}
+
+/* Geometry, surfaces and interaction tokens are independent from the palette above. */
+html[data-insight-theme] {
+  --insight-radius-xs: 2px;
+  --insight-radius-sm: 3px;
+  --insight-radius-md: 4px;
+  --insight-radius-lg: 6px;
+  --insight-radius-xl: 8px;
+  --insight-radius-panel: 8px;
+  --insight-radius-pill: 999px;
+}
+
+html[data-insight-theme] {
+  --insight-surface-page: var(--insight-content-bg);
+  --insight-surface-panel: var(--insight-card-bg);
+  --insight-surface-elevated: var(--insight-card-bg);
+  --insight-surface-sunken: var(--insight-surface-subtle);
+  --insight-border-width: 1px;
+  --insight-divider: var(--insight-border-subtle);
+  --insight-control-hover: var(--insight-hover-control, var(--insight-nav-hover));
+  --insight-control-pressed: var(--insight-pressed-control, var(--insight-pressed-bg));
+  --insight-control-selected: var(--insight-nav-active);
+  --insight-shadow-panel: 0 4px 12px var(--insight-shadow-color-14);
+  --ledger-accent: var(--insight-primary);
+  --ledger-text: var(--insight-text-primary);
+  --ledger-muted: var(--insight-text-secondary);
+  --ledger-surface: var(--insight-surface-bg);
+  --ledger-surface-opaque: var(--insight-surface-bg);
+  --ledger-bg: var(--insight-page-bg);
+  --ledger-border: var(--insight-border-color);
+  --ledger-hover: var(--insight-hover-control, var(--insight-hover-bg));
+  --ledger-danger: var(--insight-danger);
+}
+
+
+/* 对照页定下的类型圆角。不走上面的兼容几何 xs–panel。见 insight-controls-grill-checkpoint-2026-10-08.md */
+:root {
+  --insight-radius-compact: 8px;
+  --insight-radius-control: 10px;
+  --insight-radius-menu: 14px;
+  --insight-radius-card: 18px;
+  --insight-radius-composer: 22px;
+}
+
+:root {
+  --insight-font-caption: 12px;
+  --insight-font-ui: 13px;
+  --insight-font-body: 14px;
+  --insight-font-title: 16px;
+  --insight-font-page-title: 20px;
+  --insight-weight-regular: 400;
+  --insight-weight-medium: 500;
+  --insight-weight-semibold: 600;
+  --insight-weight-bold: 700;
+  --insight-font-role-label: var(--insight-font-caption);
+  --insight-font-role-control: var(--insight-font-ui);
+  --insight-font-role-menu: var(--insight-font-ui);
+  --insight-font-role-menu-group: var(--insight-font-caption);
+  --insight-font-role-dialog-title: var(--insight-font-title);
+  --insight-font-role-dialog-body: var(--insight-font-ui);
+  --insight-font-role-section: var(--insight-font-ui);
+  --insight-font-role-page-title: var(--insight-font-page-title);
+  --insight-font-role-date: var(--insight-font-ui);
+  --insight-font-role-card-title: var(--insight-font-title);
+  --insight-font-role-chat-body: var(--insight-font-body);
+  --insight-font-role-chat-composer: var(--insight-font-body);
+  --insight-font-role-chat-meta: var(--insight-font-caption);
+}

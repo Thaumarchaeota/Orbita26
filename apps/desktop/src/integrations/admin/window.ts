@@ -13,16 +13,6 @@ export function openAdminWindow(): void {
   });
 }
 
-if (import.meta.env.DEV && isTauri()) {
-  window.addEventListener("keydown", (event) => {
-    if (event.ctrlKey && event.altKey && event.key.toLowerCase() === "f") {
-      void invoke("dev_open_finance_detail").catch((err: unknown) => {
-        console.error("dev_open_finance_detail failed", err);
-      });
-    }
-  });
-}
-
 export function mountAdminButton(root: HTMLElement): void {
   const settingsMount = root.querySelector<HTMLElement>("#settingsMount");
   if (!settingsMount) return;

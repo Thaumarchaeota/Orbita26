@@ -3,6 +3,7 @@ import type { HealthTrackAxisPrefs } from "./health-track-axis";
 import type { LifeRingGoals } from "./life-ring-goals";
 import type { LifeRingSlots } from "./life-ring-metrics";
 import type { ThemePrefs } from "./theme-prefs";
+import type { UiThemeSettings } from "../../ui/color-system/theme-types";
 
 export type GridPrefs = {
   cols: number;
@@ -18,11 +19,38 @@ export type LifeRingColors = {
   ring3: string;
 };
 
+export type InsightLightTheme = "cold" | "warm" | "blue" | `${number}`;
+
+export type InsightPalette = {
+  primary: string;
+  selected: string;
+  hover: string;
+  chrome: string;
+  sidebar: string;
+  page: string;
+  surface: string;
+  controlSurface: string;
+  sunken: string;
+  textPrimary: string;
+  textSecondary: string;
+  border: string;
+  danger: string;
+};
+
+export type TravelEndpointSplitPolicy = "copy" | "front" | "rear";
+
+export type TravelEndpointSplitPrefs = {
+  movingFrontEnd: TravelEndpointSplitPolicy;
+  movingRearStart: TravelEndpointSplitPolicy;
+};
+
 export type UiPrefs = {
   engineId: string;
   localTab: "file" | "literature" | "note";
   activeConversationId: string | null;
   themePrefs: ThemePrefs;
+  insightTheme: InsightLightTheme;
+  insightPalette: InsightPalette;
   blockOpacity: number;
   topGrid: GridPrefs;
   lifeRings: LifeRingColors;
@@ -30,6 +58,10 @@ export type UiPrefs = {
   lifeRingGoals: LifeRingGoals;
   fonts: FontPrefs;
   healthTrackAxis: HealthTrackAxisPrefs;
+  insightThemePresets?: UiThemeSettings["insightThemePresets"];
+  appliedInsightTheme?: UiThemeSettings["appliedInsightTheme"];
+  insightThemeLibraryRevision?: number;
+  travelEndpointSplit?: TravelEndpointSplitPrefs;
 };
 
 export type V2rayIntegration = { exePath: string };
@@ -62,11 +94,13 @@ export type TicktickCredentials = {
   accessToken: string;
 };
 export type AiCredentials = { entries: Record<string, string> };
+export type VariflightCredentials = { apiKey: string };
 
 export type IntegrationsCredentials = {
   garmin: GarminCredentials;
   ticktick: TicktickCredentials;
   ai: AiCredentials;
+  variflight: VariflightCredentials;
 };
 
 export type Integrations = {
@@ -96,6 +130,7 @@ export type AiConfig = {
   activeEntryId: string;
   activeModel: string;
   entries: ApiEntry[];
+  searchEntryId?: string;
 };
 
 export type AppTheme = "light" | "dark" | "transparent-light" | "transparent-dark";

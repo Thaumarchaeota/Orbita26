@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import sys
+import uuid
 from datetime import date
 from pathlib import Path
 
@@ -14,20 +15,35 @@ from garmin_lib import (
     fetch_day_series,
     map_body_measurement,
     map_daily,
-    map_exercise,
     map_sleep,
     progress,
     RouteTimeoutError,
     token_file_path,
 )
-
+from garmin_normalize import build_normalized_batch
 
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--from", dest="from_date", required=True)
     p.add_argument("--to", dest="to_date", required=True)
     p.add_argument("--token-dir", required=True)
+    p.add_argument("--run-id", dest="run_id", default="")
     return p.parse_args()
+
+
+def activity_id(activity):
+    value = activity.get("activityId") or activity.get("activityIdDTO") or activity.get("id")
+    return str(value) if value is not None else ""
+
+
+def activity_summary_unit(summary, fallback_date):
+    aid = activity_id(summary)
+    start = summary.get("startTimeLocal") or summary.get("startTimeGMT") or ""
+    return {
+        "date": start[:10] if isinstance(start, str) and len(start) >= 10 else fallback_date,
+        "externalId": aid,
+        "summary": summary,
+    }
 
 
 def main():
@@ -39,6 +55,7 @@ def main():
 
     token_dir = str(Path(args.token_dir).expanduser().resolve())
     token_file = token_file_path(token_dir)
+    run_id = args.run_id.strip() or str(uuid.uuid4())
 
     client, reason, message = connect_with_token(token_dir, token_file)
     if not client:
@@ -76,27 +93,34 @@ def main():
         if not isinstance(activities, list):
             activities = activities.get("activities", []) if isinstance(activities, dict) else []
         for act in activities:
-            ex = map_exercise(act)
-            if not ex:
+            aid = activity_id(act)
+            if not aid or aid in seen:
                 continue
-            if ex["externalId"] in seen:
-                continue
-            seen.add(ex["externalId"])
-            exercises.append(ex)
+            seen.add(aid)
+            # Deprecated whole-run adapter is deliberately core-only. Detail and Original
+            # have separate bounded unit requests in garmin_unit.py.
+            exercises.append(activity_summary_unit(act, args.from_date))
     except RouteTimeoutError as e:
         emit_fail("sync_timeout", str(e))
     except Exception as e:
         emit_fail("fetch_failed", f"拉取数据失败: {e}")
 
+    batch = build_normalized_batch(
+        run_id,
+        args.from_date,
+        args.to_date,
+        dailies,
+        routines,
+        exercises,
+        series,
+        measurements,
+        core_only=True,
+    )
     emit({
         "ok": True,
         "from": args.from_date,
         "to": args.to_date,
-        "daily": dailies,
-        "routines": routines,
-        "exercises": exercises,
-        "series": series,
-        "measurements": measurements,
+        "batch": batch,
     })
     return 0
 

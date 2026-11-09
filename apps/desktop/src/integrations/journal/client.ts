@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { invokeDomainWrite } from "../admin/domain-write-guard";
 import { isTauri } from "../../core/data/client";
 import type { JournalEntry } from "../../core/data/types";
 import type { AppSettings } from "../../core/data/types";
@@ -19,13 +20,13 @@ export async function journalList(params: JournalListParams = {}) {
 }
 
 export async function journalUpsert(entry: JournalEntry) {
-  const res = await invoke<{ entry: JournalEntry }>("journal_upsert", { req: { entry } });
+  const res = await invokeDomainWrite<{ entry: JournalEntry }>("journal_upsert", { req: { entry } });
   notifyJournalChanged();
   return res;
 }
 
 export async function journalDelete(id: string) {
-  await invoke<void>("journal_delete", { req: { id } });
+  await invokeDomainWrite<void>("journal_delete", { req: { id } });
   notifyJournalChanged();
 }
 
@@ -49,6 +50,14 @@ export type GarminSyncResult = {
   dailyCount?: number;
   exerciseCount?: number;
   routineCount?: number;
+  resumeJob?: ResumeContext;
+};
+
+export type ResumeContext = {
+  requestId: string;
+  expectedDataDirKey: string;
+  jobId: string;
+  expectedRevision: number;
 };
 
 export type GarminLoginResult = {
@@ -104,25 +113,98 @@ export async function garminStatus() {
   return invoke<GarminStatusResult>("garmin_status");
 }
 
-export async function garminSync(params?: { from?: string; to?: string }) {
-  const req = params ?? {};
+const GARMIN_SYNCING_EVT = "orbita:garmin-syncing";
+let garminSyncBusy = 0;
+let garminHostBusy = false;
+let garminBusyPollId = 0;
+
+export function isGarminSyncing(): boolean {
+  return garminSyncBusy > 0 || garminHostBusy;
+}
+
+export function subscribeGarminSyncing(fn: (busy: boolean) => void): () => void {
+  initGarminSyncing();
+  const handler = () => fn(isGarminSyncing());
+  window.addEventListener(GARMIN_SYNCING_EVT, handler);
+  fn(isGarminSyncing());
+  return () => window.removeEventListener(GARMIN_SYNCING_EVT, handler);
+}
+
+function emitGarminSyncing() {
+  window.dispatchEvent(new CustomEvent(GARMIN_SYNCING_EVT));
+}
+
+function startGarminBusyPoll() {
+  if (garminBusyPollId || !isTauri()) return;
+  const tick = () => {
+    void invoke<boolean>("garmin_sync_busy")
+      .then((busy) => {
+        if (busy === garminHostBusy) return;
+        garminHostBusy = busy;
+        emitGarminSyncing();
+      })
+      .catch(() => {});
+  };
+  garminBusyPollId = window.setInterval(tick, 250);
+  tick();
+}
+
+export function initGarminSyncing(): void {
+  startGarminBusyPoll();
+}
+
+export async function garminSync(params?: { from?: string; to?: string; entryPoint?: "manual" | "auto" }) {
+  const req = {
+    from: params?.from,
+    to: params?.to,
+    entryPoint: params?.entryPoint ?? "manual",
+  };
   const SYNC_TIMEOUT_MS = 5 * 60 * 1000;
-  let timer: number | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = window.setTimeout(
-      () => reject(new Error("佳明同步超时（超过 5 分钟），请稍后重试")),
-      SYNC_TIMEOUT_MS,
-    );
-  });
+  const invokeOnce = async (resumeJob?: ResumeContext): Promise<GarminSyncResult> => {
+    let timer: number | undefined;
+    try {
+      const timeout = new Promise<never>((_, reject) => {
+        timer = window.setTimeout(
+          () => reject(new Error("佳明同步超时（超过 5 分钟），请稍后重试")),
+          SYNC_TIMEOUT_MS,
+        );
+      });
+      return await Promise.race([
+        invokeDomainWrite<GarminSyncResult>("garmin_sync", { req: { ...req, ...(resumeJob ? { resumeJob } : {}) } }),
+        timeout,
+      ]);
+    } finally {
+      if (timer !== undefined) window.clearTimeout(timer);
+    }
+  };
+  garminSyncBusy += 1;
+  emitGarminSyncing();
   try {
-    const result = await Promise.race([
-      invoke<GarminSyncResult>("garmin_sync", { req }),
-      timeout,
-    ]);
+    let result = await invokeOnce();
+    const context = result.resumeJob;
+    const validContext = context
+      && typeof context.requestId === "string" && context.requestId.length > 0
+      && typeof context.expectedDataDirKey === "string" && context.expectedDataDirKey.length > 0
+      && typeof context.jobId === "string" && context.jobId.length > 0
+      && Number.isSafeInteger(context.expectedRevision) && context.expectedRevision > 0;
+    if (req.entryPoint === "manual" && result.reason === "GARMIN_DAILY_PAUSED" && validContext) {
+      const { getConfirmDialog } = await import("../shell/dialog");
+      const confirmed = await getConfirmDialog()(
+        "继续佳明日常同步",
+        result.message ?? "日常同步已暂停。继续后会重试未成功项。",
+        undefined,
+        { confirmLabel: "继续同步并重试未成功项", danger: false },
+      );
+      if (!confirmed) {
+        return { ok: false, reason: "GARMIN_SYNC_CANCELLED" };
+      }
+      result = await invokeOnce(context);
+    }
     if (result.ok) notifyJournalChanged();
     return result;
   } finally {
-    if (timer !== undefined) window.clearTimeout(timer);
+    garminSyncBusy = Math.max(0, garminSyncBusy - 1);
+    emitGarminSyncing();
   }
 }
 
@@ -189,6 +271,7 @@ export type HealthOverviewResponse = {
       isNap: boolean;
       score: number | null;
       source: string;
+      stageTotals?: { deep: number; light: number; rem: number; awake: number } | null;
     }>;
     series: Array<{ metric: string; samples: Array<{ t: number; v: number | null }> }>;
     activities: Array<{
@@ -262,6 +345,88 @@ export async function healthOverviewQuery(req: HealthOverviewRequest) {
 
 export async function healthSyncStatus() {
   return invoke<HealthSyncStatus>("health_sync_status");
+}
+
+export type HealthMealFoodSnapshot = {
+  id: string;
+  position: number;
+  text: string;
+  kcal: number;
+  kcalEstimated: boolean;
+  servingText: string | null;
+  servingEstimated: boolean | null;
+  carbsGrams: number | null;
+  proteinGrams: number | null;
+  fatGrams: number | null;
+  sugarGrams: number | null;
+  fiberGrams: number | null;
+  sodiumMilligrams: number | null;
+  vitaminCMilligrams: number | null;
+  nutrientsEstimated: boolean | null;
+};
+
+export type HealthMealSnapshot = {
+  id: string;
+  revision: number;
+  title: string | null;
+  startedAt: string;
+  slot: string | null;
+  iconKey?: string | null;
+  text: string | null;
+  source: string;
+  atHm: string | null;
+  recordShape: "foods" | "legacy";
+  foods: HealthMealFoodSnapshot[];
+  mealKcal: number | null;
+  kcal?: number | null;
+  items?: string[] | null;
+  deletedAt: string | null;
+};
+
+export async function healthListMeals(req: {
+  localDateFrom?: string;
+  localDateTo?: string;
+  includeDeleted?: boolean;
+}) {
+  return invoke<{ meals: HealthMealSnapshot[] }>("health_list_meals", { req });
+}
+
+export async function healthCreateMeal(req: {
+  expectedDataDir?: string;
+  title: string;
+  startedAt: string;
+  slot: string | null;
+  iconKey?: string | null;
+  text?: string | null;
+  foods?: Record<string, unknown>[];
+  source?: string;
+  atHm?: string | null;
+}) {
+  const res = await invokeDomainWrite<{ meal: HealthMealSnapshot }>("health_create_meal", { req });
+  notifyJournalChanged();
+  return res;
+}
+
+export async function healthUpdateMeal(req: {
+  expectedDataDir?: string;
+  meal: { id: string; expectedRevision: number };
+  title: string;
+  startedAt: string;
+  slot: string | null;
+  iconKey?: string | null;
+  text?: string | null;
+  foods: Record<string, unknown>[];
+  atHm?: string | null;
+}) {
+  const res = await invokeDomainWrite<{ meal: HealthMealSnapshot }>("health_update_meal", { req });
+  notifyJournalChanged();
+  return res;
+}
+
+export async function healthDeleteMeal(req: { meal: { id: string; expectedRevision: number } }) {
+  const res = await invokeDomainWrite<{ meal: HealthMealSnapshot }>("health_delete_meal", { req });
+  notifyJournalChanged();
+  return res;
 }
 
 export function beijingToday(): string {

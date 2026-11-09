@@ -1,9 +1,10 @@
 import { escHtml } from "../../core/html";
+import { bindBackdropPressDismiss } from "../../ui/backdrop-dismiss";
 import { bindDialog, type MotionTrigger } from "../../ui/motion";
 import type { DidaProject, DidaTask } from "./types";
 import { formatTaskDue, fromDidaDateParts, invokeError, priorityLabel, toDidaDateTime } from "./client";
 import { formatDateValue } from "./calendar";
-import { closeAllPickers, createPickerGroup, mountDatePicker, mountListPicker, mountTimePicker, mountToggle } from "./form-pickers";
+import { closeAllPickers, createPickerGroup, mountTaskDateField, mountListPicker, mountTaskTimeField, mountToggle } from "./form-pickers";
 
 export type TaskDialogResult = {
   title: string;
@@ -64,12 +65,17 @@ export function mountTaskDialog(root: HTMLElement) {
 
   const pickerGroup = createPickerGroup();
   const projectPicker = mountListPicker(pickersEl, "清单", "project", [], "inbox", pickerGroup);
-  const datePicker = mountDatePicker(pickersEl, "日期", "date", formatDateValue(new Date()), pickerGroup);
+  const datePicker = mountTaskDateField(pickersEl, "日期", "date", formatDateValue(new Date()), pickerGroup);
   const allDayToggle = mountToggle(pickersEl, "全天", "allday", false);
-  const startPicker = mountTimePicker(pickersEl, "开始", "start", "09:00", pickerGroup);
-  const endPicker = mountTimePicker(pickersEl, "结束", "end", "10:00", pickerGroup);
+  const startPicker = mountTaskTimeField(pickersEl, "开始", "start", "09:00", pickerGroup);
+  const endPicker = mountTaskTimeField(pickersEl, "结束", "end", "10:00", pickerGroup);
   const priorityPicker = mountListPicker(pickersEl, "优先级", "priority", PRIORITY_ITEMS, "0", pickerGroup);
   const pickers = [projectPicker, datePicker, startPicker, endPicker, priorityPicker];
+  window.addEventListener("pagehide", () => {
+    datePicker.dispose();
+    startPicker.dispose();
+    endPicker.dispose();
+  }, { once: true });
 
   const timeRow = document.createElement("div");
   timeRow.className = "ticktick-time-row";
@@ -139,9 +145,7 @@ export function mountTaskDialog(root: HTMLElement) {
     })();
   });
   backdrop.querySelector('[data-action="cancel"]')!.addEventListener("click", () => void close(null));
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop && !saving) void close(null);
-  });
+  bindBackdropPressDismiss(backdrop, () => { if (!saving) void close(null); });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen() && !saving) void close(null);
   });
@@ -226,9 +230,7 @@ export function mountTaskDetailDialog(root: HTMLElement) {
 
   const close = () => void motion.close();
   backdrop.querySelector('[data-action="close"]')!.addEventListener("click", close);
-  backdrop.addEventListener("click", (e) => {
-    if (e.target === backdrop) close();
-  });
+  bindBackdropPressDismiss(backdrop, () => close());
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && motion.isOpen()) close();
   });
